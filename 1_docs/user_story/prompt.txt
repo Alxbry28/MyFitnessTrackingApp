@@ -1,0 +1,29 @@
+@1_docs/session_notes_2026-10-19.md  We just talk about this project. Can we make a user story. Well the main user is me. So, I used Bitalyze and My fitness pal. I'm having difficulty using them, as such it's difficult to understand and use them. So I think I just make my own app that's suits for me. 
+
+I log my foods in ChatGPT like this:
+
+Breakfast:
+220g taho
+
+Lunch:
+250g white rice
+110g boiled eggs
+250g boiled chicken breast
+50g okra
+
+Pre-Workout:
+7g Wake Pre workout
+5g creatine
+
+Dinner:
+Lunch:
+250g white rice
+110g boiled eggs
+250g boiled chicken breast
+50g okra
+
+Post-workout:
+30g just whey
+
+
+That's what I log. then the AI will get the macros and calories for the day. My problem is it didn't save the data from yesterday and also AI forgots the context, so the AI reach the memory limit. I want an app that will save the logs then retrieve some data from the database instead of basing the macros from the internet. then also can scan nutritional facts from the packaging of the food then save it to the app's database. 
