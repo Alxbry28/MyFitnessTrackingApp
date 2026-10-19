@@ -224,11 +224,11 @@ User input (text/voice/photo)
 | Supabase | $0 (free tier) |
 | Open Food Facts | $0 |
 | AI API | $0–5 depending on usage |
-| Apple Developer | $99/year (only if publishing to App Store) |
-| Google Play | $25 one-time (only if publishing) |
+| Apple Developer | $99/year — **needed for TestFlight** (friends on iPhone) and the App Store |
+| Google Play | $25 one-time — only for Play testing tracks or publishing; an APK link is free |
 | EAS Build | $0 on free tier for limited builds |
 
-For **personal sideload / TestFlight / internal use**, you can stay at **$0** during development.
+For **Android-only personal use** (APK sideload), you can stay at **$0**. **Any iPhone install outside Expo Go, including TestFlight, needs the $99/year Apple Developer Program**, so the iPhone version is parked for now (see `11` §6).
 
 ---
 

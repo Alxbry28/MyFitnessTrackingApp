@@ -18,12 +18,15 @@
 | 06 | [development_roadmap.md](./06_development_roadmap.md) | Phased build order and milestones |
 | 07 | [recommendation_for_dotnet_react.md](./07_recommendation_for_dotnet_react.md) | **Tailored stack for .NET dev + React career + MFP/ChatGPT pain** |
 | 08 | [october_sprint.md](./08_october_sprint.md) | **Day-by-day plan: nutrition v1 by Oct 31, 2026** |
+| 09 | [pantry_inventory.md](./09_pantry_inventory.md) | **Pantry inventory: groceries, supplements, cooked batches (v1.1, November)** |
+| 10 | [body_progress.md](./10_body_progress.md) | **Body progress: calorie stats, weight, BMI, muscle measurements** |
+| 11 | [ios_and_friends_beta.md](./11_ios_and_friends_beta.md) | **Friends beta on Android (Nov 29, $0); iPhone version parked** |
 
 ---
 
 ## Quick summary
 
-You are building a **mobile-only personal fitness app**: calorie tracking (barcode scanner + product DB), workout/strength logging, and AI assistance.
+You are building a **mobile-only personal fitness app**: calorie tracking (barcode scanner + product DB), a pantry inventory of the groceries and cooked food you have at home, workout/strength logging, body progress (weight, BMI, muscle measurements, calorie stats), and AI assistance.
 
 Open questions from your idea file are answered with recommendations in `02_technology_recommendations.md`. The finance app (spending, savings, debt) is planned separately in [finance_app](../../../finance_app/00_index.md).
 
@@ -36,6 +39,9 @@ Open questions from your idea file are answered with recommendations in `02_tech
 3. `03` — review the feature outline and trim scope for v1  
 4. `05_architecture_outline.md` — see how pieces fit together  
 5. `06_development_roadmap.md` — decide what to build first  
+6. `09_pantry_inventory.md` — grocery and cooked-food inventory (after v1)  
+7. `10_body_progress.md` — weight, BMI, measurements and calorie stats (after v1)  
+8. `11_ios_and_friends_beta.md` — letting friends test (Android), iPhone later  
 
 ---
 

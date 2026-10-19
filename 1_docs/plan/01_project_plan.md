@@ -34,12 +34,14 @@ Finance was originally a second module here; it is now planned separately in [fi
 
 | | |
 |---|---|
-| **Primary user** | You (single-user personal app) |
-| **Platform** | Mobile only (iOS + Android) |
-| **v1 audience** | Personal use — no multi-user or social features required |
-| **Out of scope for now** | Web app, desktop, sharing with friends, marketplace |
+| **Primary user** | You, on **Android** (main phone) |
+| **Testers** | Friends on **Android** (friends beta from Nov 29, see `11`), each with their own data on their own phone |
+| **Platform** | **Android only** for now. iPhone is parked until there's budget for the Apple Developer Program; code stays cross-platform |
+| **Budget** | $0: free tiers only |
+| **v1 audience** | Personal use (Oct 31); friends beta after v1.1 |
+| **Out of scope for now** | Web app, desktop, social features (seeing each other's data), marketplace |
 
-Design for **single-user** first. That simplifies auth (device-local or one account), privacy, and data modeling.
+Design for **one user per device** first: no accounts while data stays on the phone. Accounts come only with sync (Beta 2 in `11`). Never hard-code personal values (goal, scale brand, region); they're settings.
 
 ---
 
@@ -105,7 +107,7 @@ AI should reduce friction, not replace structure.
 | 3 | Database | Supabase / Firebase / SQLite + sync | See tech doc |
 | 4 | Barcode source | Open Food Facts + manual override | Free product API; your DB for custom items |
 | 5 | AI provider | OpenAI / Gemini / local model | Cost and privacy tradeoff |
-| 6 | Auth | Email magic link / device-only / passcode | Single-user can start device-local |
+| 6 | Auth | Email magic link / device-only / passcode | Device-local for v1 and Beta 1; per-user accounts needed for Beta 2 (`11`) |
 
 ---
 
@@ -138,4 +140,7 @@ This plan is the anchor. Details live in:
 - **Tech choices** → `02_technology_recommendations.md`  
 - **Fitness features** → `03_fitness_app_outline.md`  
 - **Structure** → `05_architecture_outline.md`  
-- **Build order** → `06_development_roadmap.md`
+- **Build order** → `06_development_roadmap.md`  
+- **Pantry inventory** → `09_pantry_inventory.md`  
+- **Body progress** → `10_body_progress.md`  
+- **Friends beta (Android) + iPhone later** → `11_ios_and_friends_beta.md`

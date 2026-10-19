@@ -58,6 +58,40 @@ Assumes recommended stack: **Expo + SQLite + Supabase (later) + Open Food Facts*
 
 ---
 
+## Phase 2B — Pantry inventory (v1.1, November)
+
+**Goal:** Know what food is at home (groceries, supplements, cooked batches); eating from it logs food and lowers stock in one step.
+
+Full plan: [09_pantry_inventory.md](./09_pantry_inventory.md).
+
+| Order | Feature |
+|-------|---------|
+| 2B.1 | `pantry_items` + `stock_movements`; add to pantry after scan; Pantry screen; log from pantry; remove / adjust |
+| 2B.2 | Canned goods eaten drained; opened items |
+| 2B.3 | Supplements as pantry items |
+| 2B.4 | Recipes + cooked batches (settle at the end / weigh in parts) |
+
+**Exit criteria:** Buy 3 cans → eat 1 → pantry shows 2, and only the eaten can counts toward today's macros.
+
+---
+
+## Phase 2C — Body progress (v1.1, November–December)
+
+**Goal:** See body changes and calorie trends, not only today's numbers.
+
+Full plan: [10_body_progress.md](./10_body_progress.md).
+
+| Order | Feature |
+|-------|---------|
+| 2C.1 | Body profile + weight log + 7-day trend + BMI + Xiaomi history import from CSV (start early: TDEE needs weeks of data) |
+| 2C.1b | Xiaomi scale sync via Health Connect (needs EAS dev build; Apple Health only when iPhone is unlocked) |
+| 2C.2 | Body measurements per muscle group + waist-to-height |
+| 2C.3 | Calorie stats: weekly averages, TDEE (formula → learned), suggested target |
+
+**Exit criteria:** Log weight and a measurement session; Progress shows trend, BMI, change since start and weekly calorie average.
+
+---
+
 ## Phase 3 — Fitness v1: Workouts (Weeks 5–6)
 
 **Goal:** Strength workout logging.
@@ -120,7 +154,7 @@ The Finance phases now live in [finance_app/04_development_roadmap.md](../../../
 | Workout templates | v1.1 |
 | App icon + splash | |
 | EAS internal build | Install on your phone without Expo Go |
-| Optional: TestFlight / Play internal testing | |
+| Friends beta: Android APK link ($0) | See `11`; Beta 1 on Nov 29. iPhone (TestFlight) parked until there's budget |
 
 ---
 
@@ -150,7 +184,7 @@ Week  1    2    3    4    5    6    7    8    9   10   11+
 | If you care most about… | Start with |
 |-------------------------|------------|
 | Gym progress | Phase 3 right after Phase 1 (skip nutrition temporarily) |
-| Eating / groceries | Phase 2 |
+| Eating / groceries | Phase 2, then Phase 2B (pantry) |
 | Everything balanced | Follow order above |
 
 **Recommended for your idea file:** Phase 2 (barcode nutrition) — it is the most distinctive feature you described.
@@ -183,6 +217,11 @@ Week  1    2    3    4    5    6    7    8    9   10   11+
 | Macro tracking | Fitness |
 | Meal photos + AI | Fitness |
 | Rest timer | Fitness |
+| Grocery mode, expiry warnings, shopping list from low stock | Pantry (09 P5) |
+| Grocery prices per trip (link to finance app) | Pantry |
+| Body fat % estimate, progress photos, strength vs size view | Progress (10 B4) |
+| Smartwatch import (steps, calories burned) | Progress |
+| iPhone version (TestFlight, Apple Health) | Shared (`11` §6, needs $99/yr) |
 | Widgets (home screen) | Fitness |
 | PIN / biometric lock | Shared |
 

@@ -23,7 +23,7 @@ The original roadmap (`06`) is ~15 weeks for everything. That doesn't fit in 13 
 
 ### Out of scope until November
 
-Workouts, the .NET API, Supabase/sync, AI, charts, macro *targets* (store the macro fields, but don't build UI for them yet).
+Workouts, the .NET API, Supabase/sync, AI, charts, macro *targets* (store the macro fields, but don't build UI for them yet), **pantry inventory** (planned for November in [09](./09_pantry_inventory.md); only the schema prep on Oct 20).
 
 ---
 
@@ -49,7 +49,7 @@ Each day has one goal and a checkable exit. If a day overruns, take the time fro
 | Day | Goal | Tasks | Exit check | React concept |
 |-----|------|-------|------------|---------------|
 | **Mon 19** | Scaffold | `git init`; `npx create-expo-app@latest` (TS template); folder structure from `05` §10 (fitness only); run on phone in Expo Go | App opens on your phone; first commit | JSX, components |
-| **Tue 20** | Data layer | `expo-sqlite` setup + simple migration runner; tables `products`, `food_log_entries`, `settings`; repository functions (`productRepo`, `foodLogRepo`); tab shell: **Today · Log · Products · Settings** | Insert and read a product from a debug button | `useState`, `useEffect` |
+| **Tue 20** | Data layer | `expo-sqlite` setup + simple migration runner; tables `products`, `food_log_entries`, `settings`; repository functions (`productRepo`, `foodLogRepo`); tab shell: **Today · Log · Products · Settings**. **Pantry prep ([09 §3](./09_pantry_inventory.md#3-phasing)):** nutrition per 100 g, log entries copy values + `grams`, nullable `net_weight_g`, UUIDs + timestamps | Insert and read a product from a debug button | `useState`, `useEffect` |
 | **Wed 21** | Product library | Products list + search; add/edit product form (name, brand, serving, kcal, P/C/F optional) | Add 5 real products from your kitchen by hand | Forms (`react-hook-form` + `zod`) |
 | **Thu 22** | Food log | Log screen grouped by meal for a date; "add to meal" from a product with quantity; delete entry | Log a full day of food manually | Lists, props, lifting state |
 | **Fri 23** | Today screen ✅ **M1** | Calorie goal in Settings; Today shows eaten / goal / remaining + meal summaries | **Start using it for real today.** Keep `BUGS.md` | Derived state |
@@ -68,7 +68,7 @@ Each day has one goal and a checkable exit. If a day overruns, take the time fro
 
 | Day | Goal | Tasks | Exit check |
 |-----|------|-------|------------|
-| **Thu 29** | Standalone build | `eas build --profile preview --platform android` (APK); app icon + name. On iOS, keep Expo Go unless you already have an Apple Developer account | App installed on your phone without Expo Go |
+| **Thu 29** | Standalone build | `eas build --profile preview --platform android` (APK); app icon + name. Android only (iPhone parked, `11` §6). Prefer cross-platform libraries so iOS stays possible later | App installed on your phone without Expo Go |
 | **Fri 30** | **Buffer** | Catch-up for anything that slipped. If you're ahead, see §5 stretch goals | — |
 | **Sat 31** | ✅ **v1 release** | Run the §2 checklist; tag `v1.0`; write a 10-line retro; draft the November plan (§6) | All §2 boxes ticked |
 
@@ -111,9 +111,15 @@ AI parsing waits for the .NET API, so it isn't a stretch goal this month.
 
 | Weeks | Work |
 |-------|------|
-| Nov 1–14 | ASP.NET Core Minimal API + PostgreSQL; sync products/food log; `POST /ai/parse-meal` (parse → preview → confirm) |
-| Nov 15–28 | Workouts module (`06` Phase 3) |
-| December | Finance app — separate plan in [finance_app](../../../finance_app/00_index.md) |
+| Nov 1–10 | Pantry: groceries, canned/opened items, supplements (`09` P1–P3) |
+| Nov 11–12 | Body progress B1: weight log + BMI (`10`) |
+| Nov 13–23 | Pantry: recipes and cooked batches (`09` P4) |
+| Nov 24–28 | Friends beta prep: first-run setup, backup restore, feedback, Sentry, install guide; preview APK (`11`) |
+| Nov 29 | **Friends Beta 1** starts (Android only, local-only, $0) |
+| Nov 30 – Dec 13 | ASP.NET Core Minimal API + PostgreSQL; sync (incl. pantry and body tables); `POST /ai/parse-meal` (parse → preview → confirm) |
+| December | Workouts module (`06` Phase 3) + body measurements and calorie stats (`10` B2–B3), then the finance app ([finance_app](../../../finance_app/00_index.md)) |
+
+> **Proposed Oct 20, needs your OK** (`09` Q-N1, `10` Q-B7, `11` Q-I4). Tip: write your weight and measurements in notes from now on, so the trend has data from the start. Previous order: .NET API Nov 1–14 → workouts Nov 15–28 → finance in December.
 
 ---
 

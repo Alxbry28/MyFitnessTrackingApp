@@ -198,6 +198,8 @@ Priority: **Must** = v1 (Oct 31) · **Should** = v1.1 (early Nov) · **Could** =
 | J3 | As me, I want different calorie or protein goals on **training days and rest days** | Could |
 | J4 | As me, I want a weekly view: average calories, average protein, workouts done and body weight trend | Could |
 
+J5–J16 (body profile, BMI, body measurements per muscle group, calorie stats and TDEE) are in [plan/10_body_progress.md](../../plan/10_body_progress.md#7-stories-extends-epic-j).
+
 ### Epic K — Supplement inventory
 
 | ID | Story | Priority |

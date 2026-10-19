@@ -16,6 +16,14 @@ Fitness
 │   ├── Barcode scanner
 │   ├── Product library (your saved groceries)
 │   └── Daily goals (calories, optional macros)
+├── Pantry (v1.1, see 09)
+│   ├── Groceries in stock (scan → how many?)
+│   ├── Supplements (grams left)
+│   └── Recipes + cooked batches
+├── Progress (v1.1, see 10)
+│   ├── Body weight + trend, BMI, waist-to-height
+│   ├── Body measurements (arms, chest, waist, legs…)
+│   └── Calorie stats (averages, TDEE, suggested target)
 ├── Workouts
 │   ├── Workout log (session)
 │   ├── Exercise library
@@ -39,6 +47,31 @@ Fitness
 | N6 | As a user, I duplicate yesterday's meal | Should-have |
 | N7 | As a user, I track protein/carbs/fat in addition to calories | Nice-to-have |
 | N8 | As a user, I take a photo of a meal and AI estimates calories | Future |
+
+### Pantry (inventory)
+
+Full stories: Epic L (pantry and groceries) and Epic M (recipes and batches) in [04_recipes_and_pantry.md](../business_analyst/user_story/04_recipes_and_pantry.md). Plan: [09_pantry_inventory.md](./09_pantry_inventory.md).
+
+| ID | Story | Priority |
+|----|-------|----------|
+| L1 | As a user, I add scanned groceries to my pantry with how many units I bought | Should-have |
+| L4 | As a user, I log food from my pantry and the stock goes down by the same amount | Should-have |
+| L7 | As a user, I remove stock without eating it (shared, discarded) and it never counts toward my macros | Should-have |
+| M2 | As a user, I log a cooked batch from a recipe without it counting toward today's macros | Should-have |
+| M5 | As a user, I log a portion in grams from a batch | Should-have |
+
+### Body progress
+
+Full plan and stories (Epic J extended, J5–J16): [10_body_progress.md](./10_body_progress.md).
+
+| ID | Story | Priority |
+|----|-------|----------|
+| J1 | As a user, I log my body weight and see a 7-day trend | Should-have |
+| J6 | As a user, I see my BMI and category, together with waist-to-height | Should-have |
+| J8 | As a user, I log arm, chest, waist, thigh and other measurements in one session | Should-have |
+| J9 | As a user, I see how each measurement changed since I started | Should-have |
+| J11 | As a user, I see weekly calorie and protein averages | Should-have |
+| J12 | As a user, I see my estimated maintenance calories, learned from my own data | Should-have |
 
 ### Workouts
 
@@ -81,6 +114,9 @@ Fitness
 | Workout detail | Exercises and sets for one session | Yes |
 | Progress charts | Volume/weight over time | Later |
 | AI chat | Natural language logging | v1.1 |
+| Pantry list / item detail | What I have at home and its history | v1.1 (see 09 §4) |
+| Progress (weight, BMI, measurements, calorie stats) | Body and calorie trends | v1.1 (see 10 §9) |
+| Recipes / cook a batch | Recipe ingredients, cooked weight | v1.1 (see 09 §4) |
 
 ---
 
@@ -124,6 +160,16 @@ Personal grocery / food items (from barcode or manual).
 | calorie_target | number |
 | protein_target_g | number? |
 | effective_date | date |
+
+### Pantry tables
+
+`pantry_items`, `stock_movements`, `recipes`, `recipe_ingredients`, `batches`, `batch_ingredients`, plus new fields on `products` and `food_log_entries`. See [09 §5](./09_pantry_inventory.md#5-data-model-additions).
+
+> **Note:** store product nutrition **per 100 g** and copy values onto each log entry (09 §3), so the pantry can be added later without migrating history.
+
+### Body progress tables
+
+`body_profile`, `body_weight_entries`, `measurement_sessions`, `body_measurements`. BMI, trends and TDEE are calculated. See [10 §8](./10_body_progress.md#8-data-model-additions).
 
 ### `exercises`
 
@@ -222,7 +268,9 @@ Personal grocery / food items (from barcode or manual).
 | Meal list shortcut | Yes | |
 | Quick-add favorite food | Should-have | |
 | Workout streak | | Yes |
-| Weekly calorie chart | | Yes |
+| Weekly calorie chart | | Yes (10 B3) |
+| Weight trend + log weight shortcut | | Yes (10 B1) |
+| BMI / measurements card | | Yes (10 B1–B2) |
 | PR highlights | | Yes |
 
 ---
@@ -244,6 +292,8 @@ Personal grocery / food items (from barcode or manual).
 - AI meal parsing  
 - Charts and PR tracking  
 - Photo-based meal AI  
+- Pantry inventory, recipes and cooked batches (v1.1, see `09`)  
+- Body weight, BMI, measurements and calorie stats (v1.1, see `10`)  
 
 ---
 
