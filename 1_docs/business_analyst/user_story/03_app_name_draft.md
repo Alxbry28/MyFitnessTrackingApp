@@ -53,7 +53,7 @@ From the user story, the app is:
 
 ### C. "Life Hub" names (if Finance joins later)
 
-[plan/00](../plan/00_index.md) describes one app with Fitness + Finance modules. If that still holds, the name could be broader:
+Finance has since been split into its own plan (`draft/finance_app`), so these broader names only matter if it is ever merged back:
 
 | Name | Idea |
 |------|------|
@@ -93,7 +93,7 @@ Possible taglines:
 
 ## 5. To decide
 
-- [ ] Will Finance be part of the same app? (This decides between a broad name and a fitness-only name)
+- [x] Will Finance be part of the same app? — No, it is now a separate plan (`draft/finance_app`)
 - [ ] Filipino or English name?
 - [ ] Pick 1 from the shortlist, or add your own ideas here:
   - …

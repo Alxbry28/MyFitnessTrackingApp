@@ -1,6 +1,6 @@
 # 06 — Development Roadmap
 
-Phased plan to build the personal Life Hub app **without trying to ship everything at once**.
+Phased plan to build the personal fitness app **without trying to ship everything at once**.
 
 Assumes recommended stack: **Expo + SQLite + Supabase (later) + Open Food Facts**.
 
@@ -12,7 +12,6 @@ Assumes recommended stack: **Expo + SQLite + Supabase (later) + Open Food Facts*
 
 | Task | Output |
 |------|--------|
-| Confirm one-app vs two-app | Decision recorded in `05_architecture_outline.md` |
 | Confirm Expo vs Flutter | Decision recorded |
 | Install Node, Expo CLI, emulators | Dev environment ready |
 | Create git repo | Initial commit (scaffold only) |
@@ -76,39 +75,13 @@ Assumes recommended stack: **Expo + SQLite + Supabase (later) + Open Food Facts*
 
 ---
 
-## Phase 4 — Finance v1: Transactions (Weeks 7–8)
+## Phases 4–5 — moved
 
-**Goal:** Track spending and income.
-
-| Order | Feature |
-|-------|---------|
-| 4.1 | `categories` + `transactions` schema; seed defaults |
-| 4.2 | Quick add expense/income |
-| 4.3 | Transaction list with filters (basic) |
-| 4.4 | Finance dashboard — monthly spend total |
-| 4.5 | Category management in Settings |
-
-**Exit criteria:** Log expenses for a week; see accurate monthly total.
+The Finance phases now live in [finance_app/04_development_roadmap.md](../../../finance_app/04_development_roadmap.md). Phase numbers below are kept so existing references still work.
 
 ---
 
-## Phase 5 — Finance v1: Savings & Debt (Weeks 9–10)
-
-**Goal:** Goals and debt in one place.
-
-| Order | Feature |
-|-------|---------|
-| 5.1 | `savings_goals` + `savings_contributions` |
-| 5.2 | Savings goals list + detail + add contribution |
-| 5.3 | `debts` + `debt_payments` |
-| 5.4 | Debt list + detail + log payment |
-| 5.5 | Finance dashboard — savings mini + total debt |
-
-**Exit criteria:** One savings goal and one debt account fully tracked.
-
----
-
-## Phase 6 — Cloud sync & backup (Weeks 11–12)
+## Phase 6 — Cloud sync & backup (Weeks 7–8)
 
 **Goal:** Data survives device loss.
 
@@ -124,29 +97,27 @@ Assumes recommended stack: **Expo + SQLite + Supabase (later) + Open Food Facts*
 
 ---
 
-## Phase 7 — AI layer (Weeks 13–14)
+## Phase 7 — AI layer (Weeks 9–10)
 
 **Goal:** Faster logging and simple Q&A.
 
 | Order | Feature |
 |-------|---------|
 | 7.1 | Supabase Edge Function AI proxy |
-| 7.2 | Finance: parse text → preview transactions |
-| 7.3 | Fitness: parse text → preview food log |
-| 7.4 | Simple Q&A for “spend this month” / “calories left” |
+| 7.2 | Parse text → preview food log |
+| 7.3 | Simple Q&A for “calories left” |
 
-**Exit criteria:** One confirmed AI parse flow per module.
+**Exit criteria:** One confirmed AI parse flow.
 
 ---
 
-## Phase 8 — Polish & personal release (Week 15+)
+## Phase 8 — Polish & personal release (Week 11+)
 
 | Task | Notes |
 |------|-------|
 | Dark mode | If not done earlier |
-| Charts (spending, strength) | v1.1 |
+| Charts (calories, strength) | v1.1 |
 | Workout templates | v1.1 |
-| Budgets | v1.1 |
 | App icon + splash | |
 | EAS internal build | Install on your phone without Expo Go |
 | Optional: TestFlight / Play internal testing | |
@@ -156,7 +127,7 @@ Assumes recommended stack: **Expo + SQLite + Supabase (later) + Open Food Facts*
 ## Timeline overview
 
 ```
-Week  1    2    3    4    5    6    7    8    9   10   11   12   13   14   15+
+Week  1    2    3    4    5    6    7    8    9   10   11+
       ├────┤
       P0   P1──┤
                ├─────────┤
@@ -164,14 +135,10 @@ Week  1    2    3    4    5    6    7    8    9   10   11   12   13   14   15+
                          ├─────────┤
                          P3 Workouts
                                    ├─────────┤
-                                   P4 Transactions
+                                   P6 Sync
                                              ├─────────┤
-                                             P5 Save/Debt
-                                                       ├─────────┤
-                                                       P6 Sync
-                                                                 ├────┤
-                                                                 P7 AI
-                                                                       ├──► P8
+                                             P7 AI
+                                                       ├──► P8
 ```
 
 *Weeks are estimates for solo, part-time work. Adjust freely.*
@@ -184,7 +151,6 @@ Week  1    2    3    4    5    6    7    8    9   10   11   12   13   14   15+
 |-------------------------|------------|
 | Gym progress | Phase 3 right after Phase 1 (skip nutrition temporarily) |
 | Eating / groceries | Phase 2 |
-| Money awareness | Phase 4 before Fitness |
 | Everything balanced | Follow order above |
 
 **Recommended for your idea file:** Phase 2 (barcode nutrition) — it is the most distinctive feature you described.
@@ -195,8 +161,6 @@ Week  1    2    3    4    5    6    7    8    9   10   11   12   13   14   15+
 
 - [ ] Fitness: barcode log + food log + calorie goal  
 - [ ] Fitness: workout log + history  
-- [ ] Finance: expenses/income + monthly total  
-- [ ] Finance: savings goal + debt tracking  
 - [ ] Data persists locally  
 - [ ] Export backup works  
 - [ ] No critical crashes in 7 days of daily use  
@@ -206,8 +170,6 @@ Week  1    2    3    4    5    6    7    8    9   10   11   12   13   14   15+
 ## Explicitly not in v1
 
 - Social features  
-- Multi-currency  
-- Bank account linking / automatic import  
 - Apple Health / Google Fit sync  
 - Subscription monetization  
 - Web dashboard  
@@ -221,11 +183,7 @@ Week  1    2    3    4    5    6    7    8    9   10   11   12   13   14   15+
 | Macro tracking | Fitness |
 | Meal photos + AI | Fitness |
 | Rest timer | Fitness |
-| Monthly category charts | Finance |
-| Budget alerts | Finance |
-| Debt snowball simulator | Finance |
-| Recurring transactions | Finance |
-| Widgets (home screen) | Both |
+| Widgets (home screen) | Fitness |
 | PIN / biometric lock | Shared |
 
 ---
@@ -233,5 +191,4 @@ Week  1    2    3    4    5    6    7    8    9   10   11   12   13   14   15+
 ## Next action for you
 
 1. Read `02_technology_recommendations.md` and mark your stack choices  
-2. Confirm **Life Hub** (one app) vs two apps  
-3. When ready to code, say **“start Phase 0”** — scaffold only, no feature code yet  
+2. When ready to code, say **“start Phase 0”** — scaffold only, no feature code yet  

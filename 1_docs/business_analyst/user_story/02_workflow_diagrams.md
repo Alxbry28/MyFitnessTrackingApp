@@ -12,7 +12,7 @@
 
 1. [The big picture](#1-the-big-picture)
 2. [Daily food logging](#2-daily-food-logging)
-3. [Adding a new food (barcode, label, manual)](#3-adding-a-new-food)
+3. [Adding a new food (barcode, label, AI lookup, manual)](#3-adding-a-new-food)
 4. [Paste my text log](#4-paste-my-text-log)
 5. [Supplement inventory](#5-supplement-inventory)
 6. [Workout session (lifts and cardio)](#6-workout-session)
@@ -96,26 +96,40 @@ flowchart TD
     START([New food needed]) --> TYPE{What kind?}
 
     TYPE -->|Packaged, has barcode| SCAN[Scan barcode]
-    TYPE -->|Packaged, no barcode / not found| LABEL
+    TYPE -->|Packaged, no barcode / not found| HAVE
+    TYPE -->|Branded, label not on hand| AI
     TYPE -->|Whole food: rice, eggs, taho| MANUAL
 
     SCAN --> L1{In my library?}
     L1 -->|Yes| DONE([Use it: back to logging])
     L1 -->|No| OFF{Found on Open Food Facts?}
     OFF -->|Yes| REVIEW
-    OFF -->|No| LABEL
+    OFF -->|No| HAVE{Label in hand?}
+    HAVE -->|Yes| LABEL
+    HAVE -->|No| AI
 
     LABEL[Photo of Nutrition Facts label] --> READ[App reads the values]
     READ --> CONV[Convert per serving to per 100 g]
     CONV --> REVIEW
 
+    AI[AI lookup: brand + product name, web search] --> AIJSON[Returns kcal, P, C, F per 100 g, serving size, source link]
+    AIJSON --> REVIEW
+
     MANUAL[Manual form: values from FNRI / USDA / label] --> REVIEW
 
-    REVIEW[Review form: name, cooked/raw, kcal, P, C, F per 100 g, serving size, barcode] --> OK{Values look right?}
+    REVIEW[Review form: name, brand, cooked/raw, kcal, P, C, F per 100 g, serving size, barcode, source] --> OK{Values look right?}
     OK -->|Fix| REVIEW
     OK -->|Save| LIB[(My food library)]
     LIB --> DONE
 ```
+
+**AI lookup rules**
+
+- The AI is called **only here**, when adding a new food. Logging, totals and history never call it; they always read from my library (R1). The next time I log the same almond milk, it comes from the library.
+- The library is searched first (section 2), so the AI is never asked for something I already have.
+- The AI returns structured values (not a paragraph) that pre-fill the review form. **Nothing is saved without my review.** The AI can pick the wrong variant (Original vs Unsweetened) or old or foreign values.
+- Every food remembers its **source** (manual / Open Food Facts / label / AI) and, for AI, the **source link**. AI foods start as **not verified** until I check them against a real label.
+- The AI call goes through the .NET API, never straight from the phone, so the API key stays private.
 
 **When each path arrives**
 
@@ -124,6 +138,7 @@ flowchart TD
 | Manual form | ✅ | ✅ |
 | Barcode + Open Food Facts | ✅ | ✅ |
 | Label photo | ❌ (type it in manually) | ✅ via the .NET API and AI vision (R4) |
+| AI lookup | ❌ (type it in manually) | ✅ via the .NET API (same setup as label photo) |
 
 ---
 
@@ -261,6 +276,7 @@ flowchart LR
         OFF[Open Food Facts]
         LBL[Label photo]
         REF[FNRI / USDA tables]
+        AI[AI lookup: web search]
         ME[My own typing]
     end
 
@@ -302,7 +318,7 @@ erDiagram
 
 | Thing | What it holds (in plain words) |
 |-------|-------------------------------|
-| Food | Name, cooked/raw, brand, barcode, kcal/P/C/F per 100 g, optional serving size |
+| Food | Name, cooked/raw, brand, barcode, kcal/P/C/F per 100 g, optional serving size, **source** (manual / Open Food Facts / label / AI), source link, **verified** yes/no |
 | Log entry | Day, meal slot, food, grams, **copy of the values at the time of logging** |
 | Meal slot | My own names and order (Breakfast … Post-Workout) |
 | Meal template | A saved group of foods + grams |
@@ -336,7 +352,7 @@ gantt
 
     section v1.1 (November)
     .NET API + sync                     :b1, 2026-11-01, 8d
-    Paste text log + label photo scan   :b2, after b1, 4d
+    Paste text, label scan, AI lookup   :b2, after b1, 5d
     Supplement inventory                :b3, after b1, 4d
 
     section Workouts

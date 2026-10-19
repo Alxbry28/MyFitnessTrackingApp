@@ -23,7 +23,7 @@ The original roadmap (`06`) is ~15 weeks for everything. That doesn't fit in 13 
 
 ### Out of scope until November
 
-Workouts, Finance, the .NET API, Supabase/sync, AI, charts, macro *targets* (store the macro fields, but don't build UI for them yet).
+Workouts, the .NET API, Supabase/sync, AI, charts, macro *targets* (store the macro fields, but don't build UI for them yet).
 
 ---
 
@@ -113,7 +113,7 @@ AI parsing waits for the .NET API, so it isn't a stretch goal this month.
 |-------|------|
 | Nov 1–14 | ASP.NET Core Minimal API + PostgreSQL; sync products/food log; `POST /ai/parse-meal` (parse → preview → confirm) |
 | Nov 15–28 | Workouts module (`06` Phase 3) |
-| December | Finance module (`06` Phases 4–5) |
+| December | Finance app — separate plan in [finance_app](../../../finance_app/00_index.md) |
 
 ---
 

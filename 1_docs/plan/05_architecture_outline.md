@@ -1,6 +1,6 @@
 # 05 — Architecture Outline
 
-High-level structure for a **single mobile app** with **Fitness** and **Finance** modules. No code yet — structure only.
+High-level structure for the **Fitness** mobile app. (Finance is planned separately in [finance_app](../../../finance_app/00_index.md).) No code yet — structure only.
 
 Related: [02_technology_recommendations.md](./02_technology_recommendations.md)
 
@@ -24,11 +24,11 @@ Related: [02_technology_recommendations.md](./02_technology_recommendations.md)
 ┌──────────────────────────────────────────────────────────┐
 │                    Mobile App (Expo)                      │
 │  ┌────────────┐  ┌────────────┐  ┌────────────────────┐  │
-│  │  Fitness   │  │  Finance   │  │  Shared (Settings) │  │
-│  │  Module    │  │  Module    │  │  Profile, Backup   │  │
-│  └─────┬──────┘  └─────┬──────┘  └─────────┬──────────┘  │
-│        │               │                    │              │
-│        └───────────────┼────────────────────┘              │
+│  │  Fitness   │                  │  Shared (Settings) │  │
+│  │  Module    │                  │  Profile, Backup   │  │
+│  └─────┬──────┘                  └─────────┬──────────┘  │
+│        │                                    │              │
+│        └───────────────┬────────────────────┘              │
 │                        ▼                                   │
 │              ┌─────────────────┐                           │
 │              │  Data Layer      │                           │
@@ -62,24 +62,14 @@ Root (Tab or Drawer)
 │   ├── fitness/workout        → Active / start workout
 │   └── fitness/history        → Workout history
 │
-├── Finance Tab
-│   ├── finance/index          → Finance dashboard
-│   ├── finance/transactions   → List
-│   ├── finance/add            → New transaction
-│   ├── finance/savings        → Goals list
-│   ├── finance/savings/[id]   → Goal detail
-│   ├── finance/debt           → Debt list
-│   └── finance/debt/[id]      → Debt detail
-│
 └── Settings
     ├── goals (calorie target)
-    ├── categories
-    ├── currency / units
+    ├── units
     ├── backup & export
     └── about
 ```
 
-**Alternative:** Bottom tabs = `Fitness | Finance | Settings` with stacks inside each.
+**Alternative:** Bottom tabs = `Nutrition | Workouts | Settings` with stacks inside each.
 
 ---
 
@@ -89,11 +79,11 @@ Root (Tab or Drawer)
 ┌─────────────────────────────────────┐
 │           UI Screens                │  React components, forms, lists
 ├─────────────────────────────────────┤
-│           Hooks / ViewModels        │  useFoodLog, useTransactions, etc.
+│           Hooks / ViewModels        │  useFoodLog, useWorkouts, etc.  
 ├─────────────────────────────────────┤
-│           Domain Services           │  nutritionCalc, debtCalculator
+│           Domain Services           │  nutritionCalc, volumeCalc     
 ├─────────────────────────────────────┤
-│           Repositories              │  ProductRepo, TransactionRepo
+│           Repositories              │  ProductRepo, WorkoutRepo    
 ├─────────────────────────────────────┤
 │     Local DB (SQLite)  │  Remote   │  Supabase client, sync queue
 └─────────────────────────────────────┘
@@ -107,11 +97,10 @@ Root (Tab or Drawer)
 
 | Module | Owns | Does not own |
 |--------|------|--------------|
-| **Fitness** | products, food_log, exercises, workouts | transactions, debts |
-| **Finance** | categories, transactions, savings, debts | food, workouts |
+| **Fitness** | products, food_log, exercises, workouts | — |
 | **Shared** | auth, settings, sync engine, AI client, theme | domain-specific business rules |
 
-**Shared AI client:** one service; system prompt varies by module (`fitness` vs `finance` context).
+**Shared AI client:** one service with a `fitness` system-prompt context.
 
 ---
 
@@ -121,15 +110,7 @@ Root (Tab or Drawer)
 products ──────< food_log_entries
 
 exercises ─────< workout_sets >────── workout_sessions
-
-categories ────< transactions
-
-savings_goals ─< savings_contributions
-
-debts ─────────< debt_payments
 ```
-
-No cross-module foreign keys required for v1.
 
 ---
 
@@ -195,17 +176,12 @@ No cross-module foreign keys required for v1.
 personal_project/
 ├── app/                    # Expo Router screens
 │   ├── (tabs)/
-│   │   ├── fitness/
-│   │   └── finance/
+│   │   └── fitness/
 │   └── settings/
 ├── src/
 │   ├── components/         # shared UI
 │   ├── modules/
-│   │   ├── fitness/
-│   │   │   ├── repositories/
-│   │   │   ├── services/
-│   │   │   └── types/
-│   │   └── finance/
+│   │   └── fitness/
 │   │       ├── repositories/
 │   │       ├── services/
 │   │       └── types/
@@ -239,7 +215,7 @@ personal_project/
 
 | Level | Focus |
 |-------|-------|
-| Unit | debt balance math, calorie totals, sync merge |
+| Unit | calorie totals, sync merge |
 | Integration | repository + SQLite |
 | E2E (optional) | Detox / Maestro for critical flows |
 
@@ -251,7 +227,7 @@ For personal app, prioritize **unit tests on calculations** over full E2E.
 
 | # | Decision | Rationale | Status |
 |---|----------|-----------|--------|
-| ADR-1 | Single app, two modules | Less duplication | Proposed |
+| ADR-1 | Fitness-only app; finance split into its own plan | Keep scope focused | Accepted |
 | ADR-2 | SQLite first, Supabase second | Offline logging day 1 | Proposed |
 | ADR-3 | Repository pattern | Clean sync boundary | Proposed |
 | ADR-4 | Last-write-wins sync | OK for single user | Proposed |

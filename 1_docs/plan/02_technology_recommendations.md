@@ -63,10 +63,10 @@ This document answers the open questions from [project_idea.md](../project_idea.
 |---|---|
 | **What** | Hosted PostgreSQL + Auth + Storage + Edge Functions |
 | **Free tier** | Generous for personal use (500MB DB, 50K monthly active users — far more than you need) |
-| **Pros** | Real SQL, relational data (transactions, debts, workouts), Row Level Security, easy REST |
+| **Pros** | Real SQL, relational data (products, meals, workouts), Row Level Security, easy REST |
 | **Cons** | Requires internet for sync; need local cache for offline |
 
-**Fit:** Finance (relational) + Fitness (products, meals, workouts) map cleanly to SQL tables.
+**Fit:** Fitness (products, meals, workouts) maps cleanly to SQL tables.
 
 ### Option B — Firebase (Firestore)
 
@@ -113,7 +113,7 @@ This document answers the open questions from [project_idea.md](../project_idea.
 ┌─────────────────────────────────────┐
 │     Supabase (PostgreSQL)           │
 │  products, meals, workouts,         │
-│  transactions, debts, ai_logs       │
+│  ai_logs                            │
 └─────────────────────────────────────┘
 ```
 

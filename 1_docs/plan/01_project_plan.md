@@ -2,12 +2,9 @@
 
 ## 1. Vision
 
-Build personal mobile apps that support two daily-life areas:
+Build a personal mobile app for **health & fitness** — know what you eat, track workouts, and improve over time.
 
-- **Health & fitness** — know what you eat, track workouts, and improve over time  
-- **Money** — see where money goes, track savings goals, and manage debt  
-
-Both areas benefit from **AI** for faster logging, smarter suggestions, and plain-language insights — but AI is an enhancement layer, not the core product.
+It benefits from **AI** for faster logging, smarter suggestions, and plain-language insights — but AI is an enhancement layer, not the core product.
 
 ---
 
@@ -17,37 +14,19 @@ Both areas benefit from **AI** for faster logging, smarter suggestions, and plai
 |------|------------|---------------------------|
 | Nutrition | Manual entry is slow; grocery products repeat; **MyFitnessPal** is cluttered with wrong foods; **ChatGPT** has no memory or barcode | Scan barcodes, save *your* products once, log in few taps; AI parses text but **you confirm** before save |
 | Workouts | Hard to remember sets/reps/progress | Simple workout log with history and trends |
-| Spending | Easy to lose track of small purchases | Fast expense entry with categories and summaries |
-| Savings | Goals feel abstract | Visible progress toward savings targets |
-| Debt | Multiple balances, unclear payoff path | One place to see debt and track payments |
 
 ---
 
-## 3. Product shape (recommendation)
-
-### Option A — Single “Life Hub” app (recommended)
-
-One install with two main modules:
+## 3. Product shape
 
 ```
 Home
-├── Fitness
-│   ├── Nutrition (calories, barcode, meals)
-│   └── Workouts (strength, history)
-└── Finance
-    ├── Transactions (spend / save)
-    └── Debt
+└── Fitness
+    ├── Nutrition (calories, barcode, meals)
+    └── Workouts (strength, history)
 ```
 
-**Pros:** one codebase, shared auth/settings, shared AI chat, one backup/sync story  
-**Cons:** slightly larger app; modules must stay visually distinct  
-
-### Option B — Two separate apps
-
-**Pros:** simpler mental model per app, smaller individual scope  
-**Cons:** duplicate infrastructure (auth, DB, AI, UI shell)  
-
-**Recommendation:** Start with **Option A**. You can split later if needed.
+Finance was originally a second module here; it is now planned separately in [finance_app](../../../finance_app/00_index.md).
 
 ---
 
@@ -76,7 +55,7 @@ Design for **single-user** first. That simplifies auth (device-local or one acco
 
 ## 6. Feature scope tiers
 
-Use these labels in outlines `03` and `04`:
+Use these labels in outline `03`:
 
 | Tier | Meaning |
 |------|---------|
@@ -98,13 +77,6 @@ AI should reduce friction, not replace structure.
 - Generate or adjust workout plans from goals and history  
 - Answer “what did I eat most this week?” from your data  
 
-### Finance AI (examples)
-
-- Parse “coffee 150, grab 320” into categorized transactions  
-- Summarize spending by category for a date range  
-- Suggest budget adjustments from patterns  
-- Debt payoff scenarios (“if I pay X extra on card A…”)  
-
 ### AI guardrails
 
 - Always show parsed result for **user confirmation** before save  
@@ -118,7 +90,7 @@ AI should reduce friction, not replace structure.
 | Requirement | Target |
 |-------------|--------|
 | Performance | Barcode scan → product lookup in &lt; 2s when cached |
-| Privacy | Personal financial and health data — encrypt in transit; consider local encryption |
+| Privacy | Personal health data — encrypt in transit; consider local encryption |
 | Backup | Cloud sync or export (CSV/JSON) so data is not trapped on one phone |
 | Cost | Free tier stack where possible (see `02_technology_recommendations.md`) |
 
@@ -128,7 +100,7 @@ AI should reduce friction, not replace structure.
 
 | # | Decision | Options | Notes |
 |---|----------|---------|-------|
-| 1 | One app vs two | Life Hub vs separate | Recommend Life Hub |
+| 1 | One app vs two | Life Hub vs separate | Decided: separate — finance split out |
 | 2 | Framework | React Native (Expo) vs Flutter | See tech doc |
 | 3 | Database | Supabase / Firebase / SQLite + sync | See tech doc |
 | 4 | Barcode source | Open Food Facts + manual override | Free product API; your DB for custom items |
@@ -143,8 +115,6 @@ You will know v1 is successful when:
 
 - [ ] You can scan a grocery barcode and log a meal in under 30 seconds  
 - [ ] You can log a workout with sets/reps/weight in under 1 minute  
-- [ ] You can record an expense and see weekly spending summary  
-- [ ] You can see total debt and log a payment  
 - [ ] Data persists across app restarts and (optionally) device reinstall via backup  
 
 ---
@@ -153,7 +123,7 @@ You will know v1 is successful when:
 
 | Risk | Mitigation |
 |------|------------|
-| Scope creep (two big apps at once) | Strict v1 Must-have lists; one module at a time in roadmap |
+| Scope creep | Strict v1 Must-have lists; one module at a time in roadmap |
 | Barcode API missing local products | Save manual product form; build personal product library |
 | AI costs | Rate limits, confirm-before-save, optional AI features |
 | Framework regret | Pick one stack in week 1; prototype barcode + one CRUD screen before committing |
@@ -167,6 +137,5 @@ This plan is the anchor. Details live in:
 
 - **Tech choices** → `02_technology_recommendations.md`  
 - **Fitness features** → `03_fitness_app_outline.md`  
-- **Finance features** → `04_finance_app_outline.md`  
 - **Structure** → `05_architecture_outline.md`  
 - **Build order** → `06_development_roadmap.md`

@@ -14,8 +14,8 @@ This document updates the generic recommendations in `02_technology_recommendati
 | Backend | **ASP.NET Core Minimal API** (your strength) + **PostgreSQL** or **SQLite** |
 | Database (free) | **PostgreSQL** via Supabase free tier, or **SQLite** locally with optional sync later |
 | AI | Your **.NET API** calls OpenAI/Gemini — structured JSON, keys stay server-side |
-| What to build first | **Nutrition / calorie module only** — solve your own daily pain before Finance |
-| App shape | Still **one Life Hub app**, but ship **Fitness nutrition v1** before everything else |
+| What to build first | **Nutrition / calorie module only** — solve your own daily pain first |
+| App shape | Fitness app; ship **nutrition v1** before everything else (Finance is planned separately in [finance_app](../../../finance_app/00_index.md)) |
 
 **Why this stack:** You learn **React** (career), keep **C#** for API and data logic (comfort), and build something you will actually use every day.
 
@@ -130,7 +130,7 @@ Barcode and saved products are the source of truth. AI is a **input assistant**,
 
 ## 5. Revised v1 scope (nutrition only — for you)
 
-Build this before Finance or workouts if calorie tracking is the main pain.
+Build this before workouts if calorie tracking is the main pain.
 
 ### Must-have (your personal v1)
 
@@ -149,7 +149,7 @@ Build this before Finance or workouts if calorie tracking is the main pain.
 
 ### Later
 
-- Workouts, Finance modules (already outlined in `03` and `04`)
+- Workouts module (already outlined in `03`)
 - Charts, macros, photos
 
 ---
@@ -203,7 +203,7 @@ Use **EF Core** + **FluentValidation** — patterns you already know.
 |----------|------------|
 | `02_technology_recommendations.md` | Prefer .NET API over Edge Functions for AI |
 | `03_fitness_app_outline.md` | Prioritize nutrition; add “anti-MFP” UX notes |
-| `06_development_roadmap.md` | Option: **Nutrition-only v1** before workouts/finance |
+| `06_development_roadmap.md` | Option: **Nutrition-only v1** before workouts |
 | `05_architecture_outline.md` | Record stack: Expo + .NET API + PostgreSQL |
 
 ---
@@ -214,6 +214,6 @@ Use **EF Core** + **FluentValidation** — patterns you already know.
 2. **Use .NET for the API** — you move faster; AI and data logic live where you are strong.  
 3. **Start with calorie tracking only** — build the app *you* wish MyFitnessPal was.  
 4. **Replace ChatGPT with structured AI** — same convenience, your database, confirm before save.  
-5. **Keep Finance and workouts in the plan** — but do not block nutrition v1 on them.
+5. **Keep workouts in the plan** — but do not block nutrition v1 on them.
 
 When you are ready to code, the first milestone is: **scan a grocery barcode → save product → log it → see calories remaining**. Everything else waits.
