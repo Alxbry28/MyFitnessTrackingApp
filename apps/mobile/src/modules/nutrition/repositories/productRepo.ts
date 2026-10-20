@@ -105,7 +105,11 @@ async function barcodeTaken(db: SQLiteDatabase, barcode: string | null, exceptId
   return existing !== null && existing.id !== exceptId;
 }
 
-export async function create(db: SQLiteDatabase, input: ProductInput): Promise<SaveResult> {
+export async function create(
+  db: SQLiteDatabase,
+  input: ProductInput,
+  source: ProductSource = "manual",
+): Promise<SaveResult> {
   if (await barcodeTaken(db, input.barcode)) return { ok: false, error: "duplicate_barcode" };
 
   const id = randomUUID();
@@ -115,7 +119,7 @@ export async function create(db: SQLiteDatabase, input: ProductInput): Promise<S
       `INSERT INTO products (id, barcode, name, brand, serving_size, serving_grams, kcal_per_100g,
          protein_per_100g, carbs_per_100g, fat_per_100g, net_weight_g, source, is_favorite,
          created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', 0, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
       id,
       input.barcode,
       input.name,
@@ -127,6 +131,7 @@ export async function create(db: SQLiteDatabase, input: ProductInput): Promise<S
       input.carbsPer100g,
       input.fatPer100g,
       input.netWeightG,
+      source,
       now,
       now,
     );

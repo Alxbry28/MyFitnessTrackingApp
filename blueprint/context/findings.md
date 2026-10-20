@@ -54,3 +54,11 @@
 **Why it matters:** The torch button's label is the action ("Torch off" while the torch is on) but it also sets `accessibilityState={{ checked: torch }}`, so TalkBack reads "Torch off, checked" when the torch is lit. The two signals disagree for screen-reader users.
 **Suggested fix:** Drop `accessibilityState` and keep the action label (matches the spec copy), or keep the state with a fixed "Torch" label and `accessibilityRole="switch"`. No current requirement is lost.
 **Resolution:**
+
+### F-07 [P3] open - Open Food Facts draft can show exponent notation or a zero serving weight
+
+**File:** apps/mobile/src/modules/nutrition/services/offProduct.ts:48 (asField at :52, used at :92-93)
+**Found:** 2026-10-20 by /audit (scope: current; lens: quality; independent review)
+**Why it matters:** `positive()` has no upper bound and `asField()` uses `String(Math.round(v * 100) / 100)`. A community value such as `product_quantity: 1e25` reaches the form as "1e+25" (the spec's draft format says "no exponent notation"), and the form schema accepts it, so an absurd net weight can be saved with one tap. A tiny `serving_quantity` such as 0.001 rounds to "0", which the form then rejects as "Must be more than 0" while the per-100 g values were scaled from the unrounded weight. Both were reproduced with the scratch parser run. Unlikely with real data and the user reviews before saving, so this is polish, not a contract break that blocks.
+**Suggested fix:** Pass serving grams and net weight through a bounded check (for example `inRange(value, 0.01, 100000)` or a similar plausible cap) so out-of-range values are left blank like kcal and macros. No new machinery; no current requirement is lost.
+**Resolution:**

@@ -40,7 +40,7 @@ export default function ScanScreen() {
           params: meal ? { productId: product.id, meal } : { productId: product.id },
         });
       } else {
-        router.replace({ pathname: "/product/[id]", params: { id: "new", barcode, then: "log" } });
+        router.replace({ pathname: "/lookup/[barcode]", params: { barcode } });
       }
     } catch {
       setError("Couldn't check your library. Try again.");
