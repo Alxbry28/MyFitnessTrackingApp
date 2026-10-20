@@ -426,3 +426,38 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# Expo / React Native
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+*.apk
+*.aab
+/android/
+/ios/
+.kotlin/
+
+# Environment files (commit .env.example only)
+.env
+.env*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Personal health data must never reach the public repo (ADR-17)
+personal/
+exports/
+*.export.json
+BUGS.md
