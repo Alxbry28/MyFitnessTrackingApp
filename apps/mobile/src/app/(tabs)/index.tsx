@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import { CalorieSummary } from "@/modules/nutrition/components/CalorieSummary";
+import { QuickAdd } from "@/modules/nutrition/components/QuickAdd";
 import { useCalorieGoal } from "@/modules/nutrition/hooks/useCalorieGoal";
 import { useDayLog } from "@/modules/nutrition/hooks/useDayLog";
 import { dayKey, MEAL_LABELS } from "@/modules/nutrition/services/mealTime";
@@ -53,6 +54,7 @@ export default function TodayScreen() {
       >
         <Text style={styles.scanLabel}>Scan</Text>
       </Pressable>
+      <QuickAdd />
       <View style={styles.card}>
         {log.groups.map((group, index) => {
           const label = MEAL_LABELS[group.mealType];

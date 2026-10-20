@@ -99,6 +99,45 @@ export async function findByBarcode(db: SQLiteDatabase, barcode: string): Promis
   return row ? toProduct(row) : null;
 }
 
+export async function favorites(db: SQLiteDatabase): Promise<Product[]> {
+  const rows = await db.getAllAsync<ProductRow>(
+    `SELECT ${COLUMNS} FROM products
+     WHERE is_favorite = 1 AND deleted_at IS NULL ORDER BY name COLLATE NOCASE LIMIT 12`,
+  );
+  return rows.map(toProduct);
+}
+
+// Distinct products logged since sinceIso, newest log first (DATABASE.md §3 Recents).
+export async function recentlyLogged(db: SQLiteDatabase, sinceIso: string): Promise<Product[]> {
+  const rows = await db.getAllAsync<ProductRow>(
+    `WITH recent AS (
+       SELECT product_id, MAX(logged_at) AS last_at FROM food_log_entries
+       WHERE logged_at >= ? AND deleted_at IS NULL AND product_id IS NOT NULL
+       GROUP BY product_id
+     )
+     SELECT ${COLUMNS} FROM products JOIN recent ON recent.product_id = products.id
+     WHERE products.deleted_at IS NULL
+     ORDER BY recent.last_at DESC
+     LIMIT 12`,
+    sinceIso,
+  );
+  return rows.map(toProduct);
+}
+
+export async function setFavorite(
+  db: SQLiteDatabase,
+  id: string,
+  isFavorite: boolean,
+): Promise<{ ok: true } | { ok: false; error: "not_found" }> {
+  const result = await db.runAsync(
+    "UPDATE products SET is_favorite = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+    isFavorite ? 1 : 0,
+    new Date().toISOString(),
+    id,
+  );
+  return result.changes === 0 ? { ok: false, error: "not_found" } : { ok: true };
+}
+
 async function barcodeTaken(db: SQLiteDatabase, barcode: string | null, exceptId?: string) {
   if (barcode === null) return false;
   const existing = await findByBarcode(db, barcode);

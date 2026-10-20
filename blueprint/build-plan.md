@@ -14,7 +14,7 @@ Pre-build (not features): scaffold the Expo app, run it in Expo Go.
 - [x] 3. **Today screen** - calorie goal in Settings; Today shows eaten / goal / remaining and per-meal summaries
 - [x] 4. **Barcode scanner** - scan with `expo-camera`, vibrate, open the matching saved product
 - [x] 5. **Open Food Facts lookup** - on local miss fetch, preview, edit, save and log; manual form with barcode prefilled when not found or offline
-- [ ] 6. **One-tap re-log** - recent products (7 days), favorites, quick-add on Today
+- [x] 6. **One-tap re-log** - recent products (7 days), favorites, quick-add on Today
 - [ ] 7. **Day navigation and JSON export** - previous/next day on Log; JSON backup via share sheet
 
 ## v1.1 - Pantry, body weight, friends beta (November)

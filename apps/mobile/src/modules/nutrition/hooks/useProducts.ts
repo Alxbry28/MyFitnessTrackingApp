@@ -43,5 +43,20 @@ export function useProducts() {
     void load();
   }, [load]);
 
-  return { query, setQuery, products, total, status, retry };
+  const [favoriteError, setFavoriteError] = useState<string | null>(null);
+
+  const toggleFavorite = useCallback(
+    async (product: Product) => {
+      setFavoriteError(null);
+      try {
+        await productRepo.setFavorite(db, product.id, !product.isFavorite);
+      } catch {
+        setFavoriteError("Couldn't update favorite.");
+      }
+      await load();
+    },
+    [db, load],
+  );
+
+  return { query, setQuery, products, total, status, retry, toggleFavorite, favoriteError };
 }

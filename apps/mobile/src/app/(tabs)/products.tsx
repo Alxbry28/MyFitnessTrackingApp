@@ -14,7 +14,7 @@ function openProduct(id: string) {
 export default function ProductsScreen() {
   const theme = useTheme();
   const styles = makeStyles(theme);
-  const { query, setQuery, products, total, status, retry } = useProducts();
+  const { query, setQuery, products, total, status, retry, toggleFavorite, favoriteError } = useProducts();
 
   const addButton = (
     <Pressable
@@ -60,7 +60,13 @@ export default function ProductsScreen() {
       <FlatList
         data={products}
         keyExtractor={(item: Product) => item.id}
-        renderItem={({ item }) => <ProductRow product={item} onPress={(p) => openProduct(p.id)} />}
+        renderItem={({ item }) => (
+          <ProductRow
+            product={item}
+            onPress={(p) => openProduct(p.id)}
+            onToggleFavorite={(p) => void toggleFavorite(p)}
+          />
+        )}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={styles.listContent}
         keyboardShouldPersistTaps="handled"
@@ -90,6 +96,11 @@ export default function ProductsScreen() {
       <Text style={styles.count}>
         {total} {total === 1 ? "product" : "products"} · values per 100 g
       </Text>
+      {favoriteError && (
+        <Text style={styles.error} accessibilityLiveRegion="polite">
+          {favoriteError}
+        </Text>
+      )}
       {body}
       {showFloatingAdd && <View style={styles.fab}>{addButton}</View>}
     </View>
@@ -111,6 +122,7 @@ function makeStyles(theme: Theme) {
       fontSize: fontSize.md,
     },
     count: { color: colors.muted, fontSize: fontSize.xs },
+    error: { color: colors.over, fontSize: fontSize.sm },
     center: { flex: 1, alignItems: "center", justifyContent: "center", gap: space[4] },
     message: { color: colors.muted, fontSize: fontSize.md, textAlign: "center" },
     listContent: {
