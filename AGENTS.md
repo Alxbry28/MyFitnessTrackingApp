@@ -323,7 +323,7 @@ checks do not make the Blueprint unusable.
 
 ## Commands
 
-Expo SDK 58 (React Native + TypeScript + Expo Router), npm. The mobile app lives
+Expo SDK 57 (React Native + TypeScript + Expo Router), npm. The mobile app lives
 in `apps/mobile/`; run every command below from that folder. Its own
 `apps/mobile/AGENTS.md` holds Expo's agent notes (read the versioned Expo docs
 instead of relying on memory, and add packages with `npx expo install`).

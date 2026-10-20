@@ -3,6 +3,7 @@
 **From build-plan:** feature 1
 **Build attempt:** 1
 **Branch:** feature/product-library
+**Status:** verified
 
 ## Goal
 
@@ -105,7 +106,7 @@ commits. `/complete` makes the final commit.
 
 ## Build steps
 
-- [ ] **1. Dependencies and theme tokens.**
+- [x] **1. Dependencies and theme tokens.**
   - Check the SDK 58 docs for `expo-sqlite`, `expo-crypto` and Expo Router tabs
     before writing code (rule in `apps/mobile/AGENTS.md`).
   - Run `npx expo install expo-sqlite expo-crypto react-hook-form zod @hookform/resolvers`.
@@ -116,7 +117,7 @@ commits. `/complete` makes the final commit.
     `src/lib/theme/useTheme.ts`.
   - **Done when:** `npx tsc --noEmit`, `npx expo lint` and `npx expo-doctor` pass,
     and the app still opens in Expo Go.
-- [ ] **2. Tab shell.**
+- [x] **2. Tab shell.**
   - Replace `src/app/index.tsx` with `src/app/(tabs)/_layout.tsx` (themed `Tabs`)
     plus `index.tsx` (Today), `log.tsx`, `products.tsx` and `settings.tsx`.
   - Make `src/app/_layout.tsx` a `Stack` that hosts the `(tabs)` group.
@@ -124,7 +125,7 @@ commits. `/complete` makes the final commit.
     Otherwise use labels only.
   - **Done when:** typecheck and lint pass, and on the phone the four tabs switch
     in light and dark mode with Today first.
-- [ ] **3. Database and migration runner.**
+- [x] **3. Database and migration runner.**
   - `src/db/client.ts` opens the database and runs migrations at startup.
     Prefer `SQLiteProvider` with an init callback in the root layout, plus
     `useSQLiteContext` in hooks, if the SDK 58 docs confirm it.
@@ -135,7 +136,7 @@ commits. `/complete` makes the final commit.
   - **Done when:** typecheck and lint pass, the app opens on the phone, a reload
     opens again without re-running `001`, and a temporary `user_version` log
     shows 1. Remove that log before review.
-- [ ] **4. Product types, schema and repository.**
+- [x] **4. Product types, schema and repository.**
   - `src/modules/nutrition/types/product.ts` holds the camelCase `Product` and
     `ProductInput` types.
   - `src/modules/nutrition/services/productSchema.ts` holds the zod form schema
@@ -149,7 +150,7 @@ commits. `/complete` makes the final commit.
     instead of throwing a raw SQLite error. Other write errors still reject.
   - **Done when:** typecheck and lint pass, and the repo is reachable from a hook
     (no screen imports SQL).
-- [ ] **5. Products list screen.**
+- [x] **5. Products list screen.**
   - `src/modules/nutrition/hooks/useProducts.ts` handles the search query and
     loading, error and retry states, and refreshes when the tab regains focus.
   - Add a `ProductRow` component.
@@ -157,7 +158,7 @@ commits. `/complete` makes the final commit.
     the empty, no-match and error states, and the Add product button.
   - **Done when:** typecheck and lint pass, and the phone shows the empty state
     on a fresh install. Search behavior is checked in step 6 once products exist.
-- [ ] **6. Product form (new and edit).**
+- [x] **6. Product form (new and edit).**
   - `src/app/product/[id].tsx` handles both modes: `new` for create, otherwise
     an edit by UUID.
   - Add a `ProductForm` component using `react-hook-form` with the zod resolver.
@@ -172,6 +173,21 @@ commits. `/complete` makes the final commit.
     - Each validation rule shows its error.
     - A second product with an existing barcode shows the duplicate error.
     - Values survive an app restart.
+- [x] **7. Align to Expo SDK 57 (added mid-feature).**
+  - Why: the phone's Expo Go supports SDK 57, so the SDK 58 build won't open.
+    `package.json` already pins `expo ~57.0.30` and `react-native 0.86.3`,
+    and the broken `node_modules/react-native` has been reinstalled.
+  - Run `npx expo install --fix` so every Expo-managed package, including the dev
+    packages still on 58-era ranges (`eslint-config-expo`, `@types/react`), uses
+    its SDK 57 version. Don't hand-edit versions.
+  - Re-check the APIs used in steps 1-6 (`SQLiteProvider`, `useSQLiteContext`,
+    `randomUUID`, Router `Tabs`) against the SDK 57 docs, and adjust any call
+    that differs.
+  - Update the SDK references to 57 in root `AGENTS.md` (Commands) and in this
+    spec's Notes for the AI.
+  - **Done when:** `npx expo install --check` reports no mismatches, `npx
+    expo-doctor`, `npx tsc --noEmit` and `npx expo lint` pass, and the app opens
+    on the phone in Expo Go with the four tabs and the Products list working.
 
 ## Files / areas
 
@@ -261,7 +277,7 @@ CREATE INDEX ix_products_name ON products(name COLLATE NOCASE);
 ## Notes for the AI
 
 - Run every command from `apps/mobile/`. Add packages with `npx expo install`.
-- Read the versioned Expo SDK 58 docs before using any Expo API. Don't rely on
+- Read the versioned Expo SDK 57 docs before using any Expo API. Don't rely on
   memory.
 - Layers (`1_docs/ARCHITECTURE.md` §2):
   - Route files compose components and hooks only.
@@ -278,3 +294,12 @@ CREATE INDEX ix_products_name ON products(name COLLATE NOCASE);
   `theme.css` is newer and wins for this feature. Note the drift in the review
   packet rather than editing the design system doc here.
 - Comments explain *why* only. No em dashes in comments.
+
+## Verification
+
+- Automated: `npx tsc --noEmit`, `npx expo lint` and `npx expo-doctor` (20/20) pass
+  from `apps/mobile/`. The zod schema and `escapeLike` were exercised with sample
+  inputs in a scratch script (no test runner yet).
+- **Pending on the phone:** the Expo Go Done-when checks in steps 1, 2, 3 and 6
+  (tabs in light and dark, reload without re-running `001`, 5 products, search,
+  edit, validation errors, duplicate barcode, restart persistence).
