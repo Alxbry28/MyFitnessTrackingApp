@@ -4,6 +4,7 @@ import { Controller, useForm } from "react-hook-form";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
+import { ExportCard } from "@/modules/backup/components/ExportCard";
 import { useCalorieGoal } from "@/modules/nutrition/hooks/useCalorieGoal";
 import { goalSchema, type GoalFormValues, type GoalInput } from "@/modules/nutrition/services/goalSchema";
 
@@ -35,6 +36,10 @@ export default function SettingsScreen() {
         Daily goal
       </Text>
       <View style={styles.card}>{goalCard}</View>
+      <Text style={[styles.section, styles.sectionGap]} accessibilityRole="header">
+        Your data
+      </Text>
+      <ExportCard />
     </ScrollView>
   );
 }
@@ -124,6 +129,7 @@ function makeStyles(theme: Theme) {
       textTransform: "uppercase",
       letterSpacing: 0.6,
     },
+    sectionGap: { marginTop: space[4] },
     card: { padding: space[4], borderRadius: radius.md, backgroundColor: colors.surface },
     center: { alignItems: "center", gap: space[3] },
     message: { color: colors.muted, fontSize: fontSize.md, textAlign: "center" },

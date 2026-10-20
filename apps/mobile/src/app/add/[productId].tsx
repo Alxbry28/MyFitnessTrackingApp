@@ -13,10 +13,10 @@ function isMealType(value: string | undefined): value is MealType {
 }
 
 export default function AddToMealScreen() {
-  const { productId, meal } = useLocalSearchParams<{ productId: string; meal?: string }>();
+  const { productId, meal, day } = useLocalSearchParams<{ productId: string; meal?: string; day?: string }>();
   const theme = useTheme();
   const styles = makeStyles(theme);
-  const { state, retry, save } = useAddEntry(productId);
+  const { state, retry, save } = useAddEntry(productId, day);
 
   if (state.status === "loading") {
     return (

@@ -27,7 +27,14 @@
         }
       ],
       "expo-sqlite",
-      ["expo-camera", { "recordAudioAndroid": false }]
+      [
+        "expo-camera",
+        {
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-sharing",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

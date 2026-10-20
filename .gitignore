@@ -282,6 +282,8 @@ Generated_Code/
 # because we have git ;-)
 _UpgradeReport_Files/
 Backup*/
+# Backup*/ also matches this app source folder because Git on Windows ignores case.
+!apps/mobile/src/modules/backup/
 UpgradeLog*.XML
 UpgradeLog*.htm
 ServiceFabricBackup/

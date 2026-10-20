@@ -1,17 +1,14 @@
 import { router } from "expo-router";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
+import { DayNavigator } from "@/modules/nutrition/components/DayNavigator";
 import { MealSection } from "@/modules/nutrition/components/MealSection";
 import { useDayLog } from "@/modules/nutrition/hooks/useDayLog";
 import { dayKey } from "@/modules/nutrition/services/mealTime";
 import { formatKcal, formatMacro } from "@/modules/nutrition/services/nutritionCalc";
-import type { FoodLogEntry, MealType } from "@/modules/nutrition/types/foodLog";
-
-function addFood(meal: MealType) {
-  router.push({ pathname: "/add", params: { meal } });
-}
+import type { FoodLogEntry } from "@/modules/nutrition/types/foodLog";
 
 function editEntry(entry: FoodLogEntry) {
   router.push({ pathname: "/entry/[id]", params: { id: entry.id } });
@@ -20,8 +17,8 @@ function editEntry(entry: FoodLogEntry) {
 export default function LogScreen() {
   const theme = useTheme();
   const styles = makeStyles(theme);
-  // Day navigation arrives in feature 7; until then the Log shows today.
-  const day = dayKey(new Date());
+  const today = dayKey(new Date());
+  const [day, setDay] = useState(today);
   const { status, retry, groups, totals, isEmpty, remove, undo, pendingUndo, actionError } =
     useDayLog(day);
 
@@ -52,12 +49,14 @@ export default function LogScreen() {
             P {formatMacro(totals.proteinG)} · C {formatMacro(totals.carbsG)} · F {formatMacro(totals.fatG)}
           </Text>
         </View>
-        {isEmpty && <Text style={styles.message}>No food logged today</Text>}
+        {isEmpty && (
+          <Text style={styles.message}>{day === today ? "No food logged today" : "Nothing logged this day"}</Text>
+        )}
         {groups.map((group) => (
           <MealSection
             key={group.mealType}
             group={group}
-            onAdd={addFood}
+            onAdd={(meal) => router.push({ pathname: "/add", params: { meal, day } })}
             onEdit={editEntry}
             onDelete={(entry) => void remove(entry)}
           />
@@ -68,6 +67,7 @@ export default function LogScreen() {
 
   return (
     <View style={styles.screen}>
+      <DayNavigator day={day} today={today} onChange={setDay} />
       {body}
       {actionError && (
         <Text style={styles.error} accessibilityLiveRegion="polite">

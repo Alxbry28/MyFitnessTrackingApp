@@ -15,6 +15,34 @@ export function dayKey(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+const DAY_KEY = /^(\d{4})-(\d{2})-(\d{2})$/;
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// Noon keeps day arithmetic clear of DST shifts at midnight.
+export function dayFromKey(day: string): Date {
+  const [, y, m, d] = DAY_KEY.exec(day) ?? [];
+  return new Date(Number(y), Number(m) - 1, Number(d), 12);
+}
+
+export function addDays(day: string, n: number): string {
+  const date = dayFromKey(day);
+  return dayKey(new Date(date.getFullYear(), date.getMonth(), date.getDate() + n, 12));
+}
+
+// A real calendar day in YYYY-MM-DD form; rejects shapes like 2026-02-30.
+export function isDayKey(value: string): boolean {
+  return DAY_KEY.test(value) && dayKey(dayFromKey(value)) === value;
+}
+
+export function formatDayLabel(day: string, today: string): string {
+  if (day === today) return "Today";
+  if (day === addDays(today, -1)) return "Yesterday";
+  const date = dayFromKey(day);
+  const label = `${WEEKDAYS[date.getDay()]}, ${MONTHS[date.getMonth()]} ${date.getDate()}`;
+  return day.slice(0, 4) === today.slice(0, 4) ? label : `${label}, ${date.getFullYear()}`;
+}
+
 // Cutoffs from UX_FLOWS §2: before 10:30 breakfast, 15:00 lunch, 20:00 dinner.
 export function defaultMeal(date: Date): MealType {
   const minutes = date.getHours() * 60 + date.getMinutes();
