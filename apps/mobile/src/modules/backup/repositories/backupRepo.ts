@@ -8,6 +8,7 @@ export const BACKUP_TABLES = [
   "body_profile",
   "import_runs",
   "body_weight_entries",
+  "text_log_matches",
 ] as const;
 
 export type BackupTable = (typeof BACKUP_TABLES)[number];

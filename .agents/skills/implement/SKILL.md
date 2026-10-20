@@ -32,6 +32,10 @@ contains the product contract and applicable conventions. Read one targeted
 section only when the spec explicitly depends on a missing detail. Read findings
 and review state once at the final handoff.
 
+Exception: when the spec's Design reference links prototype files, read those
+exact HTML frames and their CSS before the first UI step. The spec's summary is
+not enough to rebuild the layout.
+
 Inspect the implementation surface in one targeted, batched read before editing.
 Use one additional read batch only when an exact dependency remains unknown and
 blocks the next change. Do not list or survey the repository, inspect unrelated
@@ -75,7 +79,9 @@ For each step:
    after all steps. Run Verify earlier only when the step explicitly requires it
    or later work cannot proceed without it.
 4. Self-review the diff for contract coverage, authorization and tenant scope,
-   error handling, accidental scope, and unrelated changes.
+   error handling, accidental scope, and unrelated changes. For a UI step with a
+   prototype reference, also compare the code against the frame's layout,
+   components, spacing, type, and tokens, and fix drift before checking the box.
 5. Check the step box only after its code and focused check pass. Mark a repaired
    finding `fixed`, never `closed`.
 
@@ -138,6 +144,13 @@ acceptance.
 Do not start a dev server. When a required runtime check needs one, ask the user
 to start it. Build output does not prove visual, persisted-data, authenticated,
 or end-to-end behavior.
+
+When the spec links prototype frames, compare screenshots before the final
+packet. Ask the user for a screenshot of each referenced screen from the running
+app, then compare each one with its prototype frame. Fix in-scope drift and ask
+for new screenshots. Report deliberate prototype gaps and any remaining
+differences in the final packet. If the user skips screenshots, record the
+prototype comparison as `not run`; never claim a visual match without them.
 
 If Verify or a required gate fails, repair only in-scope defects, rerun the
 narrow failing check, then rerun the final gate. Stop on repeated failure,

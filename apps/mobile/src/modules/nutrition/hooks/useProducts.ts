@@ -7,9 +7,9 @@ import type { Product } from "../types/product";
 
 type Status = "loading" | "ready" | "error";
 
-export function useProducts() {
+export function useProducts(initialQuery = "") {
   const db = useSQLiteContext();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState<Status>("loading");

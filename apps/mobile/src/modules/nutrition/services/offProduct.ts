@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { normalizeBarcode } from "./barcode";
 import { newProductForm, type ProductFormValues } from "./productSchema";
 
 // Open Food Facts data is untrusted community input (SECURITY.md). Every field is
@@ -12,21 +13,31 @@ export type OffResult =
 
 const MAX_TEXT = 200;
 
+export type OffSearchItem = { found: boolean; draft: ProductFormValues };
+export type OffSearchResult = { kind: "results"; items: OffSearchItem[] } | { kind: "error" };
+
 // Leaves are unknown on purpose: a null or oddly typed field must blank that field,
 // not fail the whole product.
+const offProduct = z.object({
+  code: z.unknown().optional(),
+  product_name: z.unknown().optional(),
+  brands: z.unknown().optional(),
+  serving_size: z.unknown().optional(),
+  serving_quantity: z.unknown().optional(),
+  product_quantity: z.unknown().optional(),
+  nutriments: z.record(z.string(), z.unknown()).nullish().catch(null),
+});
+
+type OffProduct = z.infer<typeof offProduct>;
+
 const offBody = z.object({
   status: z.unknown().optional(),
-  product: z
-    .object({
-      product_name: z.unknown().optional(),
-      brands: z.unknown().optional(),
-      serving_size: z.unknown().optional(),
-      serving_quantity: z.unknown().optional(),
-      product_quantity: z.unknown().optional(),
-      nutriments: z.record(z.string(), z.unknown()).nullish().catch(null),
-    })
-    .nullish(),
+  product: offProduct.nullish(),
 });
+
+const offSearchBody = z.object({ products: z.array(z.unknown()).catch([]) });
+
+const MAX_SEARCH_RESULTS = 10;
 
 function toNumber(value: unknown): number | null {
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
@@ -70,7 +81,31 @@ export function parseOffResponse(httpStatus: number, body: unknown, barcode: str
   if (!parsed.success) return { kind: "error" };
   const { status, product } = parsed.data;
   if (toNumber(status) === 0 || !product) return { kind: "not_found", draft: empty };
+  return draftFromProduct(product, barcode);
+}
 
+// Name search results: unusable entries are dropped, and a result without kcal
+// still prefills its name and brand (found: false).
+export function parseOffSearch(httpStatus: number, body: unknown): OffSearchResult {
+  if (httpStatus < 200 || httpStatus >= 300) return { kind: "error" };
+  const parsed = offSearchBody.safeParse(body);
+  if (!parsed.success) return { kind: "error" };
+
+  const items: OffSearchItem[] = [];
+  for (const raw of parsed.data.products) {
+    const product = offProduct.safeParse(raw);
+    if (!product.success) continue;
+    const barcode = typeof product.data.code === "string" ? (normalizeBarcode(product.data.code) ?? "") : "";
+    const result = draftFromProduct(product.data, barcode);
+    if (result.draft.name === "") continue;
+    items.push({ found: result.kind === "found", draft: result.draft });
+    if (items.length === MAX_SEARCH_RESULTS) break;
+  }
+  return { kind: "results", items };
+}
+
+function draftFromProduct(product: OffProduct, barcode: string): Exclude<OffResult, { kind: "error" }> {
+  const empty = newProductForm(barcode);
   const servingGrams = positive(toNumber(product.serving_quantity));
   const nutriments = product.nutriments ?? {};
   const kcal = inRange(per100(nutriments, "energy-kcal", servingGrams), 0, 900);

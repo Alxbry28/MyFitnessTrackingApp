@@ -44,7 +44,7 @@ One user per device. No accounts while data stays on the phone. Personal values
 - Recent and favorite products for one-tap re-log
 - Day navigation, edit entry quantity, JSON export backup
 
-**After v1:** pantry inventory (groceries, canned and opened items, supplements,
+**After v1:** paste my text log (rule-based, offline, g/ml/oz lines, Copy yesterday, previewed before saving, unmatched lines skipped; unmatched foods can be searched on Open Food Facts by name when online), pantry inventory (groceries, canned and opened items, supplements,
 recipes and cooked batches), body weight and BMI, friends-beta readiness, .NET
 API with sync, AI meal parsing and product and grocery photos, workouts, body measurements and calorie
 stats, scale sync, web dashboard, accounts.

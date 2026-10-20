@@ -61,6 +61,13 @@ export default function TodayScreen() {
       >
         <Text style={styles.secondaryLabel}>Log weight</Text>
       </Pressable>
+      <Pressable
+        onPress={() => router.push({ pathname: "/paste-log", params: { day: dayKey(new Date()) } })}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.weight, pressed && styles.pressed]}
+      >
+        <Text style={styles.secondaryLabel}>Type or paste a meal list</Text>
+      </Pressable>
       <QuickAdd />
       <View style={styles.card}>
         {log.groups.map((group, index) => {

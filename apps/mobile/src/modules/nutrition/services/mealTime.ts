@@ -35,6 +35,12 @@ export function isDayKey(value: string): boolean {
   return DAY_KEY.test(value) && dayKey(dayFromKey(value)) === value;
 }
 
+// A day from a route counts only if it's a real date that isn't in the future.
+export function logDay(requested: string | undefined): string {
+  const today = dayKey(new Date());
+  return requested && isDayKey(requested) && requested <= today ? requested : today;
+}
+
 export function formatDayLabel(day: string, today: string): string {
   if (day === today) return "Today";
   if (day === addDays(today, -1)) return "Yesterday";

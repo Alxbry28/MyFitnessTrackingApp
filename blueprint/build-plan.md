@@ -17,15 +17,26 @@ Pre-build (not features): scaffold the Expo app, run it in Expo Go.
 - [x] 6. **One-tap re-log** - recent products (7 days), favorites, quick-add on Today
 - [x] 7. **Day navigation and JSON export** - previous/next day on Log; JSON backup via share sheet
 
-## v1.1 - Pantry, body weight, friends beta (November)
+## v1.1 - Phone-only app, no API (due Oct 31, 2026)
+
+- [x] 29. **Paste text log** - built to `prototypes/text-log.html`: "Type or paste a meal list" on Today and Log opens a text screen (Paste, Copy yesterday and Lunch → Dinner chips); rules (no AI, offline) read `Meal:` headings and `250g`, `250ml` (1 ml = 1 g) or `8oz` (28.35 g) food lines; a heading that is not a meal logs as Snack unless changed; a Preview screen matches lines to my products and shows matched, to check and not found; fix a line by choosing or creating a product, with "Always use this" to remember it; when online, a "not found" line can search Open Food Facts by name to prefill the new-product form for review; Log saves the matched lines and skips the rest; nothing saves until Log
+- [x] 11. **Body weight and BMI** - body profile, weight log, 7-day trend, BMI on a Progress screen, Xiaomi CSV import
+- [ ] 14. **Backup restore** - import a JSON backup safely
+- [ ] 13. **First-run setup** - goal, units, height, sex, birth date, BMI scale, current weight, activity level; formula TDEE (Mifflin-St Jeor) suggests a calorie goal to accept or override; personal values become settings
+
+After 13 (not a feature): build the Android APK with `eas build -p android --profile preview` and use it daily.
 
 - [ ] 8. **Pantry and groceries** - pantry items plus stock movements ledger; add after scan; eat from pantry; remove with reason; log edits restore stock
 - [ ] 9. **Canned and opened items** - drained values, usual drained weight, opened can with grams left
 - [ ] 10. **Supplements** - supplement pantry items counted in grams per scoop
-- [x] 11. **Body weight and BMI** - body profile, weight log, 7-day trend, BMI on a Progress screen, Xiaomi CSV import
 - [ ] 12. **Recipes and cooked batches** - recipes, batches with settled cooked weight, per-100 g portions, cooking subtracts tracked items
-- [ ] 13. **First-run setup** - goal, units, height, sex, birth date, BMI scale, current weight, activity level; formula TDEE (Mifflin-St Jeor) suggests a calorie goal to accept or override; personal values become settings
-- [ ] 14. **Backup restore** - import a JSON backup safely
+- [ ] 19. **Workouts** - exercise library, start/active/complete session, sets with previous hints, history; exercise illustrations from `@bryllim/workout-guide` (ADR-20: art is CC BY-SA 4.0, credit Bryl Lim and Everkinetic, don't edit the art)
+- [ ] 20. **Body measurements** - measurement sites, sessions, change since start, waist-to-height
+- [ ] 21. **Calorie stats** - weekly averages, 30-day chart, learned TDEE from logged food and weight trend (formula TDEE ships in 13), suggested target
+
+## v1.2 - .NET API and friends beta (November)
+
+- [ ] 16. **.NET API foundation** - ASP.NET Core Minimal API with PostgreSQL on Render and Neon
 - [ ] 15. **Beta feedback and safety** - feedback button, Sentry crash reports, disclaimer and privacy page
 
 ## Later (December onward)
@@ -33,13 +44,9 @@ Pre-build (not features): scaffold the Expo app, run it in Expo Go.
 - [ ] 26. **Pantry label OCR** - on-device ML Kit text recognition (needs an EAS dev build); tap the label text to fill the product name; read the expiry date from EXP/BB text (later of two dates, DD/MM default) with +1 week/month/6 months/year chips as fallback; always confirm before saving
 - [ ] 27. **Expiry warnings** - "Expiring soon" list on Pantry and Today, plus local notifications with `expo-notifications` before `expires_at`
 - [ ] 28. **Receipt OCR** - scan a grocery receipt into a reviewed list of pantry items; remember each confirmed receipt line to product match so repeat items fill in automatically; build only if most shopping turns out to be at supermarkets
-- [ ] 16. **.NET API foundation** - ASP.NET Core Minimal API with PostgreSQL on Render and Neon
 - [ ] 25. **Product and grocery photos** - take or pick a photo for a product or pantry item, upload it through the API to file storage, show it in the product library and pantry; Open Food Facts image as fallback
 - [ ] 17. **Sync** - push and pull local changes through the API with last-write-wins
 - [ ] 18. **AI meal parse** - text to parsed entries, preview, confirm, then save
-- [ ] 19. **Workouts** - exercise library, start/active/complete session, sets with previous hints, history; exercise illustrations from `@bryllim/workout-guide` (ADR-20: art is CC BY-SA 4.0, credit Bryl Lim and Everkinetic, don't edit the art)
-- [ ] 20. **Body measurements** - measurement sites, sessions, change since start, waist-to-height
-- [ ] 21. **Calorie stats** - weekly averages, 30-day chart, learned TDEE from logged food and weight trend (formula TDEE ships in 13), suggested target
 - [ ] 22. **Scale sync** - read weight from Health Connect when the app opens
 - [ ] 23. **Web dashboard** - separate Vite React app on the same API
 - [ ] 24. **Accounts (Beta 2)** - per-user accounts so testers' data syncs and they can use AI

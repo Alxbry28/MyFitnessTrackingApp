@@ -1,6 +1,6 @@
 # MyFitnessTrackingApp - Project Overview
 
-<!-- blueprint:source-hash 46cd7f3a3aaa91f1dc6b9c508b32a15242a067bb7a36b031836a91f7aa33c770 -->
+<!-- blueprint:source-hash 7f0226b2349c4dabbb6ee667b2c8939dd334d1ed00366ba451d18e4ddfcb42f1 -->
 
 > A personal, local-first Android fitness tracker: scan a barcode, save your own
 > product once, log meals in a few taps. Later it adds pantry, body progress,
@@ -47,15 +47,26 @@ scale, region) are settings, never constants.
 6. **One-tap re-log** - recents (7 days), favorites, quick-add on Today.
 7. **Day navigation and JSON export** - prev/next day; JSON backup via the share sheet.
 
-**v1.1 - Pantry, body weight, friends beta (November).**
+**v1.1 - Phone-only app, no API (due Oct 31, 2026).**
+
+29. **Paste text log** - per `prototypes/text-log.html`: text screen (Paste, Copy yesterday, Lunch → Dinner) then Preview; offline parse of `Meal:` headings and g/ml/oz lines (1 ml = 1 g, 1 oz = 28.35 g); non-meal headings log as Snack unless changed; fix lines with optional "Always use this" remembering; online Open Food Facts name search for not-found lines; Log saves matched lines and skips the rest.
+11. **Body weight and BMI** - body profile, weight log, 7-day trend, BMI on Progress, Xiaomi CSV import.
+14. **Backup restore** - safe JSON import.
+13. **First-run setup** - goal, units, height, sex, birth date, BMI scale, weight, activity; formula TDEE (Mifflin-St Jeor) suggests a calorie goal to accept or override.
+
+After 13, build the Android APK (`eas build -p android --profile preview`) and use it daily.
 
 8. **Pantry and groceries** - stock ledger; add after scan; eat from pantry; remove with reason; log edits restore stock.
 9. **Canned and opened items** - drained values and weight; opened can with grams left.
 10. **Supplements** - pantry items counted in grams per scoop.
-11. **Body weight and BMI** - body profile, weight log, 7-day trend, BMI on Progress, Xiaomi CSV import.
 12. **Recipes and cooked batches** - recipes; batches with settled cooked weight; per-100 g portions.
-13. **First-run setup** - goal, units, height, sex, birth date, BMI scale, weight, activity; formula TDEE (Mifflin-St Jeor) suggests a calorie goal to accept or override.
-14. **Backup restore** - safe JSON import.
+19. **Workouts** - exercise library, session flow, sets with previous hints, history. Illustrations from `@bryllim/workout-guide` (ADR-20: CC BY-SA 4.0, credit Bryl Lim and Everkinetic, art unedited).
+20. **Body measurements** - sites, sessions, change since start, waist-to-height.
+21. **Calorie stats** - weekly averages, 30-day chart, learned TDEE from food and weight trend, suggested target.
+
+**v1.2 - .NET API and friends beta (November).**
+
+16. **.NET API foundation** - ASP.NET Core Minimal API + PostgreSQL (Render + Neon).
 15. **Beta feedback and safety** - feedback button, Sentry, disclaimer and privacy page.
 
 **Later (December onward).**
@@ -63,13 +74,9 @@ scale, region) are settings, never constants.
 26. **Pantry label OCR** - on-device ML Kit text recognition (EAS dev build); tap label text to fill the name; read expiry from EXP/BB text (later of two dates, DD/MM default) with +1 week/month/6 months/year chips; always confirm before saving.
 27. **Expiry warnings** - "Expiring soon" list on Pantry and Today; `expo-notifications` local reminders before `expires_at`.
 28. **Receipt OCR** - grocery receipt into a reviewed list of pantry items; remembers confirmed receipt-line to product matches. Build only if most shopping is at supermarkets.
-16. **.NET API foundation** - ASP.NET Core Minimal API + PostgreSQL (Render + Neon).
 25. **Product and grocery photos** - photo per product or pantry item, uploaded through the API to file storage; Open Food Facts image as fallback.
 17. **Sync** - push/pull local changes, last-write-wins.
 18. **AI meal parse** - text, then parsed entries, preview, confirm, save.
-19. **Workouts** - exercise library, session flow, sets with previous hints, history. Illustrations from `@bryllim/workout-guide` (ADR-20: CC BY-SA 4.0, credit Bryl Lim and Everkinetic, art unedited).
-20. **Body measurements** - sites, sessions, change since start, waist-to-height.
-21. **Calorie stats** - weekly averages, 30-day chart, learned TDEE from food and weight trend, suggested target.
 22. **Scale sync** - Health Connect weight read on app open.
 23. **Web dashboard** - separate Vite React app on the same API.
 24. **Accounts (Beta 2)** - per-user accounts for tester sync and AI.
@@ -100,6 +107,13 @@ and `10` §8.
 - `grams` (real)
 - `kcal`, `protein_g`, `carbs_g`, `fat_g` (real) - **copied at log time** (ADR-6), so product edits never rewrite history
 - `pantry_item_id` (nullable), `updated_by_settle` (bool) - added with the pantry
+
+### Remembered text-log matches (feature 29)
+
+- A confirmed pasted food name (normalized text) mapped to a `product_id`, reused on the next paste
+- Confirmed lines become ordinary `food_log_entries` with copied values (ADR-6)
+
+> TODO: project-plan §4 doesn't list match data. Table name and fields are decided when 29 is specced.
 
 ### settings (feature 3)
 
@@ -193,7 +207,10 @@ styles until Oct 28, polish after v1. Health numbers are labeled as estimates.
 
 > Resolve in the plans or `1_docs`, then re-run /overview.
 
-- **Build order vs the plan:** the owner chose an offline-first order (7 -> 14 -> APK -> 13 -> 11, pantry 8-10 waiting), and feature 11 is being built now, but `build-plan.md` still lists 8-15 in numeric order. Reorder the November section if that order is final.
+- **October is tight:** v1.1 now holds 10 open phone-only features plus the APK in 11 days (Oct 20-31), including 12 (~11 days in `09`) and 19. Decide what slips to November if time runs out.
+- **API in November without a client:** 16 opens v1.2, but sync (17), AI (18) and accounts (24) stay later, so nothing on the phone calls the API yet. Decide whether 17 or 18 should follow 16 in November.
+- **Project-plan is out of step with the schedule:** §3 lists workouts, measurements and calorie stats as later, and §5/§8 call the API later; the build plan now puts 19-21 in October and 16 in November.
+- **Paste text log (29) vs AI meal parse (18):** both turn text into previewed log entries. 29 is rule-based and offline; say in the plan whether 18 later extends 29's preview and remembered matches or is a separate flow.
 - **`03` conflicts with the locked decisions:** it stores products per serving and puts workouts in v1. ADR-6 and the sprint take precedence; `03` is stale.
 - **`03` is stale on goals:** it still describes `daily_nutrition_goals` with `effective_date`; feature 3 shipped the `settings` key/value store instead.
 - **Repo layout:** the Expo app now lives in `apps/mobile/`, but neither plan says so, and the .NET API and web dashboard still have no agreed place (`apps/api`, `apps/web`, or separate repos). Record it in project-plan §5.

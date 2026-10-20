@@ -170,6 +170,20 @@ For visual replication, require an existing screenshot or reference. Store a
 provided image under `blueprint/reference/` and link it. If `prototypes/` exists,
 use its relevant HTML and `theme.css`; port shared tokens before feature UI.
 
+When a prototype covers the feature's UI, it is a build contract, not a mood
+board:
+
+- Read the referenced HTML and CSS, not just the file name. Under Design
+  reference, name each exact file and frame, then list the concrete visual rules
+  read from them: layout order, component shapes and sizes, spacing, type
+  styles, tokens, and each shown state.
+- Every UI step's `Done when` names the frame it must match, for example
+  "matches `today.html` frame 1: summary card above the meal list, 32 dp chips
+  on `surface2`".
+- List each prototype part this feature leaves out under Out of scope as a
+  prototype gap, naming the feature that will build it or "polish later".
+  Never drop a prototype part silently.
+
 ## Critique gate
 
 Before the single write, check these failure classes:

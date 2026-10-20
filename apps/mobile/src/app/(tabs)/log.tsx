@@ -41,6 +41,13 @@ export default function LogScreen() {
   } else {
     body = (
       <ScrollView contentContainerStyle={styles.content}>
+        <Pressable
+          onPress={() => router.push({ pathname: "/paste-log", params: { day } })}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.secondaryButton, styles.addLog, pressed && styles.pressed]}
+        >
+          <Text style={styles.secondaryLabel}>Type or paste a meal list</Text>
+        </Pressable>
         <View style={styles.total}>
           <Text style={styles.totalKcal}>
             {formatKcal(totals.kcal)} <Text style={styles.totalUnit}>kcal</Text>
@@ -113,6 +120,8 @@ function makeStyles(theme: Theme) {
       backgroundColor: colors.surface2,
     },
     secondaryLabel: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
+    addLog: { alignItems: "center", marginBottom: space[2] },
+    pressed: { backgroundColor: colors.border },
     snackbar: {
       position: "absolute",
       left: space[4],

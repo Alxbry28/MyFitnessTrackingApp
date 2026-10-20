@@ -94,3 +94,35 @@
 **Why it matters:** `readAll` intentionally exports soft-deleted rows, and `weighIns` is the raw `body_weight_entries` row count. After importing 388 readings and pressing Undo import, the export still says "388 weigh-ins" (plus every deleted or replaced typed weight), while Progress shows none. The products and log-entry counts already behave this way, but an undone import makes the gap large and visible.
 **Suggested fix:** Count only rows with `deleted_at` null for the summary line (keep exporting every row). No current requirement is lost.
 **Resolution:**
+
+### F-12 [P3] open - Open Food Facts result without kcal opens the form without the community-data note
+
+**File:** apps/mobile/src/modules/nutrition/components/MatchSheet.tsx:100 (note shown at :76)
+**Found:** 2026-10-20 by /audit (scope: current; lens: quality; independent review)
+**Why it matters:** Choosing a search result sets `fromOff: item.found`, and the note renders only when `fromOff` is true. A result with no usable kcal ("No kcal listed") therefore opens the in-sheet form prefilled with Open Food Facts name and brand but without "From Open Food Facts. It's community data, so check it against the label before saving." The spec shows that note for every chosen Open Food Facts result and ties only the saved `source` to whether kcal was usable.
+**Suggested fix:** Keep two values in the form step, for example `fromOff: true` for any search result and `source: item.found ? "open_food_facts" : "manual"`, and show the note on `fromOff`. No current requirement is lost.
+**Resolution:**
+
+### F-13 [P3] open - Hardware back on the sheet's form and search steps does not close the sheet as specified
+
+**File:** apps/mobile/src/modules/nutrition/components/MatchSheet.tsx:206
+**Found:** 2026-10-20 by /audit (scope: current; lens: quality; independent review)
+**Why it matters:** `onRequestClose` closes the sheet only on the options step and otherwise returns to the options. The spec says "'Back' returns to the options. The scrim and hardware back close the sheet." The code's behavior is arguably kinder (it keeps the sheet when backing out of a half-filled form), but it is undocumented drift from the approved contract, and the scrim still closes the form step and drops typed values.
+**Suggested fix:** Decide which behavior is intended and align the other: either update the spec to say hardware back steps back to the options, or pass `onClose` unconditionally. No new machinery.
+**Resolution:**
+
+### F-14 [P3] open - Match sheet options can omit candidates counted in the line's "N matches"
+
+**File:** apps/mobile/src/modules/nutrition/components/MatchSheet.tsx:40 (matching in apps/mobile/src/modules/nutrition/services/pasteLog.ts:85; SQL in apps/mobile/src/modules/nutrition/repositories/productRepo.ts:69)
+**Found:** 2026-10-20 by /audit (scope: current; lens: quality; independent review)
+**Why it matters:** The Preview counts candidates with `nameKey(product.name).includes(key)` (whitespace collapsed, Unicode lowercase), but the sheet lists options from `useProducts(food.name)`, a SQL `LIKE '%<raw typed name>%'` that keeps inner whitespace runs and is case-insensitive only for ASCII. A pasted line such as `250g white  rice` (two spaces, common in copied text) shows "White rice, cooked" as "to check" with "2 matches", while the sheet's search only finds the preselected current product, so the other candidate the spec promises ("All products whose name contains the key") is missing until the user retypes the search.
+**Suggested fix:** Seed the sheet search with `food.key` instead of the raw `food.name` (fixes whitespace), or build the initial options from `match.candidates` and use the SQL search only after the user edits the field. No current requirement is lost.
+**Resolution:**
+
+### F-15 [P3] unverified - Library search in the match sheet may sit under the keyboard
+
+**File:** apps/mobile/src/modules/nutrition/components/MatchSheet.tsx:206 (field at :115)
+**Found:** 2026-10-20 by /audit (scope: current; lens: quality; independent review)
+**Why it matters:** The spec requires the "Search your library" field to be "kept clear of the keyboard". The sheet is a bottom-anchored transparent `Modal` with no keyboard avoidance (the app has no `KeyboardAvoidingView` or keyboard handling anywhere), so it relies on the Android dialog window resizing for the IME under SDK 57's edge-to-edge mode. Whether the field and the "Use" button stay visible with the keyboard open was not observed on a device in this review.
+**Suggested fix:** Check on the phone by focusing the search field. If the sheet does not lift, wrap the sheet in `KeyboardAvoidingView` (behavior "height" or "padding") inside the modal. No new dependency.
+**Resolution:**
