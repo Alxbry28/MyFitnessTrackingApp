@@ -108,7 +108,7 @@ CREATE TABLE settings (
 Notes:
 
 - Storing the per-100 g copies on the entry lets an edit to grams rescale from the entry itself (UX_FLOWS §5).
-- `settings` as key/value is *Proposed*. The alternative is `daily_nutrition_goals` with an `effective_date` (`03` §4), which keeps old goals for history. Decide in feature 3.
+- `settings` as key/value is **decided** (feature 3, Oct 20): the calorie goal is the single current value under `calorie_goal_kcal`, so past days use the current goal. `daily_nutrition_goals` with an `effective_date` (`03` §4) was not chosen; goal history would need a later additive table.
 - Meal types are fixed in v1. Custom slots (story B2) would need a `meal_slots` table (PRD Q1).
 
 ### Common queries

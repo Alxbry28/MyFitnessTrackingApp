@@ -30,3 +30,11 @@
 **Why it matters:** The Log day is `dayKey(new Date())` computed only during render, and `useFocusEffect` reruns the `load` from the last render. If the app stays open on the Log tab across midnight (common on Android, where the app is kept in memory) and the screen does not re-render before the next focus, the tab keeps listing yesterday's entries under "today", while a new entry from Add food is saved to the new day and would not appear after `dismissTo("/log")`. Not reproduced on a device in this review; whether a navigation focus forces a re-render was not confirmed.
 **Suggested fix:** Check on the phone by changing the device clock across midnight with the Log tab open. If stale, compute the day inside `load` (or refresh it on focus/AppState "active") instead of only at render. Feature 7 (day navigation) may replace this anyway. No current requirement is lost.
 **Resolution:**
+
+### F-04 [P3] open - Today can show "0 kcal over" or "0 kcal left" at the goal boundary
+
+**File:** apps/mobile/src/modules/nutrition/components/CalorieSummary.tsx:24
+**Found:** 2026-10-20 by /audit (scope: current; lens: quality; independent review)
+**Why it matters:** `over` is decided on unrounded totals (`eaten > goal`) while the headline rounds the difference. Logged kcal are scaled by grams, so fractional totals are normal: eating 2200.3 kcal against a 2200 goal shows "0 kcal over" in the over color with "Eaten 2,200" and "Goal 2,200" captions, which reads as a contradiction. This follows the spec's formulas, so it is a display polish item, not a contract break.
+**Suggested fix:** Compare on the rounded values for the over/left decision and headline (for example `Math.round(eaten) > goal`), keeping the bar fraction unrounded. No current requirement is lost.
+**Resolution:**

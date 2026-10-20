@@ -28,8 +28,9 @@ export function sumTotals(items: Nutrients[]): Nutrients {
   );
 }
 
+// Whole kcal with thousands separators, e.g. "2,419" (DESIGN_SYSTEM §9).
 export function formatKcal(kcal: number): string {
-  return String(Math.round(kcal));
+  return String(Math.round(kcal)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 // One decimal only below 10 g (DESIGN_SYSTEM §9).
