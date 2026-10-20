@@ -10,7 +10,7 @@ Pre-build (not features): scaffold the Expo app, run it in Expo Go.
 ## v1 - Nutrition (due Oct 31, 2026)
 
 - [x] 1. **Product library** - SQLite setup with migration runner and tab shell; add, edit and search products with nutrition per 100 g
-- [ ] 2. **Food log** - log a product to a meal on a date with grams (values copied onto the entry); edit and delete entries
+- [x] 2. **Food log** - log a product to a meal on a date with grams (values copied onto the entry); edit and delete entries
 - [ ] 3. **Today screen** - calorie goal in Settings; Today shows eaten / goal / remaining and per-meal summaries
 - [ ] 4. **Barcode scanner** - scan with `expo-camera`, vibrate, open the matching saved product
 - [ ] 5. **Open Food Facts lookup** - on local miss fetch, preview, edit, save and log; manual form with barcode prefilled when not found or offline
