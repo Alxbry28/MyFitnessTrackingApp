@@ -21,7 +21,7 @@ type Props = {
   defaultValues: ProductFormValues;
   submitLabel: string;
   onSubmit: (input: ProductInput) => Promise<SaveResult>;
-  onSaved: () => void;
+  onSaved: (id: string) => void;
 };
 
 const NUMBER: KeyboardTypeOptions = "decimal-pad";
@@ -47,7 +47,7 @@ export function ProductForm({ defaultValues, submitLabel, onSubmit, onSaved }: P
     try {
       const result = await onSubmit(input);
       if (result.ok) {
-        onSaved();
+        onSaved(result.id);
       } else if (result.error === "duplicate_barcode") {
         setError("barcode", { message: "Another product already uses this barcode" }, { shouldFocus: true });
       } else {

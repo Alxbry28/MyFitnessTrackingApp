@@ -38,3 +38,19 @@
 **Why it matters:** `over` is decided on unrounded totals (`eaten > goal`) while the headline rounds the difference. Logged kcal are scaled by grams, so fractional totals are normal: eating 2200.3 kcal against a 2200 goal shows "0 kcal over" in the over color with "Eaten 2,200" and "Goal 2,200" captions, which reads as a contradiction. This follows the spec's formulas, so it is a display polish item, not a contract break.
 **Suggested fix:** Compare on the rounded values for the over/left decision and headline (for example `Math.round(eaten) > goal`), keeping the bar fraction unrounded. No current requirement is lost.
 **Resolution:**
+
+### F-05 [P3] open - Scanner keeps showing "Camera access is off" after granting in Settings
+
+**File:** apps/mobile/src/app/scan.tsx:22 (Open settings at scan.tsx:85)
+**Found:** 2026-10-20 by /audit (scope: current; lens: quality; independent review)
+**Why it matters:** `useCameraPermissions()` fetches the status once on mount (expo-modules-core `PermissionsHook.ts` runs `getPermission` only in its mount effect). When permission was permanently denied, the user taps "Open settings", grants the camera and returns: Android resumes the app without remounting the scanner, so it still shows the explain screen with "Open settings" until the user closes and reopens Scan. Denial never blocks logging, so this is a polish item, not a contract break.
+**Suggested fix:** Use the hook's third return value (`getPermission`) and call it when React Native `AppState` changes to "active" while the scanner is mounted. No new dependency; no current requirement is lost.
+**Resolution:**
+
+### F-06 [P3] open - Torch toggle announces a checked state that contradicts its label
+
+**File:** apps/mobile/src/app/scan.tsx:113
+**Found:** 2026-10-20 by /audit (scope: current; lens: quality; independent review)
+**Why it matters:** The torch button's label is the action ("Torch off" while the torch is on) but it also sets `accessibilityState={{ checked: torch }}`, so TalkBack reads "Torch off, checked" when the torch is lit. The two signals disagree for screen-reader users.
+**Suggested fix:** Drop `accessibilityState` and keep the action label (matches the spec copy), or keep the state with a fixed "Torch" label and `accessibilityRole="switch"`. No current requirement is lost.
+**Resolution:**

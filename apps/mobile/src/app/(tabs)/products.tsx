@@ -72,16 +72,21 @@ export default function ProductsScreen() {
 
   return (
     <View style={styles.screen}>
-      <TextInput
-        value={query}
-        onChangeText={setQuery}
-        placeholder="Search your products"
-        placeholderTextColor={theme.colors.faint}
-        accessibilityLabel="Search your products"
-        autoCorrect={false}
-        returnKeyType="search"
-        style={styles.search}
-      />
+      <View style={styles.searchRow}>
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search your products"
+          placeholderTextColor={theme.colors.faint}
+          accessibilityLabel="Search your products"
+          autoCorrect={false}
+          returnKeyType="search"
+          style={styles.search}
+        />
+        <Pressable onPress={() => router.push("/scan")} accessibilityRole="button" style={styles.secondaryButton}>
+          <Text style={styles.secondaryLabel}>Scan</Text>
+        </Pressable>
+      </View>
       <Text style={styles.count}>
         {total} {total === 1 ? "product" : "products"} · values per 100 g
       </Text>
@@ -95,7 +100,9 @@ function makeStyles(theme: Theme) {
   const { colors, space, fontSize, radius, tap } = theme;
   return StyleSheet.create({
     screen: { flex: 1, gap: space[3], paddingHorizontal: space[4], paddingTop: space[2], backgroundColor: colors.bg },
+    searchRow: { flexDirection: "row", gap: space[2] },
     search: {
+      flex: 1,
       height: tap,
       borderRadius: radius.md,
       backgroundColor: colors.surface2,

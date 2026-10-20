@@ -26,7 +26,8 @@
           "imageWidth": 76
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      ["expo-camera", { "recordAudioAndroid": false }]
     ],
     "experiments": {
       "typedRoutes": true,

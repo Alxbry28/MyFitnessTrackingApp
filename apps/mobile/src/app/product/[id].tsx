@@ -4,10 +4,11 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-nati
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import { ProductForm } from "@/modules/nutrition/components/ProductForm";
 import { useProduct } from "@/modules/nutrition/hooks/useProduct";
-import { emptyProductForm, productToForm } from "@/modules/nutrition/services/productSchema";
+import { newProductForm, productToForm } from "@/modules/nutrition/services/productSchema";
 
 export default function ProductScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // barcode and then=log come from the scanner: prefill, then continue to logging.
+  const { id, barcode, then } = useLocalSearchParams<{ id: string; barcode?: string; then?: string }>();
   const theme = useTheme();
   const styles = makeStyles(theme);
   const { isNew, state, retry, save } = useProduct(id);
@@ -41,10 +42,14 @@ export default function ProductScreen() {
   } else {
     body = (
       <ProductForm
-        defaultValues={state.product ? productToForm(state.product) : emptyProductForm}
+        defaultValues={state.product ? productToForm(state.product) : newProductForm(barcode ?? null)}
         submitLabel={isNew ? "Save product" : "Save changes"}
         onSubmit={save}
-        onSaved={() => router.back()}
+        onSaved={(savedId) =>
+          then === "log"
+            ? router.replace({ pathname: "/add/[productId]", params: { productId: savedId } })
+            : router.back()
+        }
       />
     );
   }

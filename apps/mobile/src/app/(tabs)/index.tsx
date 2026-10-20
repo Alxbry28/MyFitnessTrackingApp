@@ -46,6 +46,13 @@ export default function TodayScreen() {
         goal={goal.state.goal}
         onSetGoal={() => router.navigate("/settings")}
       />
+      <Pressable
+        onPress={() => router.push("/scan")}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.scan, pressed && styles.scanPressed]}
+      >
+        <Text style={styles.scanLabel}>Scan</Text>
+      </Pressable>
       <View style={styles.card}>
         {log.groups.map((group, index) => {
           const label = MEAL_LABELS[group.mealType];
@@ -93,6 +100,15 @@ function makeStyles(theme: Theme) {
     pressed: { backgroundColor: colors.surface2 },
     mealName: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
     mealKcal: { color: colors.muted, fontSize: fontSize.md, fontVariant: ["tabular-nums"] },
+    scan: {
+      minHeight: tap,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: radius.md,
+      backgroundColor: colors.accent,
+    },
+    scanPressed: { opacity: 0.85 },
+    scanLabel: { color: colors.accentInk, fontSize: fontSize.md, fontWeight: "700" },
     secondaryButton: {
       minHeight: tap,
       justifyContent: "center",

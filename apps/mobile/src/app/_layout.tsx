@@ -25,6 +25,7 @@ export default function RootLayout() {
             <Stack.Screen name="add/index" options={{ title: "Add food" }} />
             <Stack.Screen name="add/[productId]" options={{ title: "Add to meal" }} />
             <Stack.Screen name="entry/[id]" options={{ title: "Edit entry" }} />
+            <Stack.Screen name="scan" options={{ title: "Scan", presentation: "fullScreenModal" }} />
           </Stack>
         </SQLiteProvider>
       </Suspense>

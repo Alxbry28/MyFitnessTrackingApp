@@ -81,6 +81,10 @@ export const emptyProductForm: ProductFormValues = {
   fatPer100g: "",
 };
 
+export function newProductForm(barcode: string | null): ProductFormValues {
+  return { ...emptyProductForm, barcode: barcode ?? "" };
+}
+
 function text(value: string | number | null): string {
   return value === null ? "" : String(value);
 }
