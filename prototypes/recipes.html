@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recipes and batches - prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* shared v1.1 frame styles (same as recipes/progress/measure) */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--desk); color: var(--text); font-family: var(--font-sans); font-variant-numeric: tabular-nums; min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: var(--space-5); padding: var(--space-6) var(--space-4); }
+  .toolbar { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-sm); color: var(--muted); flex-wrap: wrap; justify-content: center; }
+  .toolbar a { color: var(--accent-text); }
+  .nav b { color: var(--text); font-weight: 600; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .toggle { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: var(--space-2) var(--space-4); }
+  .frames { display: flex; gap: var(--space-6); flex-wrap: wrap; justify-content: center; }
+  .frame-label { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2); text-align: center; max-width: 360px; }
+  .phone { width: 360px; height: 760px; background: var(--bg); border: 1px solid var(--border); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+  :where(.phone a) { color: inherit; text-decoration: none; }
+  .status { height: 28px; flex: none; padding: 0 var(--space-5); display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--muted); }
+  .appbar { padding: var(--space-2) var(--space-4) var(--space-3); display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+  .appbar h1 { font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.02em; }
+  .appbar h1.sm { font-size: var(--text-lg); }
+  .sub { font-size: var(--text-sm); color: var(--muted); }
+  .back { font-size: var(--text-sm); color: var(--accent-text); padding: var(--space-2) var(--space-4) 0; }
+  .content { flex: 1; overflow: hidden; padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3) var(--space-4); }
+  .section-label { font-size: var(--text-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .chips { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .chip { height: 32px; padding: 0 var(--space-3); border-radius: 999px; background: var(--surface-2); font-size: var(--text-sm); color: var(--muted); display: inline-flex; align-items: center; }
+  .chip.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+  .badge { font-size: var(--text-xs); font-weight: 600; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+  .badge.est { color: var(--estimate); background: var(--estimate-soft); }
+  .badge.over { color: var(--over); background: var(--over-soft); }
+  .badge.ok { color: var(--ok); background: var(--surface-2); }
+  .badge.acc { color: var(--accent-text); background: var(--accent-soft); }
+  .row { display: flex; align-items: center; gap: var(--space-3); min-height: 56px; padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: 0; }
+  .row .info { flex: 1; min-width: 0; }
+  .row .name { font-size: var(--text-md); font-weight: 500; }
+  .row .meta { font-size: var(--text-sm); color: var(--muted); margin-top: 2px; display: flex; gap: var(--space-1); flex-wrap: wrap; align-items: center; }
+  .row .amt { font-size: var(--text-md); font-weight: 600; text-align: right; white-space: nowrap; }
+  .row .amt small { display: block; font-size: var(--text-xs); color: var(--muted); font-weight: 400; }
+  .btn { height: var(--tap); border-radius: var(--radius); background: var(--surface-2); font-weight: 600; font-size: var(--text-sm); display: flex; align-items: center; justify-content: center; width: 100%; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.ghost { background: none; border: 1px solid var(--border); }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .btn-row.three { grid-template-columns: 1.4fr 1fr 1fr; }
+  .note { font-size: var(--text-xs); color: var(--muted); line-height: 1.45; }
+  .field { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); min-height: 48px; border-bottom: 1px solid var(--border); font-size: var(--text-sm); }
+  .field:last-child { border-bottom: 0; }
+  .field .lbl { color: var(--muted); }
+  .input { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); min-width: 88px; text-align: right; font-weight: 600; font-size: var(--text-md); }
+  .input.focus { box-shadow: 0 0 0 2px var(--accent); }
+  .input.empty { color: var(--faint); font-weight: 400; }
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; border-top: 1px solid var(--border); padding: var(--space-2) var(--space-4) var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+  .grabber { width: 36px; height: 4px; border-radius: 2px; background: var(--faint); margin: 0 auto var(--space-1); }
+  .sheet h2 { font-size: var(--text-lg); font-weight: 700; }
+  .fab { position: absolute; right: var(--space-4); bottom: calc(64px + var(--space-4)); height: 56px; padding: 0 var(--space-5); border-radius: 18px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: var(--text-md); display: flex; align-items: center; gap: var(--space-2); box-shadow: var(--shadow); }
+  .tabbar { height: 64px; flex: none; display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
+  .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); font-size: var(--text-xs); color: var(--muted); }
+  .tab.on { color: var(--accent-text); font-weight: 600; }
+  .tab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  /* recipes-specific */
+  .result { display: flex; justify-content: space-between; align-items: center; background: var(--surface-2); border-radius: var(--radius); padding: var(--space-3) var(--space-4); font-size: var(--text-sm); }
+  .result b { font-size: var(--text-lg); }
+  .paste { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-3); font-size: var(--text-xs); line-height: 1.5; color: var(--muted); white-space: pre-line; }
+  .match { display: grid; grid-template-columns: 64px 1fr auto; gap: var(--space-2); align-items: center; min-height: 34px; border-bottom: 1px solid var(--border); font-size: var(--text-sm); }
+  .match:last-child { border-bottom: 0; }
+  .match .g { font-weight: 600; text-align: right; }
+  .match .ok { color: var(--ok); font-weight: 600; }
+  .match .muted { color: var(--muted); }
+  .warn { display: flex; gap: var(--space-3); align-items: flex-start; background: var(--estimate-soft); color: var(--text); border-radius: var(--radius); padding: var(--space-3); font-size: var(--text-sm); line-height: 1.4; }
+  .warn b { color: var(--estimate); }
+  .option { display: flex; gap: var(--space-3); align-items: flex-start; border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3); background: var(--surface); }
+  .option.on { border-color: var(--accent); background: var(--accent-soft); }
+  .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--faint); flex: none; margin-top: 2px; }
+  .option.on .radio { border: 6px solid var(--accent); }
+  .option .t { font-size: var(--text-md); font-weight: 600; }
+  .option .d { font-size: var(--text-sm); color: var(--muted); margin-top: 2px; line-height: 1.4; }
+  .totals { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2); text-align: center; }
+  .totals b { display: block; font-size: var(--text-lg); }
+  .totals span { font-size: var(--text-xs); color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+  th { text-align: right; font-size: var(--text-xs); color: var(--muted); font-weight: 600; padding: var(--space-2) 0; }
+  th:first-child, td:first-child { text-align: left; }
+  td { text-align: right; padding: var(--space-2) 0; border-top: 1px solid var(--border); }
+  td.old { color: var(--faint); text-decoration: line-through; }
+  td.new { font-weight: 600; }
+  tr.total td { font-weight: 700; }
+  .check { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-sm); }
+  .box { width: 22px; height: 22px; border-radius: 6px; background: var(--accent); color: var(--accent-ink); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: var(--text-sm); flex: none; }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="toggle" id="theme-toggle">Switch to light</button>
+  <span class="nav">v1.1: <a href="pantry.html">Pantry</a> · <b>Recipes</b> · <a href="progress.html">Progress</a> · <a href="calendar.html">Calendar</a> · <a href="measure.html">Measure &amp; import</a> · <a href="measure-guide.html">Measure guide</a> · <a href="today.html">v1 screens</a></span>
+</div>
+
+<div class="frames">
+  <!-- Frame 1: recipe list -->
+  <div>
+    <p class="frame-label">1 · Recipes (More › Recipes) with learned cooked ratio</p>
+    <div class="phone">
+      <div class="status"><span>07:50</span><span>●●● 97%</span></div>
+      <div class="appbar"><h1>Recipes</h1><span class="sub">4 saved</span></div>
+      <div class="content">
+        <p class="section-label">In the fridge now</p>
+        <div class="card" style="padding-block: 0">
+          <div class="row"><div class="info"><div class="name">Chopsuey · Oct 19</div><div class="meta">550 g left <span class="badge est">⚠ unsettled</span></div></div><a class="badge acc" href="#settle">Settle</a></div>
+        </div>
+        <p class="section-label">Saved recipes</p>
+        <div class="card" style="padding-block: 0">
+          <div class="row"><div class="info"><div class="name">Chopsuey</div><div class="meta">7 ingredients · cooked 3× · ratio ×0.87</div></div><div class="amt">48<small>kcal/100 g</small></div></div>
+          <div class="row"><div class="info"><div class="name">Rice (rice cooker)</div><div class="meta">2 ingredients · cooked 11× · ratio ×2.8</div></div><div class="amt">129<small>kcal/100 g</small></div></div>
+          <div class="row"><div class="info"><div class="name">Chicken breast, boiled</div><div class="meta">1 ingredient · cooked 5× · ratio ×0.74</div></div><div class="amt">162<small>kcal/100 g</small></div></div>
+          <div class="row"><div class="info"><div class="name">Tuna pasta</div><div class="meta">5 ingredients · uses 2 cans tuna <span class="badge est">ratio not learned</span></div></div><div class="amt">—</div></div>
+        </div>
+        <p class="note">The ratio (cooked ÷ raw weight) is learned each time you settle a batch, so estimates get closer every time.</p>
+      </div>
+      <button class="fab">Cook a batch</button>
+      <nav class="tabbar">
+        <a class="tab" href="today.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Today</a>
+        <a class="tab" href="log.html"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9"/></svg>Log</a>
+        <a class="tab" href="pantry.html"><svg viewBox="0 0 24 24"><path d="M4 5h16v3H4zM5 8h14v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1zM10 12h4"/></svg>Pantry</a>
+        <a class="tab" href="progress.html"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-4 3 3 5-6"/></svg>Progress</a>
+        <a class="tab on" href="recipes.html"><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/></svg>More</a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Frame 2: paste from notes -->
+  <div>
+    <p class="frame-label">2 · Recipe edit: paste raw-ingredient notes</p>
+    <div class="phone">
+      <div class="status"><span>07:52</span><span>●●● 97%</span></div>
+      <a class="back" href="recipes.html">‹ Recipes</a>
+      <div class="appbar"><h1 class="sm">Chopsuey</h1><span class="sub">raw weights</span></div>
+      <div class="content">
+        <div class="paste">32g broccoli stem
+283g broccoli
+194.8g carrots
+45g onions
+22g garlic
+Soy sauce and oyster sauce are just estimated based on taste
+Total cooked: 532g</div>
+        <div class="card" style="padding-block: 0">
+          <div class="match"><span class="g">32 g</span><span>Broccoli stem, raw</span><span class="ok">✓</span></div>
+          <div class="match"><span class="g">283 g</span><span>Broccoli, raw</span><span class="ok">✓</span></div>
+          <div class="match"><span class="g">194.8 g</span><span>Carrots, raw</span><span class="ok">✓</span></div>
+          <div class="match"><span class="g">45 g</span><span>Onion, raw <span class="muted">· "onions"</span></span><span class="ok">✓</span></div>
+          <div class="match"><span class="g">22 g</span><span>Garlic, raw</span><span class="ok">✓</span></div>
+          <div class="match"><span class="g">~16 g</span><span>Soy sauce <span class="badge est">estimated</span></span><span class="muted">1 tbsp</span></div>
+          <div class="match"><span class="g">~18 g</span><span>Oyster sauce <span class="badge est">estimated</span></span><span class="muted">1 tbsp</span></div>
+          <div class="match"><span class="g">532 g</span><span>Cooked weight <span class="muted">· not an ingredient</span></span><span class="ok">✓</span></div>
+        </div>
+        <div class="warn"><b style="font-size: var(--text-lg); line-height: 1">!</b><span><b>No oil listed.</b> 1 tbsp of oil is about 120 kcal, almost half of this batch. Add it if you used any.</span></div>
+        <div class="btn-row"><button class="btn">+ Add oil</button><button class="btn primary">Save recipe</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 3: cook a batch -->
+  <div>
+    <p class="frame-label">3 · Cook a batch: choose how to get the cooked weight</p>
+    <div class="phone">
+      <div class="status"><span>08:15</span><span>●●● 95%</span></div>
+      <a class="back" href="recipes.html">‹ Chopsuey</a>
+      <div class="appbar"><h1 class="sm">Cook a batch</h1><span class="sub">Tue, Oct 20</span></div>
+      <div class="content">
+        <div class="card">
+          <div class="totals">
+            <div><b>611 g</b><span>raw</span></div>
+            <div><b>254</b><span>kcal</span></div>
+            <div><b>14.1</b><span>protein g</span></div>
+            <div><b>7</b><span>ingredients</span></div>
+          </div>
+          <p class="note" style="margin-top: var(--space-3)">2 ingredients estimated · <a style="color: var(--accent-text)">Edit for this batch only</a></p>
+        </div>
+        <p class="section-label">How will you get the cooked weight?</p>
+        <div class="option on"><span class="radio"></span><div><div class="t">Settle at the end</div><div class="d">Log portions in grams. When it's finished, cooked weight = everything taken out. Best for day batches.</div></div></div>
+        <div class="option"><span class="radio"></span><div><div class="t">Weigh in parts</div><div class="d">Scoop into containers that fit the scale; the app adds them up.</div></div></div>
+        <div class="option"><span class="radio"></span><div><div class="t">Estimate</div><div class="d">611 g × learned ratio 0.87 ≈ 532 g <span class="badge est">approx.</span></div></div></div>
+        <p class="note">Until it's settled, portions use the estimate (≈ 48 kcal/100 g) and show ⚠. Cooking never counts toward today; only the portions you eat do.</p>
+        <button class="btn primary">Save batch to fridge</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 4: settle -->
+  <div id="settle">
+    <p class="frame-label">4 · Settle: last portion logged, batch at 0 g</p>
+    <div class="phone">
+      <div class="status"><span>19:40</span><span>●●● 38%</span></div>
+      <div class="appbar"><h1 class="sm">Today</h1><span class="sub">Tue, Oct 20</span></div>
+      <div class="content"></div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <h2>Chopsuey is finished</h2>
+        <p class="sub">You took out <b style="color: var(--text)">1,000 g</b> in total. Use it as the cooked weight?</p>
+        <div class="card" style="padding-block: var(--space-1)">
+          <table>
+            <tr><th>Portion</th><th>g</th><th>est.</th><th>settled</th></tr>
+            <tr><td>Breakfast</td><td>300</td><td class="old">198</td><td class="new">240</td></tr>
+            <tr><td>Lunch</td><td>350</td><td class="old">230</td><td class="new">280</td></tr>
+            <tr><td>Dinner</td><td>350</td><td class="old">230</td><td class="new">280</td></tr>
+            <tr class="total"><td>Total kcal</td><td>1,000</td><td class="old">658</td><td class="new" style="color: var(--ok)">800</td></tr>
+          </table>
+        </div>
+        <div class="result"><span>Per 100 g</span><span><b>66 → 80 kcal</b></span></div>
+        <div class="check"><span class="box">✓</span><span>I logged every portion (eaten, shared, discarded)</span></div>
+        <p class="note">Only this batch's portions are updated. Ratio 0.82 is saved for next time.</p>
+        <div class="btn-row"><button class="btn ghost">Add a missing portion</button><button class="btn primary">Settle batch</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const btn = document.getElementById('theme-toggle');
+  btn.onclick = () => {
+    const light = document.documentElement.dataset.theme !== 'light';
+    document.documentElement.dataset.theme = light ? 'light' : 'dark';
+    btn.textContent = light ? 'Switch to dark' : 'Switch to light';
+  };
+</script>
+</body>
+</html>

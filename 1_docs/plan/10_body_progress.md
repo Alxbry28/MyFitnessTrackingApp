@@ -126,6 +126,8 @@ BMI can't tell muscle from fat, so building muscle can push BMI up while the wai
 
 I choose which sites I track (default: chest, waist, both arms, both thighs). Custom sites can be added.
 
+**Start now:** a printable version of this guide, with a log sheet and a notes format, is in [guides/body_measurement_guide.md](../guides/body_measurement_guide.md).
+
 ### Consistency rules (shown as a guide in the app)
 
 - Same time of day (morning, before eating), same tape, same spot.
@@ -204,7 +206,7 @@ Nothing new in the October sprint (`08` is locked). Weight and measurements can 
 | **B1. Weight + BMI** | Body profile (height, sex, birth date, activity, goal, BMI scale); weight log; 7-day trend; BMI + category on a Progress screen; **CSV import of Xiaomi history** (§5b) | J1, J5, J6, J17 | ~2–3 days |
 | **B1b. Scale sync** | Read weight (and body composition, if available) from Health Connect (Apple Health later, `11` §6); runs when the app opens | J18, J19 | ~2 days, needs an EAS dev build |
 | **B2. Measurements** | Choose sites; measurement session form; history + change since start; waist-to-height | J7–J10 | ~3 days |
-| **B3. Calorie stats** | Weekly averages, 30-day chart, starting TDEE, learned TDEE, suggested target, protein g/kg | J4, J11–J13 | ~3–4 days |
+| **B3. Calorie stats** | Weekly averages, 30-day chart, learned TDEE, suggested target, protein g/kg. **Starting (formula) TDEE moved to first-run setup, build-plan feature 13 (Oct 20)** | J4, J11–J13 | ~3–4 days |
 | **B4. Later (Could)** | Body fat % estimate, progress photos, strength-vs-size view, training/rest day goals (J3), smartwatch import | J3, J14–J16 | — |
 
 ### Proposed slot in the November / December plan (needs your OK)

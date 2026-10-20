@@ -1,6 +1,6 @@
 # MyFitnessTrackingApp - Project Overview
 
-<!-- blueprint:source-hash 716bd1e672783b8e7da78b53a59e833b3e17737f03b52b6edda6dea69adb0355 -->
+<!-- blueprint:source-hash 60f4ae87163796ba51659a5bd693d9297b7d5f18517c8748f7f47f8b3f18dcbf -->
 
 > A personal, local-first Android fitness tracker: scan a barcode, save your own
 > product once, log meals in a few taps. Later it adds pantry, body progress,
@@ -54,18 +54,22 @@ scale, region) are settings, never constants.
 10. **Supplements** - pantry items counted in grams per scoop.
 11. **Body weight and BMI** - body profile, weight log, 7-day trend, BMI on Progress, Xiaomi CSV import.
 12. **Recipes and cooked batches** - recipes; batches with settled cooked weight; per-100 g portions.
-13. **First-run setup** - goal, units, height, sex, birth date, BMI scale.
+13. **First-run setup** - goal, units, height, sex, birth date, BMI scale, weight, activity; formula TDEE (Mifflin-St Jeor) suggests a calorie goal to accept or override.
 14. **Backup restore** - safe JSON import.
 15. **Beta feedback and safety** - feedback button, Sentry, disclaimer and privacy page.
 
 **Later (December onward).**
 
+26. **Pantry label OCR** - on-device ML Kit text recognition (EAS dev build); tap label text to fill the name; read expiry from EXP/BB text (later of two dates, DD/MM default) with +1 week/month/6 months/year chips; always confirm before saving.
+27. **Expiry warnings** - "Expiring soon" list on Pantry and Today; `expo-notifications` local reminders before `expires_at`.
+28. **Receipt OCR** - grocery receipt into a reviewed list of pantry items; remembers confirmed receipt-line to product matches. Build only if most shopping is at supermarkets.
 16. **.NET API foundation** - ASP.NET Core Minimal API + PostgreSQL (Render + Neon).
+25. **Product and grocery photos** - photo per product or pantry item, uploaded through the API to file storage; Open Food Facts image as fallback.
 17. **Sync** - push/pull local changes, last-write-wins.
 18. **AI meal parse** - text, then parsed entries, preview, confirm, save.
 19. **Workouts** - exercise library, session flow, sets with previous hints, history. Illustrations from `@bryllim/workout-guide` (ADR-20: CC BY-SA 4.0, credit Bryl Lim and Everkinetic, art unedited).
 20. **Body measurements** - sites, sessions, change since start, waist-to-height.
-21. **Calorie stats** - weekly averages, 30-day chart, TDEE, suggested target.
+21. **Calorie stats** - weekly averages, 30-day chart, learned TDEE from food and weight trend, suggested target.
 22. **Scale sync** - Health Connect weight read on app open.
 23. **Web dashboard** - separate Vite React app on the same API.
 24. **Accounts (Beta 2)** - per-user accounts for tester sync and AI.
@@ -115,6 +119,12 @@ and `10` §8.
 
 > Locked rule (ADR-8): stock changes never touch daily macros. Only food log entries count.
 
+- Features 26-27 reuse `pantry_items.expires_at`; OCR results are confirmed before any write.
+- **Receipt line matches (feature 28)** - a remembered receipt line text to `product_id` mapping
+
+> TODO: project-plan §4 doesn't list receipt-match data. Table name and fields are
+> decided when 28 is specced.
+
 ### Body progress (features 11, 20-22)
 
 - **body_profile** (one row) - `height_cm`, `sex`, `birth_date`, `activity_level`, `goal` (`cut` | `maintain` | `bulk`), `bmi_scale` (`asia_pacific` | `who`), `tracked_sites`
@@ -122,13 +132,20 @@ and `10` §8.
 - **import_runs** - `source`, `file_name?`, `started_at`, readings found / added / skipped
 - **measurement_sessions** - `measured_on`, `note`, `photo_uris?` (device only)
 - **body_measurements** - `session_id`, `site`, `side` (`left` | `right` | `none`), `value_cm`, `state` (`relaxed` | `flexed`)
-- Calculated, never stored (ADR-9): BMI, waist-to-height, trends, weekly averages, TDEE. Stored in kg/cm; the display unit is a setting.
+- Calculated, never stored (ADR-9): BMI, waist-to-height, trends, weekly averages, TDEE (formula from `body_profile` + latest weight; learned from food log + weight trend). First-run weight is saved as the first `body_weight_entries` row. Stored in kg/cm; the display unit is a setting.
 
 ### Workouts (feature 19)
 
 - **exercises** - `name`, `muscle_group?`, `equipment?`
 - **workout_sessions** - `started_at`, `ended_at?`, `name?`, `notes?`
 - **workout_sets** - `session_id`, `exercise_id`, `set_number`, `reps?`, `weight_kg?`, `duration_sec?`, `rpe?`
+
+### Product photos (feature 25)
+
+- A photo reference per product or pantry item, uploaded through the API to file storage
+
+> TODO: project-plan §4 doesn't list photo data. Field names, which table owns it
+> (products, pantry_items or both) and any on-device copy are decided when 25 is specced.
 
 ### sync_queue (feature 17)
 
@@ -142,9 +159,11 @@ and `10` §8.
 - **expo-camera** - barcode scanning; **Open Food Facts** - free product lookup, no key
 - **expo-sharing** - JSON backup export
 - **Sentry** (`@sentry/react-native`) - Beta 1 crash reports
-- **ASP.NET Core Minimal API + EF Core + PostgreSQL** - later API on Render + Neon,
-  Clean Architecture + CQRS with MediatR (ADR-21)
+- **ML Kit text recognition** (later) - on-device label and receipt OCR (26, 28); needs an EAS dev build
+- **expo-notifications** (later) - local expiry reminders (27)
+- **ASP.NET Core Minimal API + EF Core + PostgreSQL** - later API on Render + Neon
 - **Gemini or OpenAI** - AI only through the API (ADR-5)
+- **File storage** (later) - free-tier object storage for product photos, provider not chosen
 - **Vite + React Router + TanStack Query** - January web dashboard
 - **GitHub Actions** - CI
 
@@ -180,7 +199,10 @@ styles until Oct 28, polish after v1. Health numbers are labeled as estimates.
 - **November order is proposed, not approved** (`08` §6, Q-N1). The build plan follows the proposal: pantry before the API and workouts.
 - **`03` conflicts with the locked decisions:** it stores products per serving and puts workouts in v1. ADR-6 and the sprint take precedence; `03` is stale.
 - **Goal storage:** `settings` vs `daily_nutrition_goals` (see Data model).
-- **Repo layout for later apps:** the .NET API and the web dashboard have no agreed place yet (this repo vs separate repos).
+- **Repo layout:** the Expo app now lives in `apps/mobile/`, but neither plan says so, and the .NET API and web dashboard still have no agreed place (`apps/api`, `apps/web`, or separate repos). Record it in project-plan §5.
 - **Feature 12** (recipes and batches) is the largest item (`09` P4, ~11 days). Consider splitting it when it is specced.
+- **Product photos (25):** storage provider (Cloudflare R2 vs Supabase Storage), whether photos also stay usable offline on the phone, and the photo field in project-plan §4 aren't decided. Uploads also need the per-user accounts from 24 or an equivalent upload guard, but 25 is ordered before 24. Settle when it is specced after feature 16.
 - **Scale sync (22)** needs an EAS dev build; its slot after calorie stats is a guess.
-- **Schedule:** the sprint planned scaffolding for Oct 19, and the app isn't scaffolded yet.
+- **Features 26-28 aren't in project-plan:** §3 doesn't mention label OCR, expiry warnings or receipt OCR, §4 has no receipt-match data, and §5 doesn't list ML Kit or `expo-notifications`. 26 is also the first feature that needs an EAS dev build instead of Expo Go.
+- **ADR-21 (Clean Architecture + CQRS with MediatR)** for the API is in `1_docs` but not project-plan §5, so it is no longer carried here. Add it to §5 to keep it in the overview.
+- **TDEE in project-plan:** the build plan puts the formula TDEE in feature 13 and the learned TDEE in 21, but project-plan §3 doesn't mention a TDEE calculator, and §4 doesn't list weight or activity level as first-run values.

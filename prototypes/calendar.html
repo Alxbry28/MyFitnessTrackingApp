@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendar - prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* shared v1.1 frame styles (same as recipes/progress/measure) */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--desk); color: var(--text); font-family: var(--font-sans); font-variant-numeric: tabular-nums; min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: var(--space-5); padding: var(--space-6) var(--space-4); }
+  .toolbar { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-sm); color: var(--muted); flex-wrap: wrap; justify-content: center; }
+  .toolbar a { color: var(--accent-text); }
+  .nav b { color: var(--text); font-weight: 600; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .toggle { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: var(--space-2) var(--space-4); }
+  .frames { display: flex; gap: var(--space-6); flex-wrap: wrap; justify-content: center; }
+  .frame-label { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2); text-align: center; max-width: 360px; }
+  .phone { width: 360px; height: 760px; background: var(--bg); border: 1px solid var(--border); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+  :where(.phone a) { color: inherit; text-decoration: none; }
+  .status { height: 28px; flex: none; padding: 0 var(--space-5); display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--muted); }
+  .appbar { padding: var(--space-2) var(--space-4) var(--space-3); display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+  .appbar h1 { font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.02em; }
+  .appbar h1.sm { font-size: var(--text-lg); }
+  .sub { font-size: var(--text-sm); color: var(--muted); }
+  .back { font-size: var(--text-sm); color: var(--accent-text); padding: var(--space-2) var(--space-4) 0; }
+  .content { flex: 1; overflow: hidden; padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3) var(--space-4); }
+  .section-label { font-size: var(--text-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .chips { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .chip { height: 32px; padding: 0 var(--space-3); border-radius: 999px; background: var(--surface-2); font-size: var(--text-sm); color: var(--muted); display: inline-flex; align-items: center; }
+  .chip.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+  .badge { font-size: var(--text-xs); font-weight: 600; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+  .badge.est { color: var(--estimate); background: var(--estimate-soft); }
+  .badge.over { color: var(--over); background: var(--over-soft); }
+  .badge.ok { color: var(--ok); background: var(--surface-2); }
+  .badge.acc { color: var(--accent-text); background: var(--accent-soft); }
+  .row { display: flex; align-items: center; gap: var(--space-3); min-height: 56px; padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: 0; }
+  .row .info { flex: 1; min-width: 0; }
+  .row .name { font-size: var(--text-md); font-weight: 500; }
+  .row .meta { font-size: var(--text-sm); color: var(--muted); margin-top: 2px; display: flex; gap: var(--space-1); flex-wrap: wrap; align-items: center; }
+  .row .amt { font-size: var(--text-md); font-weight: 600; text-align: right; white-space: nowrap; }
+  .row .amt small { display: block; font-size: var(--text-xs); color: var(--muted); font-weight: 400; }
+  .btn { height: var(--tap); border-radius: var(--radius); background: var(--surface-2); font-weight: 600; font-size: var(--text-sm); display: flex; align-items: center; justify-content: center; width: 100%; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.ghost { background: none; border: 1px solid var(--border); }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .btn-row.three { grid-template-columns: 1.4fr 1fr 1fr; }
+  .note { font-size: var(--text-xs); color: var(--muted); line-height: 1.45; }
+  .field { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); min-height: 48px; border-bottom: 1px solid var(--border); font-size: var(--text-sm); }
+  .field:last-child { border-bottom: 0; }
+  .field .lbl { color: var(--muted); }
+  .input { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); min-width: 88px; text-align: right; font-weight: 600; font-size: var(--text-md); }
+  .input.focus { box-shadow: 0 0 0 2px var(--accent); }
+  .input.empty { color: var(--faint); font-weight: 400; }
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; border-top: 1px solid var(--border); padding: var(--space-2) var(--space-4) var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+  .grabber { width: 36px; height: 4px; border-radius: 2px; background: var(--faint); margin: 0 auto var(--space-1); }
+  .sheet h2 { font-size: var(--text-lg); font-weight: 700; }
+  .fab { position: absolute; right: var(--space-4); bottom: calc(64px + var(--space-4)); height: 56px; padding: 0 var(--space-5); border-radius: 18px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: var(--text-md); display: flex; align-items: center; gap: var(--space-2); box-shadow: var(--shadow); }
+  .tabbar { height: 64px; flex: none; display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
+  .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); font-size: var(--text-xs); color: var(--muted); }
+  .tab.on { color: var(--accent-text); font-weight: 600; }
+  .tab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  /* calendar-specific (grid matches history.html) */
+  .seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface-2); border-radius: var(--radius); padding: 3px; }
+  .seg span { height: 34px; display: flex; align-items: center; justify-content: center; font-size: var(--text-sm); color: var(--muted); border-radius: 9px; }
+  .seg span.on { background: var(--surface); color: var(--text); font-weight: 600; }
+  .monthnav { display: flex; justify-content: space-between; align-items: center; }
+  .monthnav b { font-size: var(--text-md); }
+  .monthnav span { color: var(--muted); font-size: var(--text-lg); width: 32px; text-align: center; }
+  .monthnav span.faint { color: var(--faint); }
+  .chips.tight .chip { height: 28px; font-size: var(--text-xs); padding: 0 var(--space-2); }
+  .chip.later { opacity: 0.5; }
+  .stats3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+  .stats3 > div { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: var(--space-1) var(--space-2); }
+  .stats3 .k { font-size: 10px; color: var(--muted); }
+  .stats3 .v { font-size: var(--text-md); font-weight: 700; }
+  .stats3 .v span { font-size: 10px; color: var(--muted); font-weight: 400; }
+  .cal { padding: var(--space-2); }
+  .dow, .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .dow span { text-align: center; font-size: 10px; color: var(--faint); font-weight: 600; padding-bottom: var(--space-1); }
+  .day { height: 60px; border-radius: var(--radius-sm); background: var(--surface-2); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 5px; gap: 1px; position: relative; }
+  .day b { font-size: var(--text-sm); font-weight: 600; line-height: 1.1; }
+  .day small { font-size: 9px; color: var(--muted); }
+  .day::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: 4px; height: 3px; border-radius: 2px; }
+  .day.ok::after { background: var(--ok); }
+  .day.over::after { background: var(--over); }
+  .day.low::after { background: var(--estimate); }
+  .day.none { background: none; border: 1px dashed var(--border); }
+  .day.today { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
+  .day.today b { color: var(--accent-text); }
+  .day.today::after { background: var(--accent); left: calc(50% - 8px); right: auto; width: 16px; }
+  .day.future, .day.blank { background: none; }
+  .day.future b { color: var(--faint); font-weight: 400; }
+  .day.sel { box-shadow: inset 0 0 0 2px var(--text); }
+  .mk { display: flex; gap: 2px; color: var(--muted); }
+  .mk svg { width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .mk svg.hl { color: var(--accent-text); }
+  /* body filter: calorie bars fade, weights take over */
+  .body-view .day::after { opacity: 0.15; }
+  .body-view .day small.w { color: var(--text); font-weight: 600; font-size: 10px; }
+  .body-view .day.nw small.w { color: var(--faint); font-weight: 400; }
+  .legend { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); font-size: 10px; color: var(--muted); margin-top: var(--space-2); }
+  .legend span { display: flex; align-items: center; gap: 3px; }
+  .legend i { width: 12px; height: 3px; border-radius: 2px; }
+  .legend svg { width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  svg.spark { width: 100%; height: 48px; display: block; }
+  .spark .trend { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; }
+  .spark .dot { fill: var(--faint); }
+  /* day sheet */
+  .ev { display: flex; gap: var(--space-3); align-items: center; min-height: 52px; border-bottom: 1px solid var(--border); }
+  .ev:last-child { border-bottom: 0; }
+  .ev .ic { width: 34px; height: 34px; border-radius: 10px; background: var(--surface-2); color: var(--muted); display: flex; align-items: center; justify-content: center; flex: none; }
+  .ev .ic svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .ev .info { flex: 1; min-width: 0; }
+  .ev .t { font-size: var(--text-md); font-weight: 500; }
+  .ev .d { font-size: var(--text-sm); color: var(--muted); }
+  .ev .go { color: var(--faint); }
+  .ev.later { opacity: 0.5; }
+  .progress { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; display: flex; margin-top: var(--space-1); }
+  .progress i { display: block; height: 100%; }
+</style>
+</head>
+<body>
+<!-- icon sprite -->
+<svg width="0" height="0" style="position: absolute">
+  <symbol id="i-scale" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9a4 4 0 0 1 6 0M12 9.5V11"/></symbol>
+  <symbol id="i-tape" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="8" rx="1.5"/><path d="M7 8v3M11 8v3M15 8v3M19 8v2"/></symbol>
+  <symbol id="i-pot" viewBox="0 0 24 24"><path d="M4 10h16v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4zM2 10h2M20 10h2M9 6c0-1 1-1 1-2M14 6c0-1 1-1 1-2"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2"/></symbol>
+  <symbol id="i-dumbbell" viewBox="0 0 24 24"><path d="M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12"/></symbol>
+  <symbol id="i-food" viewBox="0 0 24 24"><path d="M5 3v8a2 2 0 0 0 4 0V3M7 11v10M16 3c-2 0-3 2-3 6s1 4 3 4v8"/></symbol>
+  <symbol id="i-can" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.5"/><path d="M5 6v12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6"/></symbol>
+</svg>
+
+<div class="toolbar">
+  <button class="toggle" id="theme-toggle">Switch to light</button>
+  <span class="nav">v1.1: <a href="pantry.html">Pantry</a> · <a href="recipes.html">Recipes</a> · <a href="progress.html">Progress</a> · <b>Calendar</b> · <a href="measure.html">Measure &amp; import</a> · <a href="measure-guide.html">Measure guide</a> · <a href="today.html">v1 screens</a></span>
+</div>
+
+<div class="frames">
+  <!-- Frame 1: all events -->
+  <div>
+    <p class="frame-label">1 · Progress › Calendar, All: calories per day + what happened</p>
+    <div class="phone">
+      <div class="status"><span>21:40</span><span>●●● 35%</span></div>
+      <div class="appbar" style="padding-bottom: var(--space-2)"><h1>Progress</h1></div>
+      <div class="content" style="gap: var(--space-2)">
+        <div class="seg"><span>Overview</span><span class="on">Calendar</span></div>
+        <div class="monthnav"><span>‹</span><b>October 2026</b><span class="faint">›</span></div>
+        <div class="chips tight"><span class="chip on">All</span><span class="chip">Food</span><span class="chip">Body</span><span class="chip">Pantry</span><span class="chip later">Workouts · later</span></div>
+        <div class="stats3">
+          <div><div class="k">Daily avg</div><div class="v">2,211<span> kcal</span></div></div>
+          <div><div class="k">On target</div><div class="v">11<span> / 18</span></div></div>
+          <div><div class="k">Weigh-ins</div><div class="v">13<span> days</span></div></div>
+        </div>
+        <div class="card cal">
+          <div class="dow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+          <div class="grid">
+            <div class="day blank"></div><div class="day blank"></div><div class="day blank"></div><div class="day blank"></div>
+            <div class="day ok"><b>1</b><small>2,180</small><span class="mk"><svg><use href="#i-scale"/></svg></span></div>
+            <div class="day ok"><b>2</b><small>2,050</small></div>
+            <div class="day over"><b>3</b><small>2,610</small><span class="mk"><svg><use href="#i-scale"/></svg></span></div>
+
+            <div class="day over"><b>4</b><small>2,390</small><span class="mk"><svg><use href="#i-bag"/></svg></span></div>
+            <div class="day ok"><b>5</b><small>2,120</small><span class="mk"><svg><use href="#i-scale"/></svg><svg><use href="#i-pot"/></svg></span></div>
+            <div class="day ok"><b>6</b><small>2,195</small><span class="mk"><svg><use href="#i-scale"/></svg><svg class="hl"><use href="#i-tape"/></svg></span></div>
+            <div class="day low"><b>7</b><small>1,640</small></div>
+            <div class="day ok"><b>8</b><small>2,160</small><span class="mk"><svg><use href="#i-scale"/></svg></span></div>
+            <div class="day ok"><b>9</b><small>2,080</small></div>
+            <div class="day none"><b>10</b><small>—</small><span class="mk"><svg><use href="#i-scale"/></svg></span></div>
+
+            <div class="day over"><b>11</b><small>2,720</small><span class="mk"><svg><use href="#i-bag"/></svg></span></div>
+            <div class="day ok"><b>12</b><small>2,140</small><span class="mk"><svg><use href="#i-scale"/></svg><svg><use href="#i-pot"/></svg></span></div>
+            <div class="day ok"><b>13</b><small>2,170</small><span class="mk"><svg><use href="#i-scale"/></svg></span></div>
+            <div class="day ok"><b>14</b><small>2,010</small></div>
+            <div class="day ok"><b>15</b><small>2,190</small><span class="mk"><svg><use href="#i-scale"/></svg></span></div>
+            <div class="day over"><b>16</b><small>2,240</small></div>
+            <div class="day over"><b>17</b><small>2,330</small><span class="mk"><svg><use href="#i-scale"/></svg></span></div>
+
+            <div class="day ok"><b>18</b><small>2,150</small><span class="mk"><svg><use href="#i-scale"/></svg><svg><use href="#i-bag"/></svg></span></div>
+            <a class="day over" href="#day"><b>19</b><small>2,419</small><span class="mk"><svg><use href="#i-scale"/></svg><svg><use href="#i-pot"/></svg></span></a>
+            <div class="day today"><b>20</b><small>1,420</small><span class="mk"><svg><use href="#i-scale"/></svg><svg class="hl"><use href="#i-tape"/></svg><svg><use href="#i-pot"/></svg></span></div>
+            <div class="day future"><b>21</b></div><div class="day future"><b>22</b></div><div class="day future"><b>23</b></div><div class="day future"><b>24</b></div>
+
+            <div class="day future"><b>25</b></div><div class="day future"><b>26</b></div><div class="day future"><b>27</b></div><div class="day future"><b>28</b></div><div class="day future"><b>29</b></div><div class="day future"><b>30</b></div><div class="day future"><b>31</b></div>
+          </div>
+          <div class="legend">
+            <span><i style="background: var(--ok)"></i>On target</span>
+            <span><i style="background: var(--over)"></i>Over</span>
+            <span><i style="background: var(--estimate)"></i>Under</span>
+            <span><svg><use href="#i-scale"/></svg>Weigh-in</span>
+            <span style="color: var(--accent-text)"><svg><use href="#i-tape"/></svg>Measured</span>
+            <span><svg><use href="#i-pot"/></svg>Cooked</span>
+            <span><svg><use href="#i-bag"/></svg>Groceries</span>
+          </div>
+        </div>
+      </div>
+      <nav class="tabbar">
+        <a class="tab" href="today.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Today</a>
+        <a class="tab" href="log.html"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9"/></svg>Log</a>
+        <a class="tab" href="pantry.html"><svg viewBox="0 0 24 24"><path d="M4 5h16v3H4zM5 8h14v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1zM10 12h4"/></svg>Pantry</a>
+        <a class="tab on" href="progress.html"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-4 3 3 5-6"/></svg>Progress</a>
+        <a class="tab" href="recipes.html"><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/></svg>More</a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Frame 2: body filter -->
+  <div>
+    <p class="frame-label">2 · Body filter: weight per day, measurement days, trend</p>
+    <div class="phone">
+      <div class="status"><span>21:41</span><span>●●● 35%</span></div>
+      <div class="appbar" style="padding-bottom: var(--space-2)"><h1>Progress</h1></div>
+      <div class="content" style="gap: var(--space-2)">
+        <div class="seg"><span>Overview</span><span class="on">Calendar</span></div>
+        <div class="monthnav"><span>‹</span><b>October 2026</b><span class="faint">›</span></div>
+        <div class="chips tight"><span class="chip">All</span><span class="chip">Food</span><span class="chip on">Body</span><span class="chip">Pantry</span><span class="chip later">Workouts · later</span></div>
+        <div class="stats3">
+          <div><div class="k">Weigh-ins</div><div class="v">13<span> days</span></div></div>
+          <div><div class="k">Trend</div><div class="v" style="color: var(--ok)">−0.7<span> kg</span></div></div>
+          <div><div class="k">Measured</div><div class="v">2<span> times</span></div></div>
+        </div>
+        <div class="card cal body-view">
+          <div class="dow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+          <div class="grid">
+            <div class="day blank"></div><div class="day blank"></div><div class="day blank"></div><div class="day blank"></div>
+            <div class="day ok"><b>1</b><small class="w">70.3</small></div>
+            <div class="day ok nw"><b>2</b><small class="w">—</small></div>
+            <div class="day over"><b>3</b><small class="w">70.4</small></div>
+
+            <div class="day over nw"><b>4</b><small class="w">—</small></div>
+            <div class="day ok"><b>5</b><small class="w">70.2</small></div>
+            <div class="day ok"><b>6</b><small class="w">69.9</small><span class="mk"><svg class="hl"><use href="#i-tape"/></svg></span></div>
+            <div class="day low nw"><b>7</b><small class="w">—</small></div>
+            <div class="day ok"><b>8</b><small class="w">69.9</small></div>
+            <div class="day ok nw"><b>9</b><small class="w">—</small></div>
+            <div class="day none"><b>10</b><small class="w">70.1</small></div>
+
+            <div class="day over nw"><b>11</b><small class="w">—</small></div>
+            <div class="day ok"><b>12</b><small class="w">70.0</small></div>
+            <div class="day ok"><b>13</b><small class="w">69.8</small></div>
+            <div class="day ok nw"><b>14</b><small class="w">—</small></div>
+            <div class="day ok"><b>15</b><small class="w">69.9</small></div>
+            <div class="day over nw"><b>16</b><small class="w">—</small></div>
+            <div class="day over"><b>17</b><small class="w">69.7</small></div>
+
+            <div class="day ok"><b>18</b><small class="w">69.6</small></div>
+            <div class="day over"><b>19</b><small class="w">69.8</small></div>
+            <div class="day today"><b>20</b><small class="w">69.4</small><span class="mk"><svg class="hl"><use href="#i-tape"/></svg></span></div>
+            <div class="day future"><b>21</b></div><div class="day future"><b>22</b></div><div class="day future"><b>23</b></div><div class="day future"><b>24</b></div>
+
+            <div class="day future"><b>25</b></div><div class="day future"><b>26</b></div><div class="day future"><b>27</b></div><div class="day future"><b>28</b></div><div class="day future"><b>29</b></div><div class="day future"><b>30</b></div><div class="day future"><b>31</b></div>
+          </div>
+          <div class="legend"><span>kg = first reading of the day</span><span style="color: var(--accent-text)"><svg><use href="#i-tape"/></svg>Measurement session</span></div>
+        </div>
+        <div class="card" style="padding: var(--space-2) var(--space-3)">
+          <div class="legend" style="margin: 0 0 var(--space-1)"><span style="color: var(--text); font-weight: 600">7-day average</span><span>70.3 → 69.6 kg</span></div>
+          <svg class="spark" viewBox="0 0 300 48" preserveAspectRatio="none">
+            <polyline class="trend" points="5,8 50,10 95,15 140,20 185,26 230,32 295,40"/>
+          </svg>
+        </div>
+      </div>
+      <nav class="tabbar">
+        <a class="tab" href="today.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Today</a>
+        <a class="tab" href="log.html"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9"/></svg>Log</a>
+        <a class="tab" href="pantry.html"><svg viewBox="0 0 24 24"><path d="M4 5h16v3H4zM5 8h14v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1zM10 12h4"/></svg>Pantry</a>
+        <a class="tab on" href="progress.html"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-4 3 3 5-6"/></svg>Progress</a>
+        <a class="tab" href="recipes.html"><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/></svg>More</a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Frame 3: day sheet -->
+  <div id="day">
+    <p class="frame-label">3 · Tap a day: everything from Mon, Oct 19</p>
+    <div class="phone">
+      <div class="status"><span>21:42</span><span>●●● 34%</span></div>
+      <div class="appbar" style="padding-bottom: var(--space-2)"><h1>Progress</h1></div>
+      <div class="content" style="gap: var(--space-2)">
+        <div class="seg"><span>Overview</span><span class="on">Calendar</span></div>
+        <div class="monthnav"><span>‹</span><b>October 2026</b><span class="faint">›</span></div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start">
+          <div><h2>Mon, Oct 19</h2><p class="sub">4 things logged</p></div>
+          <span class="badge over" style="font-size: var(--text-sm); padding: var(--space-1) var(--space-3)">219 over</span>
+        </div>
+        <div>
+          <a class="ev" href="log.html">
+            <span class="ic"><svg><use href="#i-food"/></svg></span>
+            <div class="info"><div class="t">Food · 2,419 / 2,200 kcal</div><div class="d">10 foods · P 151 · C 248 · F 86 g</div>
+              <div class="progress"><i style="width: 91%; background: var(--accent)"></i><i style="width: 9%; background: var(--over)"></i></div></div>
+            <span class="go">›</span>
+          </a>
+          <a class="ev" href="progress.html">
+            <span class="ic"><svg><use href="#i-scale"/></svg></span>
+            <div class="info"><div class="t">Weight · 69.8 kg</div><div class="d">Xiaomi scale · 06:51 · 7-day avg 69.7</div></div>
+            <span class="go">›</span>
+          </a>
+          <a class="ev" href="recipes.html">
+            <span class="ic"><svg><use href="#i-pot"/></svg></span>
+            <div class="info"><div class="t">Cooked chopsuey</div><div class="d">611 g raw · 254 kcal <span class="badge est">⚠ unsettled</span></div></div>
+            <span class="go">›</span>
+          </a>
+          <a class="ev" href="pantry.html">
+            <span class="ic"><svg><use href="#i-can"/></svg></span>
+            <div class="info"><div class="t">From the pantry</div><div class="d">1 can Gold Seas tuna, drained · Dinner</div></div>
+            <span class="go">›</span>
+          </a>
+          <div class="ev later">
+            <span class="ic"><svg><use href="#i-dumbbell"/></svg></span>
+            <div class="info"><div class="t">Workout</div><div class="d">Rest day · workouts come later</div></div>
+          </div>
+        </div>
+        <div class="btn-row"><button class="btn ghost">‹ Oct 18</button><button class="btn ghost">Oct 20 ›</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const btn = document.getElementById('theme-toggle');
+  btn.onclick = () => {
+    const light = document.documentElement.dataset.theme !== 'light';
+    document.documentElement.dataset.theme = light ? 'light' : 'dark';
+    btn.textContent = light ? 'Switch to dark' : 'Switch to light';
+  };
+</script>
+</body>
+</html>

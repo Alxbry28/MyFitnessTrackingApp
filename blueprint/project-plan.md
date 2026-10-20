@@ -46,7 +46,7 @@ One user per device. No accounts while data stays on the phone. Personal values
 
 **After v1:** pantry inventory (groceries, canned and opened items, supplements,
 recipes and cooked batches), body weight and BMI, friends-beta readiness, .NET
-API with sync and AI meal parsing, workouts, body measurements and calorie
+API with sync, AI meal parsing and product and grocery photos, workouts, body measurements and calorie
 stats, scale sync, web dashboard, accounts.
 
 ## 4. Data - What are we storing?
@@ -83,6 +83,7 @@ Later (proposed in `tech_lead/01`):
 
 - **API:** ASP.NET Core Minimal API (C#) + EF Core, on Render (Docker) with Neon PostgreSQL
 - **AI:** Gemini or OpenAI, called only through the API (ADR-5)
+- **File storage:** free-tier object storage (Cloudflare R2 or Supabase Storage, not chosen) for product and grocery photos uploaded through the API
 - **Crash reports:** Sentry free tier (`@sentry/react-native`)
 - **Web dashboard:** separate React app (Vite + React Router + TanStack Query) on the same API, on Vercel or Cloudflare Pages
 - **CI:** GitHub Actions

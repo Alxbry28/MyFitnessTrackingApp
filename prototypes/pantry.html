@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pantry - prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* shared v1.1 frame styles (same as recipes/progress/measure) */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--desk); color: var(--text); font-family: var(--font-sans); font-variant-numeric: tabular-nums; min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: var(--space-5); padding: var(--space-6) var(--space-4); }
+  .toolbar { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-sm); color: var(--muted); flex-wrap: wrap; justify-content: center; }
+  .toolbar a { color: var(--accent-text); }
+  .nav b { color: var(--text); font-weight: 600; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .toggle { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: var(--space-2) var(--space-4); }
+  .frames { display: flex; gap: var(--space-6); flex-wrap: wrap; justify-content: center; }
+  .frame-label { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2); text-align: center; max-width: 360px; }
+  .phone { width: 360px; height: 760px; background: var(--bg); border: 1px solid var(--border); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+  :where(.phone a) { color: inherit; text-decoration: none; }
+  .status { height: 28px; flex: none; padding: 0 var(--space-5); display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--muted); }
+  .appbar { padding: var(--space-2) var(--space-4) var(--space-3); display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+  .appbar h1 { font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.02em; }
+  .appbar h1.sm { font-size: var(--text-lg); }
+  .sub { font-size: var(--text-sm); color: var(--muted); }
+  .back { font-size: var(--text-sm); color: var(--accent-text); padding: var(--space-2) var(--space-4) 0; }
+  .content { flex: 1; overflow: hidden; padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3) var(--space-4); }
+  .section-label { font-size: var(--text-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .chips { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .chip { height: 32px; padding: 0 var(--space-3); border-radius: 999px; background: var(--surface-2); font-size: var(--text-sm); color: var(--muted); display: inline-flex; align-items: center; }
+  .chip.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+  .badge { font-size: var(--text-xs); font-weight: 600; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+  .badge.est { color: var(--estimate); background: var(--estimate-soft); }
+  .badge.over { color: var(--over); background: var(--over-soft); }
+  .badge.ok { color: var(--ok); background: var(--surface-2); }
+  .badge.acc { color: var(--accent-text); background: var(--accent-soft); }
+  .row { display: flex; align-items: center; gap: var(--space-3); min-height: 56px; padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: 0; }
+  .row .info { flex: 1; min-width: 0; }
+  .row .name { font-size: var(--text-md); font-weight: 500; }
+  .row .meta { font-size: var(--text-sm); color: var(--muted); margin-top: 2px; display: flex; gap: var(--space-1); flex-wrap: wrap; align-items: center; }
+  .row .amt { font-size: var(--text-md); font-weight: 600; text-align: right; white-space: nowrap; }
+  .row .amt small { display: block; font-size: var(--text-xs); color: var(--muted); font-weight: 400; }
+  .btn { height: var(--tap); border-radius: var(--radius); background: var(--surface-2); font-weight: 600; font-size: var(--text-sm); display: flex; align-items: center; justify-content: center; width: 100%; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.ghost { background: none; border: 1px solid var(--border); }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .btn-row.three { grid-template-columns: 1.4fr 1fr 1fr; }
+  .note { font-size: var(--text-xs); color: var(--muted); line-height: 1.45; }
+  .field { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); min-height: 48px; border-bottom: 1px solid var(--border); font-size: var(--text-sm); }
+  .field:last-child { border-bottom: 0; }
+  .field .lbl { color: var(--muted); }
+  .input { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); min-width: 88px; text-align: right; font-weight: 600; font-size: var(--text-md); }
+  .input.focus { box-shadow: 0 0 0 2px var(--accent); }
+  .input.empty { color: var(--faint); font-weight: 400; }
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; border-top: 1px solid var(--border); padding: var(--space-2) var(--space-4) var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+  .grabber { width: 36px; height: 4px; border-radius: 2px; background: var(--faint); margin: 0 auto var(--space-1); }
+  .sheet h2 { font-size: var(--text-lg); font-weight: 700; }
+  .fab { position: absolute; right: var(--space-4); bottom: calc(64px + var(--space-4)); height: 56px; padding: 0 var(--space-5); border-radius: 18px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: var(--text-md); display: flex; align-items: center; gap: var(--space-2); box-shadow: var(--shadow); }
+  .tabbar { height: 64px; flex: none; display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
+  .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); font-size: var(--text-xs); color: var(--muted); }
+  .tab.on { color: var(--accent-text); font-weight: 600; }
+  .tab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* pantry-specific */
+  .search { height: 44px; border-radius: var(--radius); background: var(--surface-2); color: var(--faint); font-size: var(--text-md); display: flex; align-items: center; padding: 0 var(--space-4); }
+  .group-head { display: flex; justify-content: space-between; align-items: baseline; margin-top: var(--space-1); }
+  .group-head span { font-size: var(--text-xs); color: var(--faint); }
+  .hero { display: flex; align-items: baseline; gap: var(--space-2); }
+  .hero b { font-size: var(--text-num); font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+  .hero span { color: var(--muted); font-size: var(--text-sm); }
+  .units { display: flex; gap: var(--space-2); margin-top: var(--space-3); }
+  .can { width: 34px; height: 44px; border-radius: 6px; border: 2px solid var(--accent); background: var(--accent-soft); }
+  .can.opened { background: linear-gradient(to top, var(--accent-soft) 45%, transparent 45%); border-style: dashed; }
+  .move { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .move.plus { color: var(--ok); }
+  .move.minus { color: var(--text); }
+  .move.waste { color: var(--over); }
+  .camera { background: var(--camera); color: var(--camera-text); flex: 1; position: relative; }
+  .camera .found { position: absolute; top: 120px; left: 50%; transform: translateX(-50%); border: 2px solid var(--camera-line); border-radius: var(--radius); width: 240px; height: 120px; display: flex; align-items: center; justify-content: center; font-size: var(--text-sm); }
+  .stepper { display: flex; align-items: center; gap: var(--space-4); }
+  .stepper button { width: var(--tap); height: var(--tap); border-radius: 50%; background: var(--surface-2); font-size: var(--text-lg); font-weight: 600; }
+  .stepper b { font-size: var(--text-num); font-weight: 700; min-width: 40px; text-align: center; }
+  .toggle-sw { width: 40px; height: 24px; border-radius: 12px; background: var(--accent); position: relative; flex: none; }
+  .toggle-sw::after { content: ""; position: absolute; right: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--accent-ink); }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface-2); border-radius: var(--radius); padding: 3px; }
+  .seg span { height: 36px; display: flex; align-items: center; justify-content: center; font-size: var(--text-sm); color: var(--muted); border-radius: 9px; }
+  .seg span.on { background: var(--surface); color: var(--text); font-weight: 600; }
+  .result { display: flex; justify-content: space-between; align-items: center; background: var(--surface-2); border-radius: var(--radius); padding: var(--space-3) var(--space-4); font-size: var(--text-sm); }
+  .result b { font-size: var(--text-lg); }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="toggle" id="theme-toggle">Switch to light</button>
+  <span class="nav">v1.1: <b>Pantry</b> · <a href="recipes.html">Recipes</a> · <a href="progress.html">Progress</a> · <a href="calendar.html">Calendar</a> · <a href="measure.html">Measure &amp; import</a> · <a href="measure-guide.html">Measure guide</a> · <a href="today.html">v1 screens</a></span>
+</div>
+
+<div class="frames">
+  <!-- Frame 1: pantry list -->
+  <div>
+    <p class="frame-label">1 · Pantry list, grouped by kind</p>
+    <div class="phone">
+      <div class="status"><span>18:10</span><span>●●● 64%</span></div>
+      <div class="appbar"><h1>Pantry</h1><span class="sub">14 items</span></div>
+      <div class="content">
+        <div class="chips"><span class="chip on">All</span><span class="chip">Cooked</span><span class="chip">Groceries</span><span class="chip">Supplements</span></div>
+
+        <div class="group-head"><p class="section-label">Cooked</p><span>fridge</span></div>
+        <div class="card" style="padding-block: 0">
+          <div class="row"><div class="info"><div class="name">Chopsuey</div><div class="meta">Oct 19 · 1 day old <span class="badge est">⚠ unsettled</span></div></div><div class="amt">550 g<small>≈ 66 kcal/100 g</small></div></div>
+          <div class="row"><div class="info"><div class="name">Rice, cooked</div><div class="meta">Oct 20 · today <span class="badge ok">settled</span></div></div><div class="amt">620 g<small>129 kcal/100 g</small></div></div>
+        </div>
+
+        <div class="group-head"><p class="section-label">Groceries</p><span>cupboard · fridge</span></div>
+        <div class="card" style="padding-block: 0">
+          <div class="row"><div class="info"><div class="name">Gold Seas tuna flakes in oil</div><div class="meta">155 g/can · eaten drained</div></div><div class="amt">2 + 1 open<small>≈ 60 g drained left</small></div></div>
+          <div class="row"><div class="info"><div class="name">Greek yogurt 0%</div><div class="meta">170 g/cup <span class="badge over">expires in 3 days</span></div></div><div class="amt">2 cups</div></div>
+        </div>
+
+        <div class="group-head"><p class="section-label">Supplements</p><span>shelf</span></div>
+        <div class="card" style="padding-block: 0">
+          <div class="row"><div class="info"><div class="name">Just Whey</div><div class="meta">2 kg tub · 30 g/day</div></div><div class="amt">1.24 kg<small>~41 days</small></div></div>
+          <div class="row"><div class="info"><div class="name">Wake pre-workout</div><div class="meta">9 g/scoop <span class="badge over">low · ~5 days</span></div></div><div class="amt">45 g</div></div>
+        </div>
+      </div>
+      <button class="fab">+ Add stock</button>
+      <nav class="tabbar">
+        <a class="tab" href="today.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Today</a>
+        <a class="tab" href="log.html"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9"/></svg>Log</a>
+        <a class="tab on" href="pantry.html"><svg viewBox="0 0 24 24"><path d="M4 5h16v3H4zM5 8h14v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1zM10 12h4"/></svg>Pantry</a>
+        <a class="tab" href="progress.html"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-4 3 3 5-6"/></svg>Progress</a>
+        <a class="tab" href="recipes.html"><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/></svg>More</a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Frame 2: item detail -->
+  <div>
+    <p class="frame-label">2 · Item detail: amount left = sum of the history</p>
+    <div class="phone">
+      <div class="status"><span>18:12</span><span>●●● 64%</span></div>
+      <a class="back" href="pantry.html">‹ Pantry</a>
+      <div class="appbar"><h1 class="sm">Gold Seas tuna flakes in oil</h1></div>
+      <div class="content">
+        <div class="card">
+          <div class="hero"><b>2</b><span>sealed</span><b style="margin-left: var(--space-2)">1</b><span>opened</span></div>
+          <div class="units"><span class="can"></span><span class="can"></span><span class="can opened"></span></div>
+          <p class="note" style="margin-top: var(--space-3)">Opened Oct 20 · about 60 g drained left · eat within 2 days</p>
+        </div>
+        <div class="card" style="padding-block: var(--space-1)">
+          <div class="field"><span class="lbl">Net weight per can</span><span>155 g</span></div>
+          <div class="field"><span class="lbl">Eaten drained</span><span>Yes · drained values</span></div>
+          <div class="field"><span class="lbl">Usual drained weight</span><span>110 g <span class="badge est">avg of 2</span></span></div>
+          <div class="field"><span class="lbl">Location</span><span>Cupboard</span></div>
+        </div>
+        <div class="btn-row three">
+          <button class="btn primary">Log a portion</button>
+          <button class="btn">Remove</button>
+          <button class="btn">Adjust</button>
+        </div>
+        <p class="section-label">History</p>
+        <div class="card" style="padding-block: 0">
+          <div class="row"><div class="info"><div class="name">Eaten · Lunch</div><div class="meta">Oct 20, 12:35 · opened 1 can</div></div><span class="move minus">−50 g</span></div>
+          <div class="row"><div class="info"><div class="name">Eaten · Dinner</div><div class="meta">Oct 19, 19:10 · 1 can drained</div></div><span class="move minus">−1 can</span></div>
+          <div class="row"><div class="info"><div class="name">Bought</div><div class="meta">Oct 18 · SM Hypermarket</div></div><span class="move plus">+4 cans</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 3: add to pantry after scan -->
+  <div>
+    <p class="frame-label">3 · After a scan: "How many did you buy?"</p>
+    <div class="phone">
+      <div class="status" style="background: var(--camera); color: var(--camera-text)"><span>10:05</span><span>●●● 91%</span></div>
+      <div class="camera"><div class="found">✓ Found in your library</div></div>
+      <div class="scrim" style="background: transparent"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div>
+          <h2>Gold Seas tuna flakes in oil</h2>
+          <p class="sub">155 g can · in your library · eaten drained</p>
+        </div>
+        <div class="field" style="border: 0; min-height: 0">
+          <span class="lbl">Cans bought</span>
+          <div class="stepper"><button>−</button><b>3</b><button>+</button></div>
+        </div>
+        <div class="result"><span>In stock after this</span><span><b>5</b> sealed + 1 opened</span></div>
+        <div>
+          <div class="field"><span class="lbl">Location</span><div class="chips"><span class="chip on">Cupboard</span><span class="chip">Fridge</span><span class="chip">Freezer</span></div></div>
+          <div class="field"><span class="lbl">Expiry date</span><span class="input empty">Optional</span></div>
+        </div>
+        <p class="note">Adding stock doesn't count toward today's calories. Only eating does.</p>
+        <div class="btn-row"><button class="btn ghost">Library only</button><button class="btn primary">Add 3 to pantry</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 4: remove / adjust -->
+  <div>
+    <p class="frame-label">4 · Remove without eating (shared, discarded, spilled)</p>
+    <div class="phone">
+      <div class="status"><span>20:30</span><span>●●● 41%</span></div>
+      <a class="back" href="pantry.html">‹ Pantry</a>
+      <div class="appbar"><h1 class="sm">Chopsuey · Oct 19</h1><span class="badge est">⚠ unsettled</span></div>
+      <div class="content">
+        <div class="card"><div class="hero"><b>550 g</b><span>left in the fridge</span></div></div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div class="seg"><span class="on">Remove</span><span>Adjust to actual</span></div>
+        <p class="section-label">Reason</p>
+        <div class="chips"><span class="chip on">Shared</span><span class="chip">Discarded</span><span class="chip">Spilled</span></div>
+        <div class="field"><span class="lbl">Amount</span><span class="input focus">200 g</span></div>
+        <div class="result"><span>Chopsuey</span><span><b>550 → 350 g</b></span></div>
+        <p class="note">Not counted as eaten, so no calories are added. Because this batch is unsettled, the 200 g still counts toward its cooked weight when you settle it.</p>
+        <div class="btn-row"><button class="btn ghost">Cancel</button><button class="btn primary">Remove 200 g</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const btn = document.getElementById('theme-toggle');
+  btn.onclick = () => {
+    const light = document.documentElement.dataset.theme !== 'light';
+    document.documentElement.dataset.theme = light ? 'light' : 'dark';
+    btn.textContent = light ? 'Switch to dark' : 'Switch to light';
+  };
+</script>
+</body>
+</html>

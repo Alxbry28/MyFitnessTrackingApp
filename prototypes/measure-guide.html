@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Measurement guide - prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* shared v1.1 frame styles (same as recipes/progress/measure) */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--desk); color: var(--text); font-family: var(--font-sans); font-variant-numeric: tabular-nums; min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: var(--space-5); padding: var(--space-6) var(--space-4); }
+  .toolbar { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-sm); color: var(--muted); flex-wrap: wrap; justify-content: center; }
+  .toolbar a { color: var(--accent-text); }
+  .nav b { color: var(--text); font-weight: 600; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .toggle { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: var(--space-2) var(--space-4); }
+  .frames { display: flex; gap: var(--space-6); flex-wrap: wrap; justify-content: center; }
+  .frame-label { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2); text-align: center; max-width: 360px; }
+  .phone { width: 360px; height: 760px; background: var(--bg); border: 1px solid var(--border); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+  :where(.phone a) { color: inherit; text-decoration: none; }
+  .status { height: 28px; flex: none; padding: 0 var(--space-5); display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--muted); }
+  .appbar { padding: var(--space-2) var(--space-4) var(--space-3); display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+  .appbar h1 { font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.02em; }
+  .appbar h1.sm { font-size: var(--text-lg); }
+  .sub { font-size: var(--text-sm); color: var(--muted); }
+  .back { font-size: var(--text-sm); color: var(--accent-text); padding: var(--space-2) var(--space-4) 0; }
+  .content { flex: 1; overflow: hidden; padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3) var(--space-4); }
+  .section-label { font-size: var(--text-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .chips { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .chip { height: 32px; padding: 0 var(--space-3); border-radius: 999px; background: var(--surface-2); font-size: var(--text-sm); color: var(--muted); display: inline-flex; align-items: center; }
+  .chip.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+  .badge { font-size: var(--text-xs); font-weight: 600; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+  .badge.est { color: var(--estimate); background: var(--estimate-soft); }
+  .badge.over { color: var(--over); background: var(--over-soft); }
+  .badge.ok { color: var(--ok); background: var(--surface-2); }
+  .badge.acc { color: var(--accent-text); background: var(--accent-soft); }
+  .row { display: flex; align-items: center; gap: var(--space-3); min-height: 56px; padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: 0; }
+  .row .info { flex: 1; min-width: 0; }
+  .row .name { font-size: var(--text-md); font-weight: 500; }
+  .row .meta { font-size: var(--text-sm); color: var(--muted); margin-top: 2px; display: flex; gap: var(--space-1); flex-wrap: wrap; align-items: center; }
+  .row .amt { font-size: var(--text-md); font-weight: 600; text-align: right; white-space: nowrap; }
+  .row .amt small { display: block; font-size: var(--text-xs); color: var(--muted); font-weight: 400; }
+  .btn { height: var(--tap); border-radius: var(--radius); background: var(--surface-2); font-weight: 600; font-size: var(--text-sm); display: flex; align-items: center; justify-content: center; width: 100%; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.ghost { background: none; border: 1px solid var(--border); }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .btn-row.three { grid-template-columns: 1.4fr 1fr 1fr; }
+  .note { font-size: var(--text-xs); color: var(--muted); line-height: 1.45; }
+  .field { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); min-height: 48px; border-bottom: 1px solid var(--border); font-size: var(--text-sm); }
+  .field:last-child { border-bottom: 0; }
+  .field .lbl { color: var(--muted); }
+  .input { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); min-width: 88px; text-align: right; font-weight: 600; font-size: var(--text-md); }
+  .input.focus { box-shadow: 0 0 0 2px var(--accent); }
+  .input.empty { color: var(--faint); font-weight: 400; }
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; border-top: 1px solid var(--border); padding: var(--space-2) var(--space-4) var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+  .grabber { width: 36px; height: 4px; border-radius: 2px; background: var(--faint); margin: 0 auto var(--space-1); }
+  .sheet h2 { font-size: var(--text-lg); font-weight: 700; }
+  .fab { position: absolute; right: var(--space-4); bottom: calc(64px + var(--space-4)); height: 56px; padding: 0 var(--space-5); border-radius: 18px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: var(--text-md); display: flex; align-items: center; gap: var(--space-2); box-shadow: var(--shadow); }
+  .tabbar { height: 64px; flex: none; display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
+  .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); font-size: var(--text-xs); color: var(--muted); }
+  .tab.on { color: var(--accent-text); font-weight: 600; }
+  .tab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  /* guide-specific */
+  .content { overflow-y: auto; scrollbar-width: none; }
+  .fig { fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+  .fig-soft { fill: var(--surface-2); stroke: var(--muted); stroke-width: 1.6; stroke-linejoin: round; }
+  .faint-line { stroke: var(--faint); stroke-width: 1; stroke-dasharray: 3 3; fill: none; }
+  .tape { stroke: var(--accent); stroke-width: 3; stroke-linecap: round; fill: none; }
+  .tape-back { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 3 3; fill: none; opacity: 0.6; }
+  .num circle { fill: var(--accent); }
+  .num text { fill: var(--accent-ink); font: 700 9px var(--font-sans); text-anchor: middle; dominant-baseline: central; }
+  .num.off circle { fill: var(--surface-2); stroke: var(--faint); }
+  .num.off text { fill: var(--muted); }
+  .dim { stroke: var(--text); stroke-width: 1.2; fill: none; }
+  .dim-t { fill: var(--text); font: 600 10px var(--font-sans); text-anchor: middle; }
+  .map { display: grid; grid-template-columns: 116px 1fr; gap: var(--space-2); align-items: start; }
+  .site-list { display: flex; flex-direction: column; }
+  .site-list div { display: flex; align-items: center; gap: var(--space-2); min-height: 30px; font-size: var(--text-sm); border-bottom: 1px solid var(--border); }
+  .site-list div:last-child { border-bottom: 0; }
+  .site-list i { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-style: normal; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none; }
+  .site-list .off i { background: var(--surface-2); color: var(--muted); }
+  .site-list .off { color: var(--muted); }
+  .site-list span { flex: 1; }
+  .site-list small { font-size: var(--text-xs); color: var(--faint); }
+  .ticks { display: flex; flex-direction: column; gap: var(--space-2); }
+  .ticks p { display: flex; gap: var(--space-2); font-size: var(--text-sm); line-height: 1.4; }
+  .ticks p::before { content: "✓"; color: var(--ok); font-weight: 700; flex: none; width: 14px; }
+  .ticks.no p::before { content: "✕"; color: var(--over); }
+  .steps { counter-reset: s; display: flex; flex-direction: column; gap: var(--space-2); }
+  .steps p { counter-increment: s; display: flex; gap: var(--space-3); font-size: var(--text-sm); line-height: 1.4; }
+  .steps p::before { content: counter(s); width: 20px; height: 20px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); font-size: var(--text-xs); font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none; }
+  .k-title { font-size: var(--text-sm); color: var(--muted); font-weight: 600; margin-bottom: var(--space-2); }
+  .tip { background: var(--accent-soft); border-radius: var(--radius); padding: var(--space-3); font-size: var(--text-sm); line-height: 1.45; }
+  .tip b { color: var(--accent-text); }
+  .stepbar { display: flex; gap: 4px; }
+  .stepbar i { flex: 1; height: 4px; border-radius: 2px; background: var(--track); }
+  .stepbar i.done { background: var(--ok); }
+  .stepbar i.now { background: var(--accent); }
+  .big-in { display: flex; align-items: baseline; justify-content: center; gap: var(--space-2); background: var(--surface-2); border-radius: var(--radius); padding: var(--space-3); box-shadow: 0 0 0 2px var(--accent); }
+  .big-in b { font-size: 44px; font-weight: 700; letter-spacing: -0.03em; }
+  .big-in span { color: var(--muted); font-size: var(--text-lg); }
+  .twice { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-2); text-align: center; }
+  .twice div { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2) 0; }
+  .twice b { display: block; font-size: var(--text-md); }
+  .twice span { font-size: var(--text-xs); color: var(--muted); }
+  .twice .avg { background: var(--accent-soft); }
+  .twice .avg b { color: var(--accent-text); }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="toggle" id="theme-toggle">Switch to light</button>
+  <span class="nav">v1.1: <a href="pantry.html">Pantry</a> · <a href="recipes.html">Recipes</a> · <a href="progress.html">Progress</a> · <a href="calendar.html">Calendar</a> · <a href="measure.html">Measure &amp; import</a> · <b>Measure guide</b> · <a href="today.html">v1 screens</a></span>
+</div>
+
+<div class="frames">
+  <!-- Frame 1: overview -->
+  <div>
+    <p class="frame-label">1 · Guide overview: where to measure, before you start, rules</p>
+    <div class="phone">
+      <div class="status"><span>06:58</span><span>●●● 100%</span></div>
+      <a class="back" href="measure.html">‹ New measurements</a>
+      <div class="appbar"><h1 class="sm">How to measure</h1><span class="sub">2 min read</span></div>
+      <div class="content">
+        <div class="card map">
+          <svg viewBox="0 0 120 260" width="116" height="252" aria-label="Body with measuring sites">
+            <circle class="fig-soft" cx="60" cy="20" r="13"/>
+            <path class="fig-soft" d="M53 32 v9 L32 48 Q24 51 22 60 L15 120 L23 122 L32 72 L34 118 Q32 134 36 146 L41 252 L56 252 L58 160 L62 160 L64 252 L79 252 L84 146 Q88 134 86 118 L88 72 L97 122 L105 120 L98 60 Q96 51 88 48 L67 41 v-9 Z"/>
+            <path class="tape" d="M53 39 h14"/>
+            <path class="tape" d="M24 53 h72"/>
+            <path class="tape" d="M33 68 h54"/>
+            <path class="tape" d="M19 80 h12"/>
+            <path class="tape" d="M16 104 h11"/>
+            <path class="tape" d="M35 108 h50"/>
+            <path class="tape" d="M35 136 h50"/>
+            <path class="tape" d="M41 176 h16"/>
+            <path class="tape" d="M42 222 h14"/>
+            <g class="num off"><circle cx="74" cy="39" r="6"/><text x="74" y="39">1</text></g>
+            <g class="num off"><circle cx="103" cy="53" r="6"/><text x="103" y="53">2</text></g>
+            <g class="num"><circle cx="94" cy="68" r="6"/><text x="94" y="68">3</text></g>
+            <g class="num"><circle cx="9" cy="80" r="6"/><text x="9" y="80">4</text></g>
+            <g class="num off"><circle cx="8" cy="104" r="6"/><text x="8" y="104">5</text></g>
+            <g class="num"><circle cx="92" cy="108" r="6"/><text x="92" y="108">6</text></g>
+            <g class="num off"><circle cx="92" cy="136" r="6"/><text x="92" y="136">7</text></g>
+            <g class="num"><circle cx="33" cy="176" r="6"/><text x="33" y="176">8</text></g>
+            <g class="num off"><circle cx="34" cy="222" r="6"/><text x="34" y="222">9</text></g>
+          </svg>
+          <div class="site-list">
+            <div class="off"><i>1</i><span>Neck</span><small>off</small></div>
+            <div class="off"><i>2</i><span>Shoulders</span><small>off</small></div>
+            <div><i>3</i><span>Chest</span></div>
+            <div><i>4</i><span>Upper arm</span><small>L/R</small></div>
+            <div class="off"><i>5</i><span>Forearm</span><small>off</small></div>
+            <div><i>6</i><span>Waist</span></div>
+            <div class="off"><i>7</i><span>Hips</span><small>off</small></div>
+            <div><i>8</i><span>Thigh</span><small>L/R</small></div>
+            <div class="off"><i>9</i><span>Calf</span><small>off</small></div>
+            <a class="sub" style="color: var(--accent-text); margin-top: var(--space-2)">Choose sites ›</a>
+          </div>
+        </div>
+        <div class="card">
+          <p class="k-title">Before you start</p>
+          <div class="ticks">
+            <p>Soft tape measure (tailor's tape), not a metal one</p>
+            <p>Morning, after the bathroom, before eating or training</p>
+            <p>Light clothing or bare skin; stand in front of a mirror</p>
+            <p>Relaxed and standing tall, feet hip-width apart</p>
+          </div>
+        </div>
+        <div class="card">
+          <p class="k-title">Golden rules</p>
+          <div class="steps">
+            <p>Same time, same spot, same tape every session.</p>
+            <p>Tape snug on the skin and level all the way around. Don't press in.</p>
+            <p>Measure twice. If they differ, the app saves the average.</p>
+            <p>Every 2–4 weeks is enough. Weekly changes are mostly noise.</p>
+            <p>Pick flexed or relaxed arms once, and keep it.</p>
+          </div>
+        </div>
+        <button class="btn primary">Start guided session</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 2: site detail -->
+  <div>
+    <p class="frame-label">2 · Site detail: upper arm, with your consistency spot</p>
+    <div class="phone">
+      <div class="status"><span>06:59</span><span>●●● 100%</span></div>
+      <a class="back" href="#">‹ How to measure</a>
+      <div class="appbar"><h1 class="sm">Upper arm</h1><span class="badge acc">flexed · your setting</span></div>
+      <div class="content">
+        <div class="card" style="display: flex; justify-content: center">
+          <svg viewBox="0 0 200 150" width="280" height="190" aria-label="Flexed arm with tape at the biceps peak">
+            <path class="fig-soft" d="M8 128 Q14 100 52 94 Q78 72 104 82 Q118 88 126 96 L138 46 Q140 30 154 31 Q168 33 166 50 L156 108 Q152 130 128 132 Q90 136 56 138 Q20 142 8 128 Z"/>
+            <path class="faint-line" d="M126 96 Q132 112 132 130"/>
+            <path class="tape-back" d="M80 80 Q66 108 82 136"/>
+            <path class="tape" d="M80 80 Q94 108 82 136"/>
+            <path class="dim" d="M84 146 H130 M84 142 v8 M130 142 v8"/>
+            <text class="dim-t" x="107" y="144" dy="-4">12 cm</text>
+            <text class="dim-t" x="140" y="148" style="fill: var(--muted); font-weight: 400; text-anchor: start">elbow crease</text>
+          </svg>
+        </div>
+        <div class="card">
+          <p class="k-title">How</p>
+          <div class="steps">
+            <p>Raise your arm to shoulder height and flex, fist toward your shoulder.</p>
+            <p>Find the biceps peak: the widest part of the upper arm.</p>
+            <p>Wrap the tape around it, level, crossing the back of the arm (triceps).</p>
+            <p>Read in cm. Right arm first, then left.</p>
+          </div>
+        </div>
+        <div class="card">
+          <p class="k-title">Common mistakes</p>
+          <div class="ticks no">
+            <p>Tape slanted toward the elbow</p>
+            <p>Flexed this time, relaxed last time</p>
+            <p>Pulling the tape tight so it digs in</p>
+          </div>
+        </div>
+        <div class="tip"><b>Same spot every time:</b> measure the distance from your elbow crease to the tape once. The app saves it ("12 cm above the elbow crease") and shows it each session.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 3: guided session -->
+  <div>
+    <p class="frame-label">3 · Guided session: one site per screen, measure twice</p>
+    <div class="phone">
+      <div class="status"><span>07:01</span><span>●●● 99%</span></div>
+      <div class="appbar"><h1 class="sm">3 of 6 · Waist</h1><a class="sub" href="measure.html">Use quick form</a></div>
+      <div class="content">
+        <div class="stepbar"><i class="done"></i><i class="done"></i><i class="now"></i><i></i><i></i><i></i></div>
+        <div class="card" style="display: flex; justify-content: center">
+          <svg viewBox="0 0 160 150" width="230" height="200" aria-label="Torso with tape at the navel">
+            <path class="fig-soft" d="M40 6 Q80 0 120 6 Q130 40 124 70 Q120 92 126 118 L128 146 L32 146 L34 118 Q40 92 36 70 Q30 40 40 6 Z"/>
+            <path class="faint-line" d="M50 52 Q80 62 110 52"/>
+            <text class="dim-t" x="80" y="46" style="fill: var(--faint); font-weight: 400; font-size: 8px">ribs</text>
+            <path class="tape-back" d="M38 84 Q80 74 122 84"/>
+            <path class="tape" d="M38 84 Q80 96 122 84"/>
+            <circle cx="80" cy="90" r="2.5" style="fill: var(--text)"/>
+            <text class="dim-t" x="80" y="108">navel</text>
+            <path class="faint-line" d="M80 114 V138"/>
+          </svg>
+        </div>
+        <p class="sub" style="line-height: 1.45; color: var(--text)">At the navel, standing relaxed. Breathe out normally, then read. Don't suck in.</p>
+        <div class="big-in"><b>81.2</b><span>cm</span></div>
+        <div class="twice">
+          <div><b>81.0</b><span>1st</span></div>
+          <div><b>81.2</b><span>2nd</span></div>
+          <div class="avg"><b>81.1</b><span>saved</span></div>
+        </div>
+        <p class="note" style="text-align: center">Last session 81.6 cm · Oct 6 → <b style="color: var(--ok)">−0.5 cm</b></p>
+        <div class="btn-row"><button class="btn ghost">Skip</button><button class="btn primary">Next: Arm, right ›</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const btn = document.getElementById('theme-toggle');
+  btn.onclick = () => {
+    const light = document.documentElement.dataset.theme !== 'light';
+    document.documentElement.dataset.theme = light ? 'light' : 'dark';
+    btn.textContent = light ? 'Switch to dark' : 'Switch to light';
+  };
+</script>
+</body>
+</html>

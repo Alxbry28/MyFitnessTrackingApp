@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Measure and import - prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* shared v1.1 frame styles (same as recipes/progress/measure) */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--desk); color: var(--text); font-family: var(--font-sans); font-variant-numeric: tabular-nums; min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: var(--space-5); padding: var(--space-6) var(--space-4); }
+  .toolbar { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-sm); color: var(--muted); flex-wrap: wrap; justify-content: center; }
+  .toolbar a { color: var(--accent-text); }
+  .nav b { color: var(--text); font-weight: 600; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .toggle { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: var(--space-2) var(--space-4); }
+  .frames { display: flex; gap: var(--space-6); flex-wrap: wrap; justify-content: center; }
+  .frame-label { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2); text-align: center; max-width: 360px; }
+  .phone { width: 360px; height: 760px; background: var(--bg); border: 1px solid var(--border); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+  :where(.phone a) { color: inherit; text-decoration: none; }
+  .status { height: 28px; flex: none; padding: 0 var(--space-5); display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--muted); }
+  .appbar { padding: var(--space-2) var(--space-4) var(--space-3); display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+  .appbar h1 { font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.02em; }
+  .appbar h1.sm { font-size: var(--text-lg); }
+  .sub { font-size: var(--text-sm); color: var(--muted); }
+  .back { font-size: var(--text-sm); color: var(--accent-text); padding: var(--space-2) var(--space-4) 0; }
+  .content { flex: 1; overflow: hidden; padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3) var(--space-4); }
+  .section-label { font-size: var(--text-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .chips { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .chip { height: 32px; padding: 0 var(--space-3); border-radius: 999px; background: var(--surface-2); font-size: var(--text-sm); color: var(--muted); display: inline-flex; align-items: center; }
+  .chip.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+  .badge { font-size: var(--text-xs); font-weight: 600; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+  .badge.est { color: var(--estimate); background: var(--estimate-soft); }
+  .badge.over { color: var(--over); background: var(--over-soft); }
+  .badge.ok { color: var(--ok); background: var(--surface-2); }
+  .badge.acc { color: var(--accent-text); background: var(--accent-soft); }
+  .row { display: flex; align-items: center; gap: var(--space-3); min-height: 56px; padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: 0; }
+  .row .info { flex: 1; min-width: 0; }
+  .row .name { font-size: var(--text-md); font-weight: 500; }
+  .row .meta { font-size: var(--text-sm); color: var(--muted); margin-top: 2px; display: flex; gap: var(--space-1); flex-wrap: wrap; align-items: center; }
+  .row .amt { font-size: var(--text-md); font-weight: 600; text-align: right; white-space: nowrap; }
+  .row .amt small { display: block; font-size: var(--text-xs); color: var(--muted); font-weight: 400; }
+  .btn { height: var(--tap); border-radius: var(--radius); background: var(--surface-2); font-weight: 600; font-size: var(--text-sm); display: flex; align-items: center; justify-content: center; width: 100%; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.ghost { background: none; border: 1px solid var(--border); }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .btn-row.three { grid-template-columns: 1.4fr 1fr 1fr; }
+  .note { font-size: var(--text-xs); color: var(--muted); line-height: 1.45; }
+  .field { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); min-height: 48px; border-bottom: 1px solid var(--border); font-size: var(--text-sm); }
+  .field:last-child { border-bottom: 0; }
+  .field .lbl { color: var(--muted); }
+  .input { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); min-width: 88px; text-align: right; font-weight: 600; font-size: var(--text-md); }
+  .input.focus { box-shadow: 0 0 0 2px var(--accent); }
+  .input.empty { color: var(--faint); font-weight: 400; }
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; border-top: 1px solid var(--border); padding: var(--space-2) var(--space-4) var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+  .grabber { width: 36px; height: 4px; border-radius: 2px; background: var(--faint); margin: 0 auto var(--space-1); }
+  .sheet h2 { font-size: var(--text-lg); font-weight: 700; }
+  .fab { position: absolute; right: var(--space-4); bottom: calc(64px + var(--space-4)); height: 56px; padding: 0 var(--space-5); border-radius: 18px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: var(--text-md); display: flex; align-items: center; gap: var(--space-2); box-shadow: var(--shadow); }
+  .tabbar { height: 64px; flex: none; display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
+  .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); font-size: var(--text-xs); color: var(--muted); }
+  .tab.on { color: var(--accent-text); font-weight: 600; }
+  .tab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  /* measure-specific */
+  .site { border-bottom: 1px solid var(--border); padding: var(--space-2) 0; }
+  .site:last-child { border-bottom: 0; }
+  .site .top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); min-height: 44px; }
+  .site .name { font-size: var(--text-md); font-weight: 500; }
+  .site .last { font-size: var(--text-xs); color: var(--faint); }
+  .guide { display: flex; gap: var(--space-3); align-items: center; background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); margin-top: var(--space-1); font-size: var(--text-sm); color: var(--muted); line-height: 1.4; }
+  .guide svg { width: 36px; height: 48px; flex: none; fill: none; stroke: var(--muted); stroke-width: 1.5; }
+  .guide svg .hl { stroke: var(--accent); stroke-width: 2.5; }
+  .weight-big { display: flex; align-items: center; justify-content: center; gap: var(--space-5); padding: var(--space-3) 0; }
+  .weight-big b { font-size: 48px; font-weight: 700; letter-spacing: -0.03em; }
+  .weight-big b small { font-size: var(--text-lg); color: var(--muted); font-weight: 500; }
+  .weight-big button { width: var(--tap); height: var(--tap); border-radius: 50%; background: var(--surface-2); font-size: var(--text-lg); font-weight: 600; }
+  .ok-line { color: var(--ok); font-size: var(--text-sm); font-weight: 600; }
+  .file { display: flex; gap: var(--space-3); align-items: center; }
+  .file .ic { width: 40px; height: 48px; border-radius: 6px; background: var(--surface-2); color: var(--muted); font-size: var(--text-xs); font-weight: 700; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; flex: none; }
+  .stats3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); text-align: center; }
+  .stats3 div { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2) 0; }
+  .stats3 b { display: block; font-size: var(--text-lg); }
+  .stats3 span { font-size: var(--text-xs); color: var(--muted); }
+  .flag { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; border-bottom: 1px solid var(--border); font-size: var(--text-sm); }
+  .flag:last-child { border-bottom: 0; }
+  .flag .d { flex: 1; color: var(--muted); }
+  .flag b { font-weight: 600; }
+  .sw { width: 40px; height: 24px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); position: relative; flex: none; }
+  .sw::after { content: ""; position: absolute; left: 3px; top: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--faint); }
+  .sw.on { background: var(--accent); border-color: var(--accent); }
+  .sw.on::after { left: auto; right: 3px; background: var(--accent-ink); }
+  .perm { display: flex; gap: var(--space-3); align-items: center; min-height: 56px; border-bottom: 1px solid var(--border); }
+  .perm:last-child { border-bottom: 0; }
+  .perm .info { flex: 1; }
+  .perm .t { font-size: var(--text-md); font-weight: 500; }
+  .perm .d { font-size: var(--text-sm); color: var(--muted); }
+  .hc-logo { width: 56px; height: 56px; border-radius: 16px; background: var(--accent-soft); color: var(--accent-text); display: flex; align-items: center; justify-content: center; }
+  .hc-logo svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .steps { counter-reset: s; display: flex; flex-direction: column; gap: var(--space-2); }
+  .steps p { counter-increment: s; display: flex; gap: var(--space-3); font-size: var(--text-sm); line-height: 1.4; }
+  .steps p::before { content: counter(s); width: 22px; height: 22px; border-radius: 50%; background: var(--surface-2); color: var(--muted); font-size: var(--text-xs); font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none; }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="toggle" id="theme-toggle">Switch to light</button>
+  <span class="nav">v1.1: <a href="pantry.html">Pantry</a> · <a href="recipes.html">Recipes</a> · <a href="progress.html">Progress</a> · <a href="calendar.html">Calendar</a> · <b>Measure &amp; import</b> · <a href="measure-guide.html">Measure guide</a> · <a href="today.html">v1 screens</a></span>
+</div>
+
+<div class="frames">
+  <!-- Frame 1: measurement session -->
+  <div>
+    <p class="frame-label">1 · Measurement session: chosen sites, one form, guide per site</p>
+    <div class="phone">
+      <div class="status"><span>07:02</span><span>●●● 99%</span></div>
+      <a class="back" href="progress.html">‹ Progress</a>
+      <div class="appbar"><h1 class="sm">New measurements</h1><a class="sub" href="measure-guide.html" style="color: var(--accent-text)">How to measure ›</a></div>
+      <div class="content">
+        <div class="card" style="padding-block: 0">
+          <div class="site"><div class="top"><div><div class="name">Chest</div><div class="last">last 98.0</div></div><span class="input">98.5</span></div></div>
+          <div class="site">
+            <div class="top"><div><div class="name">Waist</div><div class="last">last 81.6</div></div><span class="input">81.0</span></div>
+            <div class="guide">
+              <svg viewBox="0 0 36 48"><circle cx="18" cy="6" r="4"/><path d="M12 13h12l2 16h-16z"/><path class="hl" d="M9 23h18"/><path d="M13 29l-1 17M23 29l1 17"/></svg>
+              <span>At the navel, relaxed, after breathing out. Tape snug, not pressing in.</span>
+            </div>
+          </div>
+          <div class="site"><div class="top"><div><div class="name">Arm, left <span class="badge acc">flexed</span></div><div class="last">last 33.6</div></div><span class="input">34.0</span></div></div>
+          <div class="site"><div class="top"><div><div class="name">Arm, right <span class="badge acc">flexed</span></div><div class="last">last 34.1</div></div><span class="input">34.5</span></div></div>
+          <div class="site"><div class="top"><div><div class="name">Thigh, left</div><div class="last">last 55.8</div></div><span class="input">56.0</span></div></div>
+          <div class="site"><div class="top"><div><div class="name">Thigh, right</div><div class="last">last 56.3</div></div><span class="input focus empty">cm</span></div></div>
+        </div>
+        <p class="note">Skipped sites stay empty, never 0. Measure each site twice; if the two differ, the average is saved.</p>
+        <div class="btn-row"><button class="btn ghost">+ Photo <span class="badge est" style="margin-left: 4px">later</span></button><button class="btn primary">Save session</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 2: log weight -->
+  <div>
+    <p class="frame-label">2 · Log weight sheet (from Today or Progress, ≤ 2 taps)</p>
+    <div class="phone">
+      <div class="status"><span>06:44</span><span>●●● 100%</span></div>
+      <div class="appbar"><h1>Today</h1><span class="sub">Tue, Oct 20</span></div>
+      <div class="content"></div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <h2>Log weight</h2>
+        <div class="weight-big"><button>−</button><b>69.4 <small>kg</small></b><button>+</button></div>
+        <p class="sub" style="text-align: center">Yesterday 69.8 · 7-day average 69.6</p>
+        <div>
+          <div class="field"><span class="lbl">Time</span><span class="input">06:42</span></div>
+          <div class="field"><span class="lbl">Morning, before eating</span><span class="ok-line">✓ counts as today's weight</span></div>
+        </div>
+        <p class="note">Weight changes 0.5–1.5 kg a day from water and food. Watch the 7-day average, not one day.</p>
+        <button class="btn primary">Save 69.4 kg</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 3: CSV import preview -->
+  <div>
+    <p class="frame-label">3 · Xiaomi history import: preview before saving</p>
+    <div class="phone">
+      <div class="status"><span>21:30</span><span>●●● 30%</span></div>
+      <a class="back" href="progress.html">‹ Settings</a>
+      <div class="appbar"><h1 class="sm">Import weight history</h1></div>
+      <div class="content">
+        <div class="card file"><span class="ic">CSV</span><div><div style="font-weight: 600">ZeppLife_weight_export.csv</div><div class="sub">Mar 2, 2025 – Oct 19, 2026 · 412 readings</div></div></div>
+        <div class="stats3">
+          <div><b style="color: var(--ok)">388</b><span>new</span></div>
+          <div><b>12</b><span>already in app</span></div>
+          <div><b style="color: var(--estimate)">12</b><span>to review</span></div>
+        </div>
+        <p class="section-label">To review · more than 5 kg off your trend</p>
+        <div class="card" style="padding-block: 0">
+          <div class="flag"><span class="d">Jul 14, 2026 · 18:20</span><b>52.3 kg</b><span class="sw"></span></div>
+          <div class="flag"><span class="d">Jul 14, 2026 · 18:21</span><b>52.4 kg</b><span class="sw"></span></div>
+          <div class="flag"><span class="d">+ 10 more, likely another person</span><b style="color: var(--accent-text)">Show</b></div>
+        </div>
+        <div class="card" style="padding-block: 0">
+          <div class="flag"><span class="d">Body fat %, muscle mass (380 readings) as <span class="badge est">estimates</span></span><span class="sw on"></span></div>
+          <div class="flag"><span class="d">Daily weight = first reading of the day</span><span class="sw on"></span></div>
+        </div>
+        <p class="note">Nothing is saved until you import. Weights you typed yourself are never replaced. You can undo this import later.</p>
+        <div class="btn-row"><button class="btn ghost">Cancel</button><button class="btn primary">Import 388</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 4: Health Connect -->
+  <div>
+    <p class="frame-label">4 · Connect Health Connect (new weigh-ins arrive automatically)</p>
+    <div class="phone">
+      <div class="status"><span>21:34</span><span>●●● 29%</span></div>
+      <a class="back" href="progress.html">‹ Settings</a>
+      <div class="content" style="padding-top: var(--space-4)">
+        <div class="hc-logo"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path d="M8 12h2l1-2 2 4 1-2h2"/></svg></div>
+        <div><h2 style="font-size: var(--text-lg); font-weight: 700">Weight from your Xiaomi scale</h2><p class="sub" style="margin-top: var(--space-1); line-height: 1.4">Your scale's app shares weigh-ins with Health Connect. This app reads them so you never type your weight.</p></div>
+        <div class="steps">
+          <p>In Zepp Life / Mi Fitness, turn on Health Connect sharing for weight.</p>
+          <p>Allow this app to read the data below.</p>
+        </div>
+        <div class="card" style="padding-block: 0">
+          <div class="perm"><div class="info"><div class="t">Weight</div><div class="d">Required</div></div><span class="sw on"></span></div>
+          <div class="perm"><div class="info"><div class="t">Body fat</div><div class="d">Optional · shown as an estimate</div></div><span class="sw on"></span></div>
+          <div class="perm"><div class="info"><div class="t">Data older than 30 days</div><div class="d">Android 14+ · to bring in your history</div></div><span class="sw on"></span></div>
+        </div>
+        <p class="note">Read only: nothing is written to Health Connect. Last synced: never.</p>
+        <div class="btn-row"><button class="btn ghost">Not now</button><button class="btn primary">Connect</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const btn = document.getElementById('theme-toggle');
+  btn.onclick = () => {
+    const light = document.documentElement.dataset.theme !== 'light';
+    document.documentElement.dataset.theme = light ? 'light' : 'dark';
+    btn.textContent = light ? 'Switch to dark' : 'Switch to light';
+  };
+</script>
+</body>
+</html>

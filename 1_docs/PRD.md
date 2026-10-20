@@ -156,7 +156,7 @@ Detail lives in the linked plan docs. Each feature gets a full spec through `/fe
 | 10 | Supplements | K1-K6 | `09` P3 |
 | 11 | Body weight and BMI | J1, J5, J6, J17 | `10` B1 |
 | 12 | Recipes and cooked batches | M1-M8, M18, M19 | `09` P4 |
-| 13 | First-run setup | O-series | `11` §4 |
+| 13 | First-run setup + formula TDEE calculator | O-series, J5, J12 (formula), J13 | `11` §4, `10` §2 |
 | 14 | Backup restore | G2 | `11` §4 |
 | 15 | Beta feedback and safety | O-series | `11` §4 |
 | 16 | .NET API foundation | - | `tech_lead/01` |
@@ -164,7 +164,7 @@ Detail lives in the linked plan docs. Each feature gets a full spec through `/fe
 | 18 | AI meal parse | D1-D3 | `07`, `02_workflow` §4 |
 | 19 | Workouts | H1-H4, H8 | `06` Phase 3, ADR-20 |
 | 20 | Body measurements | J7-J10 | `10` B2 |
-| 21 | Calorie stats | J4, J11-J13 | `10` B3 |
+| 21 | Calorie stats + learned TDEE | J4, J11, J12 (learned), J13 | `10` B3 |
 | 22 | Scale sync | J18, J19 | `10` B1b |
 | 23 | Web dashboard | - | `tech_lead/01` §5 |
 | 24 | Accounts (Beta 2) | O7 | `11` §2 |

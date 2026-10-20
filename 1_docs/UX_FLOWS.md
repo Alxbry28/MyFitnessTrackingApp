@@ -151,7 +151,7 @@ Each becomes a full flow in its `/feature` spec.
 | Supplement scoop | 10 | Log 30 g whey → container down 30 g; days-left estimate |
 | Cook a batch | 12 | Recipe → raw grams → batch (not counted) → portions logged → settle cooked weight → per-100 g fixed |
 | Log weight | 11 | Today shortcut or Progress → kg → trend and BMI update |
-| First run | 13 | Goal, units, height, sex, birth date, BMI scale → app opens on Today |
+| First run + TDEE | 13 | Units, height, sex, birth date, weight, activity, goal (cut / maintain / bulk) → formula TDEE and suggested calorie goal ("Estimate, not medical advice") → accept or type your own → weight saved as the first weigh-in → Today |
 | Restore backup | 14 | Pick file → validate version → preview counts → confirm → replace or merge (decide in spec) |
 | AI meal parse | 18 | Paste text → API parses → preview lines matched to my products → fix unmatched → confirm → save. Nothing saved without confirm |
 | Workout session | 19 | Start → pick exercise (illustration from `@bryllim/workout-guide`) → sets with "Last: 60 kg × 8" hints → finish |
