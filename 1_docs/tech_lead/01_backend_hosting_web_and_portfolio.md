@@ -10,7 +10,7 @@
 
 | Question | Answer |
 |----------|--------|
-| Backend: .NET or Node? | **ASP.NET Core Minimal API** (C#) |
+| Backend: .NET or Node? | **ASP.NET Core Minimal API** (C#), Clean Architecture + CQRS with MediatR (ADR-21) |
 | Where to host it for free? | **Render** (API, Docker) + **Neon** (PostgreSQL) |
 | Mobile or web first? | **Mobile first.** Web dashboard in **January**, after the API exists |
 | How to build the web version? | **Separate React (Vite) app** on the same .NET API, not Expo web |
@@ -132,14 +132,14 @@ gantt
     dateFormat YYYY-MM-DD
     axisFormat %b %d
     section Mobile
-    Mobile v1 (locked sprint)        :a1, 2026-10-20, 2026-10-31
+    Mobile v1 - locked sprint        :a1, 2026-10-20, 2026-10-31
     Pantry, weight/BMI, beta prep    :a2, 2026-11-01, 2026-11-28
-    Friends Beta 1 (Android)         :milestone, 2026-11-29, 0d
+    Friends Beta 1 - Android         :milestone, m1, 2026-11-29, 0d
     section Backend
-    .NET API + Postgres + sync + AI  :b1, 2026-11-30, 2026-12-13
+    Backend API, Postgres, sync, AI  :b1, 2026-11-30, 2026-12-13
     Deploy to Render + Neon          :b2, 2026-12-07, 2026-12-13
     section Web
-    React web practice (side repo)   :c0, 2026-11-07, 2026-12-31
+    React web practice - side repo   :c0, 2026-11-07, 2026-12-31
     Web dashboard v1                 :c1, 2027-01-04, 2027-01-31
 ```
 
@@ -204,6 +204,7 @@ To add to `05` §13 once the owner approves.
 | ADR-16 | Every synced table has `updated_at` and `deleted_at` (soft delete) | Last-write-wins sync and delete propagation | Proposed |
 | ADR-17 | Public repo: no personal data or secrets in git; demo seed data for screenshots | The repo is public as a portfolio piece | Proposed |
 | ADR-18 | Web client is a separate React (Vite) app on the .NET API, built after the API (January) | Web React skills; desktop-first UI; one API, two clients | Proposed |
+| ADR-21 | API uses Clean Architecture (Domain, Application, Infrastructure, Api) + CQRS with MediatR; one database, handlers use `IAppDbContext` with no generic repository | Owner's choice; familiar .NET pattern; clear portfolio structure; validation and logging as pipeline behaviors | Accepted (Oct 20) |
 
 ---
 

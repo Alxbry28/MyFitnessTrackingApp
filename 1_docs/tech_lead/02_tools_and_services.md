@@ -99,7 +99,8 @@
 |----------------|-----|------|
 | **ASP.NET Core Minimal API** on **.NET 10 LTS** | API | 🔜 Nov 30 |
 | **EF Core** + `Npgsql.EntityFrameworkCore.PostgreSQL` | ORM + migrations | 🔜 Nov 30 |
-| **FluentValidation** | Request validation | 🔜 Nov 30 |
+| **MediatR** (Community license, free for individuals; key in env vars) | CQRS commands, queries and pipeline behaviors (ADR-21) | 🔜 Nov 30 |
+| **FluentValidation** | Request validation, run in a MediatR pipeline behavior | 🔜 Nov 30 |
 | `Microsoft.AspNetCore.OpenApi` + **Scalar** | OpenAPI document + API docs page (portfolio) | 🔜 Nov 30 |
 | **ASP.NET Core Identity** (API endpoints) + JWT bearer | Accounts for Beta 2 | 🔜 Dec–Jan |
 | **Serilog** | Structured logging | 🔜 Nov 30 |

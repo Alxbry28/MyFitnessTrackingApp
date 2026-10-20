@@ -1,6 +1,6 @@
 # MyFitnessTrackingApp - Project Overview
 
-<!-- blueprint:source-hash 11606437be2dc4e32ea8d67f614ac88fdea55e639df5407f499f533b9af4fe4c -->
+<!-- blueprint:source-hash 716bd1e672783b8e7da78b53a59e833b3e17737f03b52b6edda6dea69adb0355 -->
 
 > A personal, local-first Android fitness tracker: scan a barcode, save your own
 > product once, log meals in a few taps. Later it adds pantry, body progress,
@@ -63,7 +63,7 @@ scale, region) are settings, never constants.
 16. **.NET API foundation** - ASP.NET Core Minimal API + PostgreSQL (Render + Neon).
 17. **Sync** - push/pull local changes, last-write-wins.
 18. **AI meal parse** - text, then parsed entries, preview, confirm, save.
-19. **Workouts** - exercise library, session flow, sets with previous hints, history.
+19. **Workouts** - exercise library, session flow, sets with previous hints, history. Illustrations from `@bryllim/workout-guide` (ADR-20: CC BY-SA 4.0, credit Bryl Lim and Everkinetic, art unedited).
 20. **Body measurements** - sites, sessions, change since start, waist-to-height.
 21. **Calorie stats** - weekly averages, 30-day chart, TDEE, suggested target.
 22. **Scale sync** - Health Connect weight read on app open.
@@ -142,7 +142,8 @@ and `10` §8.
 - **expo-camera** - barcode scanning; **Open Food Facts** - free product lookup, no key
 - **expo-sharing** - JSON backup export
 - **Sentry** (`@sentry/react-native`) - Beta 1 crash reports
-- **ASP.NET Core Minimal API + EF Core + PostgreSQL** - later API on Render + Neon
+- **ASP.NET Core Minimal API + EF Core + PostgreSQL** - later API on Render + Neon,
+  Clean Architecture + CQRS with MediatR (ADR-21)
 - **Gemini or OpenAI** - AI only through the API (ADR-5)
 - **Vite + React Router + TanStack Query** - January web dashboard
 - **GitHub Actions** - CI

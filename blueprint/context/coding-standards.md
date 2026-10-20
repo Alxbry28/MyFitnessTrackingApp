@@ -186,3 +186,17 @@ Over-commenting is a common AI tell, so resist it.
   READMEs, specs. They read as AI-generated.
 - Use a hyphen for `term - description` separators; rephrase prose with commas,
   parentheses, or a colon. Avoid en dashes and the ellipsis character too.
+
+## Diagrams
+
+- Use Mermaid in a fenced ```` ```mermaid ```` block, and write only syntax from
+  the official docs for that diagram type. Never mix syntax from other diagram types.
+- Keep gantt task names and unquoted labels plain: no `:`, `;`, `#`, quotes,
+  brackets, or parentheses, and never start one with a symbol such as `.` or `+`.
+  Quote flowchart node text (`A["Scan barcode"]`) when it has spaces or punctuation.
+- Gantt: put `title` first, then `dateFormat` and `axisFormat`. Give every task
+  and milestone an id (`:milestone, m1, 2026-10-31, 0d`). Use `after <id>` only
+  for ids defined earlier.
+- Check that a diagram parses before saving it (for example, in mermaid.live or
+  `npx -y @mermaid-js/mermaid-cli`). If it can't be checked, copy the patterns
+  from a diagram in the repo that already renders.

@@ -163,6 +163,15 @@ exercises ─────< workout_sets >────── workout_sessions
 | Supabase | App ↔ Postgres | Anon key + RLS (single user) |
 | AI proxy | App → Edge Function → LLM | Function secret |
 | Health Connect / Apple Health | App reads weight (Xiaomi scale data) on device | User permission (read weight; Android "read history" for > 30 days) |
+| [Workout Guide](https://github.com/bryllim/workout-guide) (`@bryllim/workout-guide`) | Bundled npm package, no network | None (offline). Art is CC BY-SA 4.0, see ADR-20 |
+
+### Exercise illustrations (Workouts, feature 19)
+
+- 302 exercises, 3 frames each (512 × 512 SVG, PNG fallback), with muscle and equipment metadata
+- `exercises` stores the package's exercise id (e.g. `push-up`) for exercises that have art; custom exercises have none
+- Only `require()` the frames in use, so Metro bundles just those (the full package is ~34 MB)
+- SVGs need `react-native-svg`, or use the PNGs; decide when the feature is specced
+- Licensing: package code is MIT; the art is **CC BY-SA 4.0** (Bryl Lim, derived from [Everkinetic](https://github.com/everkinetic/data)). Credit both on an About/Credits screen and in the README. Use the art unchanged; edited art would also have to be CC BY-SA
 
 ### Open Food Facts usage
 
@@ -257,3 +266,5 @@ For personal app, prioritize **unit tests on calculations** over full E2E.
 | ADR-11 | Scale data comes through Health Connect / Apple Health or an export file, never a direct Bluetooth link to the scale | Xiaomi protocol is closed; the scale stores little history | Proposed |
 | ADR-12 | Android only for now; code stays cross-platform with platform-specific code behind interfaces (e.g. `healthService`) | No Apple budget or devices; iPhone stays a later switch, not a rewrite | Accepted (Oct 20) |
 | ADR-13 | Friends beta starts local-only (no accounts, no server data), Android APK link | $0; no hosting, AI cost or other people's health data on my server | Accepted (Oct 20) |
+| ADR-20 | Exercise illustrations come from `@bryllim/workout-guide`, used unchanged with credit | Free, offline, 302 exercises with animation frames; CC BY-SA 4.0 art needs attribution, and only edited art must be shared alike | Accepted (Oct 20) |
+| ADR-21 | API uses Clean Architecture + CQRS with MediatR; one database, no generic repository over EF Core (details: `ARCHITECTURE.md` §6) | Owner's choice; familiar .NET pattern; clear portfolio structure | Accepted (Oct 20) |
