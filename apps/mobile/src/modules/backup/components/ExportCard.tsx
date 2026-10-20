@@ -22,7 +22,7 @@ export function ExportCard() {
       const s = await exportBackup(db);
       setNotice({
         kind: "ok",
-        text: `Exported ${s.products} products, ${s.entries} log entries, ${s.settings} settings (${formatBytes(s.bytes)})`,
+        text: `Exported ${s.products} products, ${s.entries} log entries, ${s.weighIns} weigh-ins, ${s.settings} settings (${formatBytes(s.bytes)})`,
       });
     } catch {
       setNotice({ kind: "error", text: "Couldn't export the backup." });

@@ -1,6 +1,6 @@
 import { SymbolView, type AndroidSymbol } from "expo-symbols";
-import { Tabs } from "expo-router";
-import type { ColorValue } from "react-native";
+import { router, Tabs } from "expo-router";
+import { Pressable, Text, type ColorValue } from "react-native";
 
 import { useTheme } from "@/lib/theme/useTheme";
 
@@ -11,7 +11,7 @@ function tabIcon(name: AndroidSymbol) {
 }
 
 export default function TabLayout() {
-  const { colors, fontSize } = useTheme();
+  const { colors, fontSize, space, tap } = useTheme();
   return (
     <Tabs
       screenOptions={{
@@ -30,6 +30,22 @@ export default function TabLayout() {
       <Tabs.Screen
         name="products"
         options={{ title: "Products", tabBarIcon: tabIcon("deployed_code") }}
+      />
+      <Tabs.Screen
+        name="progress"
+        options={{
+          title: "Progress",
+          tabBarIcon: tabIcon("monitor_weight"),
+          headerRight: () => (
+            <Pressable
+              onPress={() => router.push("/weight")}
+              accessibilityRole="button"
+              style={{ minHeight: tap, justifyContent: "center", paddingHorizontal: space[4] }}
+            >
+              <Text style={{ color: colors.accentText, fontSize: fontSize.md, fontWeight: "600" }}>+ Log weight</Text>
+            </Pressable>
+          ),
+        }}
       />
       <Tabs.Screen name="settings" options={{ title: "Settings", tabBarIcon: tabIcon("settings") }} />
     </Tabs>

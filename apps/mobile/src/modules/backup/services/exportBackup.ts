@@ -7,7 +7,13 @@ import { dayKey } from "@/modules/nutrition/services/mealTime";
 import { readAll } from "../repositories/backupRepo";
 import { buildBackup } from "./backupFile";
 
-export type ExportSummary = { products: number; entries: number; settings: number; bytes: number };
+export type ExportSummary = {
+  products: number;
+  entries: number;
+  settings: number;
+  weighIns: number;
+  bytes: number;
+};
 
 // Writes the backup to the app cache and hands it to the Android share sheet.
 export async function exportBackup(db: SQLiteDatabase): Promise<ExportSummary> {
@@ -27,6 +33,7 @@ export async function exportBackup(db: SQLiteDatabase): Promise<ExportSummary> {
     products: tables.products.length,
     entries: tables.food_log_entries.length,
     settings: tables.settings.length,
+    weighIns: tables.body_weight_entries.length,
     bytes: new TextEncoder().encode(json).length,
   };
 }

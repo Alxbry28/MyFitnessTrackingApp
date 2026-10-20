@@ -22,7 +22,7 @@ Pre-build (not features): scaffold the Expo app, run it in Expo Go.
 - [ ] 8. **Pantry and groceries** - pantry items plus stock movements ledger; add after scan; eat from pantry; remove with reason; log edits restore stock
 - [ ] 9. **Canned and opened items** - drained values, usual drained weight, opened can with grams left
 - [ ] 10. **Supplements** - supplement pantry items counted in grams per scoop
-- [ ] 11. **Body weight and BMI** - body profile, weight log, 7-day trend, BMI on a Progress screen, Xiaomi CSV import
+- [x] 11. **Body weight and BMI** - body profile, weight log, 7-day trend, BMI on a Progress screen, Xiaomi CSV import
 - [ ] 12. **Recipes and cooked batches** - recipes, batches with settled cooked weight, per-100 g portions, cooking subtracts tracked items
 - [ ] 13. **First-run setup** - goal, units, height, sex, birth date, BMI scale, current weight, activity level; formula TDEE (Mifflin-St Jeor) suggests a calorie goal to accept or override; personal values become settings
 - [ ] 14. **Backup restore** - import a JSON backup safely

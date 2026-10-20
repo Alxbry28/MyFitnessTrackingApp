@@ -1,7 +1,14 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
 // Fixed list: table names are never built from input. Order matches DATABASE.md §6.
-export const BACKUP_TABLES = ["products", "food_log_entries", "settings"] as const;
+export const BACKUP_TABLES = [
+  "products",
+  "food_log_entries",
+  "settings",
+  "body_profile",
+  "import_runs",
+  "body_weight_entries",
+] as const;
 
 export type BackupTable = (typeof BACKUP_TABLES)[number];
 export type BackupRows = Record<BackupTable, Record<string, unknown>[]>;

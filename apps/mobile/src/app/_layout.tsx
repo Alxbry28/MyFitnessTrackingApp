@@ -27,6 +27,9 @@ export default function RootLayout() {
             <Stack.Screen name="entry/[id]" options={{ title: "Edit entry" }} />
             <Stack.Screen name="scan" options={{ title: "Scan", presentation: "fullScreenModal" }} />
             <Stack.Screen name="lookup/[barcode]" options={{ title: "Check and save" }} />
+            <Stack.Screen name="weight" options={{ title: "Log weight" }} />
+            <Stack.Screen name="body-profile" options={{ title: "Body profile" }} />
+            <Stack.Screen name="import-weight" options={{ title: "Import weight history" }} />
           </Stack>
         </SQLiteProvider>
       </Suspense>

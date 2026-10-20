@@ -62,3 +62,35 @@
 **Why it matters:** `positive()` has no upper bound and `asField()` uses `String(Math.round(v * 100) / 100)`. A community value such as `product_quantity: 1e25` reaches the form as "1e+25" (the spec's draft format says "no exponent notation"), and the form schema accepts it, so an absurd net weight can be saved with one tap. A tiny `serving_quantity` such as 0.001 rounds to "0", which the form then rejects as "Must be more than 0" while the per-100 g values were scaled from the unrounded weight. Both were reproduced with the scratch parser run. Unlikely with real data and the user reviews before saving, so this is polish, not a contract break that blocks.
 **Suggested fix:** Pass serving grams and net weight through a bounded check (for example `inRange(value, 0.01, 100000)` or a similar plausible cap) so out-of-range values are left blank like kcal and macros. No new machinery; no current requirement is lost.
 **Resolution:**
+
+### F-08 [P2] open - Import holds back legitimate history when weight changed more than 10 kg
+
+**File:** apps/mobile/src/modules/body/services/weightCsv.ts:207 (review check at :215)
+**Found:** 2026-10-20 by /audit (scope: current; lens: quality; independent review)
+**Why it matters:** "Usual weight" is one median over all existing daily values plus every file reading, so any reading more than 5 kg from that single number goes to review and can never be imported. For a real weight-loss history the start and the end of the file are both far from the overall median. A scratch run of 300 daily readings going from 85 kg to 70 kg (empty app) planned 200 new and 100 to review, including the most recent 50 days down to 70 kg on 2026-09-26. Re-importing after the 200 are in still holds them back. The code matches the spec's contract, but the plan (`1_docs/plan/10_body_progress.md` line 197) says "more than 5 kg off my trend", and a fitness app's own user is the person most likely to change weight by 10 kg or more.
+**Suggested fix:** Compare each reading with a local reference instead of one global median, for example the median of daily values (existing plus file) within a few days or weeks of that reading, so only same-period outliers (another person on the scale) are held back. Needs a spec contract update; no new machinery.
+**Resolution:**
+
+### F-09 [P3] open - First six trend dots on the 30-day chart use incomplete 7-day windows
+
+**File:** apps/mobile/src/modules/body/hooks/useProgress.ts:75 (trend in apps/mobile/src/modules/body/services/weightCalc.ts:55)
+**Found:** 2026-10-20 by /audit (scope: current; lens: quality; independent review)
+**Why it matters:** `useProgress` loads readings only from `today - 29`, and `chartPoints` computes each day's trend as the mean of daily values in its own 7-day window from that same list. For the oldest six chart days the window reaches back before the loaded range, so their accent trend dots average fewer days than the spec's "mean of daily values in its own 7-day window" and can jump at the left edge of the chart.
+**Suggested fix:** Load from `addDays(today, -35)` (30 chart days plus 6 days of window) and keep the 30-day filter in `chartPoints`; also keep `recent` limited to 14 days as now. No current requirement is lost.
+**Resolution:**
+
+### F-10 [P3] open - Editing an imported reading says it replaces the typed weight but does not
+
+**File:** apps/mobile/src/modules/body/components/WeightForm.tsx:265 (replace rule in apps/mobile/src/modules/body/repositories/weightRepo.ts:340)
+**Found:** 2026-10-20 by /audit (scope: current; lens: quality; independent review)
+**Why it matters:** When the user opens an "Imported" reading from Recent weigh-ins on a day that also has a typed weight, the sheet shows "Replaces the X kg you logged for this day." but `saveManual` only removes the other manual row when the edited entry is itself manual, so nothing is replaced. The edited value also stays `csv_import` ("Imported"), the typed weight still wins as the daily value, and a later Undo import silently removes the user's correction. The copy contradicts what is saved.
+**Suggested fix:** Show the "Replaces" line only when the entry being edited is manual or new (pass the entry's source to the form), or decide in the spec whether editing an imported reading turns it into a typed one. No current requirement is lost.
+**Resolution:**
+
+### F-11 [P3] open - Export success line counts deleted and undone weigh-ins
+
+**File:** apps/mobile/src/modules/backup/services/exportBackup.ts:36
+**Found:** 2026-10-20 by /audit (scope: current; lens: quality; independent review)
+**Why it matters:** `readAll` intentionally exports soft-deleted rows, and `weighIns` is the raw `body_weight_entries` row count. After importing 388 readings and pressing Undo import, the export still says "388 weigh-ins" (plus every deleted or replaced typed weight), while Progress shows none. The products and log-entry counts already behave this way, but an undone import makes the gap large and visible.
+**Suggested fix:** Count only rows with `deleted_at` null for the summary line (keep exporting every row). No current requirement is lost.
+**Resolution:**

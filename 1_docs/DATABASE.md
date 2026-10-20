@@ -149,6 +149,8 @@ Additions to existing tables: `products` gets `label_basis`, `eaten_drained`, dr
 | `measurement_sessions` | `measured_on`, `note`, `photo_uris?` (device only, ADR-10) |
 | `body_measurements` | `session_id`, `site`, `side` (`left`/`right`/`none`), `value_cm`, `state` (`relaxed`/`flexed`) |
 
+Feature 11 (migration `004_body`) built the first three tables with what it uses. `body_profile` holds `height_cm` and `bmi_scale`; feature 13 adds the rest with `ADD COLUMN`. `body_weight_entries` adds `day` (local date) and `import_run_id` (for undoing an import) and leaves out `is_daily_value` and the body composition columns until scale sync (22): a day's weight is calculated as its manual reading, else its first reading (ADR-9). `import_runs` adds `undone_at`.
+
 ### Workouts (feature 19)
 
 | Table | Columns |

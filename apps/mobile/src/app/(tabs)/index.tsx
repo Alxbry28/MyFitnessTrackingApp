@@ -54,6 +54,13 @@ export default function TodayScreen() {
       >
         <Text style={styles.scanLabel}>Scan</Text>
       </Pressable>
+      <Pressable
+        onPress={() => router.push("/weight")}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.weight, pressed && styles.pressed]}
+      >
+        <Text style={styles.secondaryLabel}>Log weight</Text>
+      </Pressable>
       <QuickAdd />
       <View style={styles.card}>
         {log.groups.map((group, index) => {
@@ -111,6 +118,13 @@ function makeStyles(theme: Theme) {
     },
     scanPressed: { opacity: 0.85 },
     scanLabel: { color: colors.accentInk, fontSize: fontSize.md, fontWeight: "700" },
+    weight: {
+      minHeight: tap,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: radius.md,
+      backgroundColor: colors.surface2,
+    },
     secondaryButton: {
       minHeight: tap,
       justifyContent: "center",

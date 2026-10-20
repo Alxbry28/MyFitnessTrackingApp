@@ -103,10 +103,7 @@ and `10` §8.
 
 ### settings (feature 3)
 
-- Single-row or key/value store: `calorie_goal_kcal`, then units and first-run values (feature 13)
-
-> TODO: the plans list both a `settings` table (08) and `daily_nutrition_goals`
-> with `effective_date` (03). Pick one in feature 3.
+- Key/value store: `calorie_goal_kcal` (shipped in feature 3; past days use the current goal), then units and first-run values (feature 13)
 
 ### Pantry (features 8-12)
 
@@ -196,9 +193,9 @@ styles until Oct 28, polish after v1. Health numbers are labeled as estimates.
 
 > Resolve in the plans or `1_docs`, then re-run /overview.
 
-- **November order is proposed, not approved** (`08` §6, Q-N1). The build plan follows the proposal: pantry before the API and workouts.
+- **Build order vs the plan:** the owner chose an offline-first order (7 -> 14 -> APK -> 13 -> 11, pantry 8-10 waiting), and feature 11 is being built now, but `build-plan.md` still lists 8-15 in numeric order. Reorder the November section if that order is final.
 - **`03` conflicts with the locked decisions:** it stores products per serving and puts workouts in v1. ADR-6 and the sprint take precedence; `03` is stale.
-- **Goal storage:** `settings` vs `daily_nutrition_goals` (see Data model).
+- **`03` is stale on goals:** it still describes `daily_nutrition_goals` with `effective_date`; feature 3 shipped the `settings` key/value store instead.
 - **Repo layout:** the Expo app now lives in `apps/mobile/`, but neither plan says so, and the .NET API and web dashboard still have no agreed place (`apps/api`, `apps/web`, or separate repos). Record it in project-plan §5.
 - **Feature 12** (recipes and batches) is the largest item (`09` P4, ~11 days). Consider splitting it when it is specced.
 - **Product photos (25):** storage provider (Cloudflare R2 vs Supabase Storage), whether photos also stay usable offline on the phone, and the photo field in project-plan §4 aren't decided. Uploads also need the per-user accounts from 24 or an equivalent upload guard, but 25 is ordered before 24. Settle when it is specced after feature 16.
