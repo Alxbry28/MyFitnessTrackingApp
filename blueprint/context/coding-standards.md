@@ -22,15 +22,16 @@
 
 ## Expo Router
 
-- File-based routes live in `app/`; tabs under `app/(tabs)/`
+- File-based routes live in `src/app/`; tabs under `src/app/(tabs)/`
 - Keep route files thin: they compose screens from `src/` and own navigation only
 - Android is the only target (ADR-12). Don't add iOS- or web-specific code paths
 
 ## File Organization
 
-Follows `1_docs/plan/05_architecture_outline.md` §10:
+Follows `1_docs/ARCHITECTURE.md` §4. The mobile app lives in `apps/mobile/`; the
+paths below are relative to it. `apps/web/` and `apps/api/` come later.
 
-- Screens/routes: `app/[route].tsx`
+- Screens/routes: `src/app/[route].tsx`
 - Shared UI: `src/components/ComponentName.tsx`
 - Feature modules: `src/modules/[module]/` with `repositories/`, `services/`, `types/`
 - Database schema and migrations: `src/db/`
@@ -191,6 +192,10 @@ Over-commenting is a common AI tell, so resist it.
 
 - Use Mermaid in a fenced ```` ```mermaid ```` block, and write only syntax from
   the official docs for that diagram type. Never mix syntax from other diagram types.
+- Docs are read in two places: Cursor's built-in preview and GitHub. Cursor only
+  draws `flowchart`/`graph`, `sequenceDiagram`, `stateDiagram-v2`, `classDiagram`,
+  `erDiagram`, and `xychart-beta`. Prefer those. When another type (such as
+  `gantt`) is worth keeping for GitHub, put a flowchart version next to it.
 - Keep gantt task names and unquoted labels plain: no `:`, `;`, `#`, quotes,
   brackets, or parentheses, and never start one with a symbol such as `.` or `+`.
   Quote flowchart node text (`A["Scan barcode"]`) when it has spaces or punctuation.

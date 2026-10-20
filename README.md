@@ -198,6 +198,18 @@ erDiagram
 ## Roadmap
 
 ```mermaid
+flowchart LR
+    V1["v1 Nutrition<br/>Oct 21 - Oct 31"]
+    V11["v1.1 Pantry and beta<br/>Nov 1 - Nov 28"]
+    B1(["Friends Beta 1<br/>Nov 29"])
+    LATER["Later<br/>Dec 2026 - Feb 2027"]
+
+    V1 --> V11 --> B1 --> LATER
+```
+
+Timeline view (renders on GitHub; Cursor's built-in preview can't draw gantt charts):
+
+```mermaid
 gantt
     title Release plan
     dateFormat YYYY-MM-DD
@@ -271,6 +283,10 @@ eas build -p android --profile preview   # shareable APK
 
 ```text
 .
+├── apps/
+│   ├── mobile/      # Expo app (React Native + TypeScript)
+│   ├── web/         # later: Vite React dashboard
+│   └── api/         # later: ASP.NET Core Minimal API
 ├── 1_docs/          # planning history: plans, user stories, ADRs, tech lead notes
 ├── blueprint/       # workflow: project plan, build plan, current spec, history
 ├── specs/           # database and design specs
@@ -279,11 +295,11 @@ eas build -p android --profile preview   # shareable APK
 └── README.md
 ```
 
-Planned app structure once scaffolded:
+Inside `apps/mobile/`:
 
 ```text
-app/                 # Expo Router screens: Today, Log, Products, Settings
 src/
+├── app/             # Expo Router screens: Today, Log, Products, Settings
 ├── components/      # shared UI
 ├── modules/fitness/ # repositories, services, types, pantry
 ├── db/              # SQLite schema and migrations

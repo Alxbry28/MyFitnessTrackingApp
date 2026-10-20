@@ -1,0 +1,104 @@
+/* Theme variables - the durable output of /prototype.
+   Dark is the default on :root; light overrides live under [data-theme="light"].
+   Port these tokens into the app's theme module when the first UI feature lands.
+   Tokens marked "mockup-only" exist for the HTML frames and do not port. */
+
+:root {
+  color-scheme: dark;
+
+  /* surfaces */
+  --bg: #121110;            /* screen background          */
+  --surface: #1c1a18;       /* cards, tab bar, sheets     */
+  --surface-2: #262320;     /* inputs, pressed rows, chips */
+  --border: #322e2a;
+  --scrim: rgba(0, 0, 0, 0.55);
+
+  /* text */
+  --text: #f3efea;          /* primary                    */
+  --muted: #a59d94;         /* secondary, labels          */
+  --faint: #6b645d;         /* hints, disabled            */
+
+  /* accent - warm orange */
+  --accent: #ff7a1a;        /* primary action fill, ring  */
+  --accent-ink: #1a0f05;    /* text/icons on accent fill  */
+  --accent-text: #ff8f3d;   /* orange text on surfaces    */
+  --accent-soft: rgba(255, 122, 26, 0.14); /* selected chip, focus halo */
+
+  /* status - never reuse the accent for these */
+  --ok: #4cc38a;            /* under goal, remaining      */
+  --over: #f0605a;          /* over goal, delete          */
+  --over-soft: rgba(240, 96, 90, 0.14);
+  --estimate: #e8b44a;      /* "est." labels on health numbers */
+  --estimate-soft: rgba(232, 180, 74, 0.14);
+
+  /* macros */
+  --protein: #6aa8f0;
+  --carbs: #e8b44a;
+  --fat: #c58af0;
+  --track: #2e2a26;         /* empty ring / bar track     */
+
+  /* camera (scanner is always dark, in both themes) */
+  --camera: #050505;
+  --camera-text: #f3efea;
+  --camera-line: rgba(255, 255, 255, 0.2);
+
+  /* mockup-only */
+  --desk: #0b0a09;          /* page around the phone frames */
+  --shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+  /* type */
+  --font-sans: "Inter", "Roboto", system-ui, sans-serif;
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-md: 15px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+  --text-num: 34px;         /* hero numbers (remaining)   */
+
+  /* spacing (4px grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* shape */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 20px;        /* bottom sheets              */
+  --tap: 48px;              /* minimum touch target       */
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f6f4f1;
+  --surface: #ffffff;
+  --surface-2: #efebe6;
+  --border: #e3ddd6;
+  --scrim: rgba(29, 26, 23, 0.4);
+
+  --text: #1d1a17;
+  --muted: #6e665e;
+  --faint: #a39b92;
+
+  --accent: #f26d12;
+  --accent-ink: #1a0f05;
+  --accent-text: #b44d07;
+  --accent-soft: rgba(242, 109, 18, 0.12);
+
+  --ok: #1f8a57;
+  --over: #d23f39;
+  --over-soft: rgba(210, 63, 57, 0.1);
+  --estimate: #9a6a08;
+  --estimate-soft: rgba(212, 150, 30, 0.14);
+
+  --protein: #2f7bd6;
+  --carbs: #c98a0c;
+  --fat: #9b55d0;
+  --track: #ebe5de;
+
+  --desk: #dcd6cf;
+  --shadow: 0 20px 60px rgba(60, 40, 20, 0.18);
+}

@@ -20,9 +20,9 @@ Exact commands live in the Commands section of [AGENTS.md](../AGENTS.md).
 
 ## 2. Project layout
 
-Follow [ARCHITECTURE.md §4](./ARCHITECTURE.md#4-folder-structure).
+Follow [ARCHITECTURE.md §4](./ARCHITECTURE.md#4-folder-structure). The mobile app lives in `apps/mobile/`, and the paths below are relative to it.
 
-- `app/` holds routes only. A route file composes components and hooks and owns navigation.
+- `src/app/` holds routes only. A route file composes components and hooks and owns navigation.
 - Feature code lives in `src/modules/<module>/{components,hooks,repositories,services,types}`.
 - Shared UI goes in `src/components/`, shared helpers in `src/lib/`.
 - Tests sit next to the file they test: `nutritionCalc.ts` and `nutritionCalc.test.ts`.

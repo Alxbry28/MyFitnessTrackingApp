@@ -61,7 +61,7 @@ Screens never touch SQLite or the network directly.
 
 ```mermaid
 flowchart TB
-    UI["Screens and components<br/>app/, src/components"]
+    UI["Screens and components<br/>src/app/, src/components"]
     H["Hooks<br/>useDayTotals, useRecentProducts, useBarcodeLookup"]
     SV["Domain services (pure functions)<br/>nutritionCalc, normalizePer100g, stock, bmi"]
     R["Repositories<br/>productRepo, foodLogRepo, settingsRepo"]
@@ -80,7 +80,7 @@ flowchart TB
 
 | Layer | Owns | Rules |
 |-------|------|-------|
-| Screens | Layout, navigation, form wiring | No SQL, no `fetch`. Thin route files in `app/` |
+| Screens | Layout, navigation, form wiring | No SQL, no `fetch`. Thin route files in `src/app/` |
 | Hooks | Loading and error state, composing services and repos | One concern each; reusable across screens |
 | Domain services | Calculations and normalization | Pure and synchronous where possible. **These are unit-tested** |
 | Repositories | All SQL, mapping rows to types | Parameterized queries only; return typed objects; set `updated_at` |
@@ -102,18 +102,33 @@ Pantry rule (ADR-8): only `food_log_entries` count toward daily totals. Eating f
 
 ## 4. Folder structure
 
+The repo is a monorepo. Each app is its own project with its own config, under `apps/`:
+
 ```text
-app/                         # Expo Router routes (thin)
-├── (tabs)/
-│   ├── _layout.tsx          # tab bar
-│   ├── index.tsx            # Today
-│   ├── log.tsx
-│   ├── products.tsx
-│   └── settings.tsx
-├── scan.tsx
-├── product/[id].tsx
-└── add/[productId].tsx
+apps/
+├── mobile/                  # Expo app (v1 onward)
+├── web/                     # Vite React dashboard (later, feature 23)
+└── api/                     # ASP.NET Core Minimal API (later, feature 16)
+1_docs/  blueprint/  specs/  # planning and workflow, outside the apps
+```
+
+Only `apps/mobile` exists until the web and API phases start. No npm workspaces until code is shared between apps.
+
+Inside `apps/mobile/` (every `src/` path in the docs is relative to this folder):
+
+```text
 src/
+├── app/                     # Expo Router routes only (thin)
+│   ├── _layout.tsx          # root stack
+│   ├── (tabs)/
+│   │   ├── _layout.tsx      # tab bar
+│   │   ├── index.tsx        # Today
+│   │   ├── log.tsx
+│   │   ├── products.tsx
+│   │   └── settings.tsx
+│   ├── scan.tsx
+│   ├── product/[id].tsx
+│   └── add/[productId].tsx
 ├── components/              # shared UI (CalorieSummary, EntryRow, ...)
 ├── modules/
 │   ├── nutrition/
@@ -136,7 +151,7 @@ src/
 assets/
 ```
 
-The API and web dashboard locations (this repo under `api/` and `web/`, or separate repos) are **not decided**.
+The API and web dashboard live in this repo under `apps/api/` and `apps/web/`. Their internal layout is set when those features are specced.
 
 ## 5. Key runtime decisions
 

@@ -33,15 +33,15 @@ flowchart TB
 
 | Route (Expo Router) | Screen | Feature |
 |---------------------|--------|---------|
-| `app/(tabs)/index.tsx` | Today | 3, 6 |
-| `app/(tabs)/log.tsx` | Log (by day) | 2, 7 |
-| `app/(tabs)/products.tsx` | Product library | 1 |
-| `app/(tabs)/settings.tsx` | Settings | 3, 7 |
-| `app/scan.tsx` | Scanner (full screen modal) | 4, 5 |
-| `app/product/[id].tsx` | Product form (new or edit) | 1, 5 |
-| `app/add/[productId].tsx` | Add to meal sheet | 2 |
+| `src/app/(tabs)/index.tsx` | Today | 3, 6 |
+| `src/app/(tabs)/log.tsx` | Log (by day) | 2, 7 |
+| `src/app/(tabs)/products.tsx` | Product library | 1 |
+| `src/app/(tabs)/settings.tsx` | Settings | 3, 7 |
+| `src/app/scan.tsx` | Scanner (full screen modal) | 4, 5 |
+| `src/app/product/[id].tsx` | Product form (new or edit) | 1, 5 |
+| `src/app/add/[productId].tsx` | Add to meal sheet | 2 |
 
-Route names are *Proposed*; final names are set in each feature spec.
+Routes are relative to `apps/mobile/`. Route names are *Proposed*; final names are set in each feature spec.
 
 ## 2. Daily logging (v1)
 

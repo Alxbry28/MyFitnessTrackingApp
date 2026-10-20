@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>History calendar - prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--desk); color: var(--text); font-family: var(--font-sans); font-variant-numeric: tabular-nums; min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: var(--space-5); padding: var(--space-6) var(--space-4); }
+  .toolbar { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-sm); color: var(--muted); }
+  .toolbar a { color: var(--accent-text); }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .toggle { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: var(--space-2) var(--space-4); }
+  .frames { display: flex; gap: var(--space-6); flex-wrap: wrap; justify-content: center; }
+  .frame-label { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2); text-align: center; }
+  .phone { width: 360px; height: 760px; background: var(--bg); border: 1px solid var(--border); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+  .status { height: 28px; flex: none; padding: 0 var(--space-5); display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--muted); }
+  .content { flex: 1; overflow: hidden; padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+  .tabbar { height: 64px; flex: none; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
+  .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); font-size: var(--text-xs); color: var(--muted); }
+  .tab.on { color: var(--accent-text); font-weight: 600; }
+  svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .btn { height: var(--tap); border-radius: var(--radius); font-weight: 700; font-size: var(--text-md); display: flex; align-items: center; justify-content: center; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  :where(.phone a) { color: inherit; text-decoration: none; }
+  .nav b { color: var(--text); font-weight: 600; }
+
+  /* month header */
+  .monthnav { display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-2) var(--space-2); }
+  .monthnav button, .monthnav a { width: var(--tap); height: var(--tap); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+  .monthnav .faint { color: var(--faint); }
+  .monthnav b { font-size: var(--text-lg); font-weight: 700; }
+
+  /* month stats */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); }
+  .stat .k { font-size: var(--text-xs); color: var(--muted); }
+  .stat .v { font-size: var(--text-lg); font-weight: 700; }
+  .stat .v span { font-size: var(--text-xs); color: var(--muted); font-weight: 400; }
+
+  /* calendar grid */
+  .cal { padding: var(--space-3); }
+  .dow, .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .dow span { text-align: center; font-size: var(--text-xs); color: var(--faint); font-weight: 600; padding-bottom: var(--space-2); }
+  .day { height: 54px; border-radius: var(--radius-sm); background: var(--surface-2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; position: relative; }
+  .day b { font-size: var(--text-sm); font-weight: 600; }
+  .day small { font-size: 10px; color: var(--muted); }
+  .day::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 5px; height: 3px; border-radius: 2px; }
+  .day.ok::after { background: var(--ok); }
+  .day.over::after { background: var(--over); }
+  .day.low::after { background: var(--estimate); }
+  .day.none { background: none; border: 1px dashed var(--border); }
+  .day.none small { color: var(--faint); }
+  .day.today { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
+  .day.today b { color: var(--accent-text); }
+  .day.today::after { background: var(--accent); right: auto; width: 16px; left: calc(50% - 8px); }
+  .day.future { background: none; }
+  .day.future b { color: var(--faint); font-weight: 400; }
+  .day.blank { background: none; }
+  .day.sel { box-shadow: inset 0 0 0 2px var(--text); }
+  .legend { display: flex; flex-wrap: wrap; gap: var(--space-3); font-size: var(--text-xs); color: var(--muted); margin-top: var(--space-3); }
+  .legend span { display: flex; align-items: center; gap: var(--space-1); }
+  .legend i { width: 12px; height: 3px; border-radius: 2px; }
+  .legend i.none { height: 8px; width: 8px; border: 1px dashed var(--faint); border-radius: 2px; }
+
+  .streak { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); font-size: var(--text-sm); color: var(--muted); }
+  .streak b { color: var(--text); }
+  .streak svg { color: var(--accent-text); flex: none; }
+
+  /* day sheet */
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-2) var(--space-4) var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+  .grabber { width: 36px; height: 4px; border-radius: 2px; background: var(--faint); margin: 0 auto; }
+  .sheet-head { display: flex; justify-content: space-between; align-items: flex-start; }
+  .sheet-head h2 { font-size: var(--text-lg); font-weight: 700; }
+  .sheet-head p { font-size: var(--text-sm); color: var(--muted); margin-top: 2px; }
+  .badge { font-size: var(--text-sm); font-weight: 600; padding: var(--space-1) var(--space-3); border-radius: 999px; color: var(--over); background: var(--over-soft); }
+  .progress { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; display: flex; }
+  .progress i { display: block; height: 100%; }
+  .meals { display: flex; flex-direction: column; }
+  .meal { display: flex; justify-content: space-between; min-height: 40px; align-items: center; font-size: var(--text-md); border-bottom: 1px solid var(--border); }
+  .meal span { color: var(--muted); font-size: var(--text-sm); }
+  .macros { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+  .macros div { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); }
+  .macros i { display: block; width: 24px; height: 3px; border-radius: 2px; margin-bottom: var(--space-2); }
+  .macros b { display: block; font-size: var(--text-md); }
+  .macros span { font-size: var(--text-xs); color: var(--muted); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .btn.ghost { background: var(--surface-2); color: var(--text); font-size: var(--text-sm); }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="toggle" id="theme-toggle">Switch to light</button>
+  <span class="nav"><a href="onboarding.html">Setup</a> · <a href="today.html">Today</a> · <a href="log.html">Log</a> · <b>History</b> · <a href="search.html">Search</a> · <a href="text-log.html">Text log</a> · <a href="products.html">Products</a> · <a href="settings.html">Settings</a></span>
+</div>
+
+<div class="frames">
+  <!-- Frame 1: month view -->
+  <div>
+    <p class="frame-label">1 · Month at a glance</p>
+    <div class="phone">
+      <div class="status"><span>21:40</span><span>●●● 35%</span></div>
+      <div class="monthnav">
+        <button aria-label="Previous month"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <b>October 2026</b>
+        <button class="faint" aria-label="Next month"><svg class="i" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+      <div class="content">
+        <div class="stats">
+          <div class="stat"><div class="k">Daily avg</div><div class="v">2,211<span> kcal</span></div></div>
+          <div class="stat"><div class="k">On target</div><div class="v">11<span> / 18 days</span></div></div>
+          <div class="stat"><div class="k">Logged</div><div class="v">19<span> / 20 days</span></div></div>
+        </div>
+        <div class="card cal">
+          <div class="dow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+          <div class="grid">
+            <div class="day blank"></div><div class="day blank"></div><div class="day blank"></div><div class="day blank"></div>
+            <div class="day ok"><b>1</b><small>2,180</small></div>
+            <div class="day ok"><b>2</b><small>2,050</small></div>
+            <div class="day over"><b>3</b><small>2,610</small></div>
+
+            <div class="day over"><b>4</b><small>2,390</small></div>
+            <div class="day ok"><b>5</b><small>2,120</small></div>
+            <div class="day ok"><b>6</b><small>2,195</small></div>
+            <div class="day low"><b>7</b><small>1,640</small></div>
+            <div class="day ok"><b>8</b><small>2,160</small></div>
+            <div class="day ok"><b>9</b><small>2,080</small></div>
+            <div class="day none"><b>10</b><small>—</small></div>
+
+            <div class="day over"><b>11</b><small>2,720</small></div>
+            <div class="day ok"><b>12</b><small>2,140</small></div>
+            <div class="day ok"><b>13</b><small>2,170</small></div>
+            <div class="day ok"><b>14</b><small>2,010</small></div>
+            <div class="day ok"><b>15</b><small>2,190</small></div>
+            <div class="day over"><b>16</b><small>2,240</small></div>
+            <div class="day over"><b>17</b><small>2,330</small></div>
+
+            <div class="day ok"><b>18</b><small>2,150</small></div>
+            <a class="day over" href="#day"><b>19</b><small>2,419</small></a>
+            <a class="day today" href="today.html"><b>20</b><small>1,420</small></a>
+            <div class="day future"><b>21</b></div><div class="day future"><b>22</b></div><div class="day future"><b>23</b></div><div class="day future"><b>24</b></div>
+
+            <div class="day future"><b>25</b></div><div class="day future"><b>26</b></div><div class="day future"><b>27</b></div><div class="day future"><b>28</b></div><div class="day future"><b>29</b></div><div class="day future"><b>30</b></div><div class="day future"><b>31</b></div>
+          </div>
+          <div class="legend">
+            <span><i style="background: var(--ok)"></i>On target</span>
+            <span><i style="background: var(--over)"></i>Over</span>
+            <span><i style="background: var(--estimate)"></i>Under 90%</span>
+            <span><i class="none"></i>Not logged</span>
+          </div>
+        </div>
+        <div class="card streak"><svg class="i" viewBox="0 0 24 24"><path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-6 1.5 1 2 2 2 3 1-2 1-4 1-7z"/></svg><span><b>10-day logging streak.</b> Last missed day: Sat, Oct 10</span></div>
+      </div>
+      <nav class="tabbar">
+        <a class="tab" href="today.html"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Today</a>
+        <a class="tab on" href="log.html"><svg class="i" viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9"/></svg>Log</a>
+        <a class="tab" href="products.html"><svg class="i" viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></svg>Products</a>
+        <a class="tab" href="settings.html"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>Settings</a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Frame 2: tapped a past day -->
+  <div id="day">
+    <p class="frame-label">2 · Tap a day for its summary</p>
+    <div class="phone">
+      <div class="status"><span>21:40</span><span>●●● 35%</span></div>
+      <div class="monthnav">
+        <button aria-label="Previous month"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <b>October 2026</b>
+        <button class="faint" aria-label="Next month"><svg class="i" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+      <div class="content">
+        <div class="card cal">
+          <div class="dow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+          <div class="grid">
+            <div class="day ok"><b>18</b><small>2,150</small></div>
+            <div class="day over sel"><b>19</b><small>2,419</small></div>
+            <div class="day today"><b>20</b><small>1,420</small></div>
+            <div class="day future"><b>21</b></div><div class="day future"><b>22</b></div><div class="day future"><b>23</b></div><div class="day future"><b>24</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div class="sheet-head">
+          <div><h2>Mon, Oct 19</h2><p>2,419 / 2,200 kcal · 10 foods</p></div>
+          <span class="badge">219 over</span>
+        </div>
+        <div class="progress"><i style="width: 91%; background: var(--accent)"></i><i style="width: 9%; background: var(--over)"></i></div>
+        <div class="meals">
+          <div class="meal">Breakfast<span>493 kcal</span></div>
+          <div class="meal">Lunch<span>676 kcal</span></div>
+          <div class="meal">Dinner<span>870 kcal</span></div>
+          <div class="meal">Snacks<span>380 kcal</span></div>
+        </div>
+        <div class="macros">
+          <div><i style="background: var(--protein)"></i><b>146 g</b><span>Protein</span></div>
+          <div><i style="background: var(--carbs)"></i><b>248 g</b><span>Carbs</span></div>
+          <div><i style="background: var(--fat)"></i><b>92 g</b><span>Fat</span></div>
+        </div>
+        <div class="row2">
+          <button class="btn ghost">Copy to today</button>
+          <a class="btn primary" href="log.html">Open in Log</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const btn = document.getElementById('theme-toggle');
+  btn.onclick = () => {
+    const light = document.documentElement.dataset.theme !== 'light';
+    document.documentElement.dataset.theme = light ? 'light' : 'dark';
+    btn.textContent = light ? 'Switch to dark' : 'Switch to light';
+  };
+</script>
+</body>
+</html>

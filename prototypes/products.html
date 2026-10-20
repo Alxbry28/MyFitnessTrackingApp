@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Products and scan - prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--desk); color: var(--text); font-family: var(--font-sans); font-variant-numeric: tabular-nums; min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: var(--space-5); padding: var(--space-6) var(--space-4); }
+  .toolbar { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-sm); color: var(--muted); }
+  .toolbar a { color: var(--accent-text); }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .toggle { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: var(--space-2) var(--space-4); }
+  .frames { display: flex; gap: var(--space-6); flex-wrap: wrap; justify-content: center; }
+  .frame-label { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2); text-align: center; }
+  .phone { width: 360px; height: 760px; background: var(--bg); border: 1px solid var(--border); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+  .status { height: 28px; flex: none; padding: 0 var(--space-5); display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--muted); }
+  .appbar { padding: var(--space-2) var(--space-4) var(--space-3); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  .appbar h1 { font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.02em; }
+  .appbar h2 { font-size: var(--text-lg); font-weight: 700; flex: 1; }
+  .icon-btn { width: var(--tap); height: var(--tap); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--muted); flex: none; }
+  .content { flex: 1; overflow: hidden; padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+  .tabbar { height: 64px; flex: none; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
+  .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); font-size: var(--text-xs); color: var(--muted); }
+  .tab.on { color: var(--accent-text); font-weight: 600; }
+  svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* library */
+  .search { height: var(--tap); border-radius: var(--radius); background: var(--surface-2); display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3); color: var(--faint); font-size: var(--text-md); }
+  .chips { display: flex; gap: var(--space-2); }
+  .chip { height: 32px; padding: 0 var(--space-3); border-radius: 999px; background: var(--surface-2); font-size: var(--text-sm); color: var(--muted); display: inline-flex; align-items: center; }
+  .chip.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+  .count { font-size: var(--text-xs); color: var(--muted); }
+  .prod { display: flex; align-items: center; gap: var(--space-3); min-height: 60px; padding: var(--space-2) var(--space-4); }
+  .prod + .prod { border-top: 1px solid var(--border); }
+  .prod .info { flex: 1; min-width: 0; }
+  .prod .name { font-size: var(--text-md); font-weight: 500; }
+  .prod .meta { font-size: var(--text-sm); color: var(--muted); display: flex; align-items: center; gap: var(--space-1); }
+  .prod .meta svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
+  .prod .kcal { text-align: right; font-size: var(--text-md); font-weight: 600; }
+  .prod .kcal span { display: block; font-size: var(--text-xs); color: var(--muted); font-weight: 400; }
+  .fab { position: absolute; right: var(--space-4); bottom: calc(64px + var(--space-4)); height: 56px; padding: 0 var(--space-5); border-radius: 18px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: var(--text-md); display: flex; align-items: center; gap: var(--space-2); box-shadow: var(--shadow); }
+  .fab svg { stroke-width: 2.2; }
+
+  /* scanner */
+  .camera { background: var(--camera); color: var(--camera-text); }
+  .camera .status { color: var(--camera-text); }
+  .viewfinder { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-5); }
+  .box { width: 260px; height: 160px; position: relative; }
+  .box i { position: absolute; width: 32px; height: 32px; border: 4px solid var(--accent); }
+  .box i:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; border-radius: 10px 0 0 0; }
+  .box i:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; border-radius: 0 10px 0 0; }
+  .box i:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0; border-radius: 0 0 0 10px; }
+  .box i:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0; border-radius: 0 0 10px 0; }
+  .box .laser { position: absolute; left: 16px; right: 16px; top: 50%; height: 2px; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+  .box .code { position: absolute; inset: 40px 56px; background: repeating-linear-gradient(90deg, var(--camera-text) 0 2px, transparent 2px 5px, var(--camera-text) 5px 6px, transparent 6px 9px); opacity: 0.35; }
+  .viewfinder p { font-size: var(--text-md); text-align: center; }
+  .viewfinder p span { display: block; font-size: var(--text-sm); opacity: 0.6; margin-top: var(--space-1); }
+  .cam-actions { display: flex; justify-content: space-between; align-items: center; padding: var(--space-5) var(--space-6) var(--space-6); }
+  .round { width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--camera-line); display: flex; align-items: center; justify-content: center; color: var(--camera-text); }
+  .text-btn { color: var(--camera-text); font-size: var(--text-sm); font-weight: 600; opacity: 0.85; }
+
+  /* sheets */
+  .camera-dim { position: absolute; inset: 0; background: var(--camera); }
+  .camera-dim .box { position: absolute; top: 140px; left: 50px; opacity: 0.5; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); color: var(--text); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-2) var(--space-4) var(--space-5); display: flex; flex-direction: column; gap: var(--space-4); }
+  .sheet.tall { top: 92px; overflow: hidden; }
+  .grabber { width: 36px; height: 4px; border-radius: 2px; background: var(--faint); margin: 0 auto; }
+  .sheet h2 { font-size: var(--text-lg); font-weight: 700; }
+  .sheet .sub { font-size: var(--text-sm); color: var(--muted); margin-top: 2px; }
+  .notice { display: flex; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--accent-soft); font-size: var(--text-sm); color: var(--text); }
+  .notice b { color: var(--accent-text); }
+  .field { display: flex; flex-direction: column; gap: var(--space-1); }
+  .field label { font-size: var(--text-xs); color: var(--muted); font-weight: 600; }
+  .input { height: var(--tap); border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid transparent; padding: 0 var(--space-3); display: flex; align-items: center; justify-content: space-between; font-size: var(--text-md); }
+  .input.focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .input.placeholder { color: var(--faint); }
+  .input .unit { color: var(--muted); font-size: var(--text-sm); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+  .row4 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+  .basis { font-size: var(--text-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .check { font-size: var(--text-sm); color: var(--ok); }
+  .warn-line { font-size: var(--text-sm); color: var(--estimate); }
+  .basis-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface-2); border-radius: var(--radius-sm); padding: 3px; }
+  .seg span { height: 30px; padding: 0 var(--space-3); display: flex; align-items: center; font-size: var(--text-xs); color: var(--muted); border-radius: 6px; }
+  .seg span.on { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 1px 2px var(--scrim); }
+  .input.missing { border-color: var(--estimate); background: var(--estimate-soft); }
+  .off-head { display: flex; gap: var(--space-3); align-items: center; }
+  .thumb { width: 56px; height: 56px; border-radius: var(--radius-sm); background: var(--surface-2); color: var(--faint); display: flex; align-items: center; justify-content: center; flex: none; }
+  .off-name { font-size: var(--text-md); font-weight: 700; }
+  .off-meta { font-size: var(--text-sm); color: var(--muted); }
+  .btn { height: var(--tap); border-radius: var(--radius); font-weight: 700; font-size: var(--text-md); display: flex; align-items: center; justify-content: center; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.ghost { background: var(--surface-2); }
+
+  /* found sheet */
+  .amount { display: flex; align-items: center; gap: var(--space-3); }
+  .amount .input { flex: 1; font-size: var(--text-lg); font-weight: 600; }
+  .step { width: var(--tap); height: var(--tap); border-radius: var(--radius-sm); background: var(--surface-2); font-size: var(--text-lg); font-weight: 600; }
+  .preview { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; padding: var(--space-3) 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .preview b { display: block; font-size: var(--text-lg); font-weight: 700; }
+  .preview span { font-size: var(--text-xs); color: var(--muted); }
+  .preview .kc b { color: var(--accent-text); }
+  :where(.phone a) { color: inherit; text-decoration: none; }
+  .nav b { color: var(--text); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="toggle" id="theme-toggle">Switch to light</button>
+  <span class="nav"><a href="onboarding.html">Setup</a> · <a href="today.html">Today</a> · <a href="log.html">Log</a> · <a href="history.html">History</a> · <a href="search.html">Search</a> · <a href="text-log.html">Text log</a> · <b>Products</b> · <a href="settings.html">Settings</a></span>
+</div>
+
+<div class="frames">
+  <!-- Frame 1: library -->
+  <div>
+    <p class="frame-label">1 · Product library</p>
+    <div class="phone">
+      <div class="status"><span>19:05</span><span>●●● 64%</span></div>
+      <div class="appbar"><h1>Products</h1></div>
+      <div class="content">
+        <div class="search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>Search your products</div>
+        <div class="chips"><span class="chip on">All</span><span class="chip">Recent</span><span class="chip">Scanned</span><span class="chip">Custom</span></div>
+        <p class="count">48 products · values per 100 g or 100 mL</p>
+        <div class="card">
+          <div class="prod"><div class="info"><div class="name">Greek yogurt 0%</div><div class="meta"><svg viewBox="0 0 24 24"><path d="M5 6v12M8 6v12M11 6v12M14 6v12M17 6v12"/></svg>Fage Total</div></div><div class="kcal">57<span>kcal</span></div></div>
+          <div class="prod"><div class="info"><div class="name">Rolled oats</div><div class="meta"><svg viewBox="0 0 24 24"><path d="M5 6v12M8 6v12M11 6v12M14 6v12M17 6v12"/></svg>Quaker</div></div><div class="kcal">380<span>kcal</span></div></div>
+          <div class="prod"><div class="info"><div class="name">Jasmine rice, cooked</div><div class="meta">Custom · 1 cup = 158 g</div></div><div class="kcal">130<span>kcal</span></div></div>
+          <div class="prod"><div class="info"><div class="name">Chicken breast, grilled</div><div class="meta">Custom</div></div><div class="kcal">165<span>kcal</span></div></div>
+          <div class="prod"><div class="info"><div class="name">Whole milk</div><div class="meta"><svg viewBox="0 0 24 24"><path d="M5 6v12M8 6v12M11 6v12M14 6v12M17 6v12"/></svg>Arla · per 100 mL</div></div><div class="kcal">64<span>kcal</span></div></div>
+          <div class="prod"><div class="info"><div class="name">Dark chocolate 85%</div><div class="meta"><svg viewBox="0 0 24 24"><path d="M5 6v12M8 6v12M11 6v12M14 6v12M17 6v12"/></svg>Lindt Excellence</div></div><div class="kcal">567<span>kcal</span></div></div>
+          <div class="prod"><div class="info"><div class="name">Sourdough</div><div class="meta">Custom · 1 slice = 45 g</div></div><div class="kcal">256<span>kcal</span></div></div>
+          <div class="prod"><div class="info"><div class="name">Olive oil, extra virgin</div><div class="meta"><svg viewBox="0 0 24 24"><path d="M5 6v12M8 6v12M11 6v12M14 6v12M17 6v12"/></svg>Filippo Berio</div></div><div class="kcal">884<span>kcal</span></div></div>
+        </div>
+      </div>
+      <button class="fab"><svg class="i" viewBox="0 0 24 24"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 8v8M11 8v8M14 8v8M17 8v8"/></svg>Scan</button>
+      <nav class="tabbar">
+        <a class="tab" href="today.html"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Today</a>
+        <a class="tab" href="log.html"><svg class="i" viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9"/></svg>Log</a>
+        <a class="tab on" href="products.html"><svg class="i" viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></svg>Products</a>
+        <a class="tab" href="settings.html"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>Settings</a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Frame 2: scanning -->
+  <div>
+    <p class="frame-label">2 · Scanning</p>
+    <div class="phone camera">
+      <div class="status"><span>19:06</span><span>●●● 64%</span></div>
+      <div class="appbar"><button class="icon-btn" style="color: var(--camera-text)" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button><span></span></div>
+      <div class="viewfinder">
+        <div class="box"><i></i><i></i><i></i><i></i><div class="code"></div><div class="laser"></div></div>
+        <p>Point at a barcode<span>Adding to Breakfast · works offline</span></p>
+      </div>
+      <div class="cam-actions">
+        <button class="round" aria-label="Torch"><svg class="i" viewBox="0 0 24 24"><path d="M8 3h8l-1 6h-6zM9 9h6v4l-1.5 8h-3L9 13z"/></svg></button>
+        <button class="text-btn">Type barcode</button>
+        <button class="round" aria-label="Search library"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 3: found in library -->
+  <div>
+    <p class="frame-label">3a · Found → set amount (tap 3 of 3)</p>
+    <div class="phone camera">
+      <div class="camera-dim"><div class="box"><i></i><i></i><i></i><i></i></div></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div><h2>Greek yogurt 0%</h2><p class="sub">Fage Total · 57 kcal per 100 g · usual 170 g</p></div>
+        <div class="field">
+          <label>Amount</label>
+          <div class="amount"><button class="step">−</button><div class="input focus">170<span class="unit">g</span></div><button class="step">+</button></div>
+        </div>
+        <div class="chips"><span class="chip">100 g</span><span class="chip on">1 pot · 170 g</span><span class="chip">500 g</span></div>
+        <div class="preview">
+          <div class="kc"><b>97</b><span>kcal</span></div>
+          <div><b>17.5</b><span>protein g</span></div>
+          <div><b>6.5</b><span>carbs g</span></div>
+          <div><b>0</b><span>fat g</span></div>
+        </div>
+        <button class="btn primary">Add to Breakfast</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 4: not in library, found on Open Food Facts -->
+  <div>
+    <p class="frame-label">3b · Not in library → found on Open Food Facts</p>
+    <div class="phone">
+      <div class="status"><span>19:07</span><span>●●● 64%</span></div>
+      <div class="appbar"><button class="icon-btn" aria-label="Back"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h2>Check and save</h2></div>
+      <div class="content">
+        <div class="off-head">
+          <div class="thumb"><svg class="i" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M4 10h16"/></svg></div>
+          <div><div class="off-name">Pancit Canton, Original</div><div class="off-meta">Lucky Me! · 60 g pack · 4 807770 270017</div></div>
+        </div>
+        <div class="notice"><svg class="i" viewBox="0 0 24 24" style="flex: none; color: var(--accent-text)"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span>Found on <b>Open Food Facts</b>. It's community data, so check it against the label before saving.</span></div>
+        <p class="basis">Nutrition per 100 g</p>
+        <div class="row2">
+          <div class="field"><label>Energy</label><div class="input">483<span class="unit">kcal</span></div></div>
+          <div class="field"><label>Serving</label><div class="input">1 pack · 60 g</div></div>
+        </div>
+        <div class="row4">
+          <div class="field"><label>Protein</label><div class="input">8.3</div></div>
+          <div class="field"><label>Carbs</label><div class="input">60</div></div>
+          <div class="field"><label>Fat</label><div class="input missing">22.5</div></div>
+        </div>
+        <p class="warn-line">Fat was missing online. Filled from the label.</p>
+        <p class="check">✓ Macros add up to ≈ 476 kcal, close to the label</p>
+        <div style="flex: 1"></div>
+        <button class="btn primary">Save to library and log</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 5: not found anywhere → add product -->
+  <div>
+    <p class="frame-label">3c · Not found anywhere → enter from label</p>
+    <div class="phone">
+      <div class="status"><span>19:07</span><span>●●● 64%</span></div>
+      <div class="appbar"><button class="icon-btn" aria-label="Back"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h2>New product</h2></div>
+      <div class="content">
+        <div class="notice"><svg class="i" viewBox="0 0 24 24" style="flex: none; color: var(--accent-text)"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg><span><b>4 056489 112230</b> isn't in your library or on Open Food Facts. Add it once from the label and it's yours for next time.</span></div>
+        <div class="field"><label>Name</label><div class="input">Crunchy granola, honey</div></div>
+        <div class="field"><label>Brand</label><div class="input">Crownfield</div></div>
+        <div class="basis-row"><p class="basis">Nutrition per 100</p><div class="seg"><span class="on">g · solid</span><span>mL · liquid</span></div></div>
+        <div class="row2">
+          <div class="field"><label>Energy</label><div class="input">452<span class="unit">kcal</span></div></div>
+          <div class="field"><label>Serving (optional)</label><div class="input placeholder">e.g. 45 g</div></div>
+        </div>
+        <div class="row4">
+          <div class="field"><label>Protein</label><div class="input">9.0</div></div>
+          <div class="field"><label>Carbs</label><div class="input">64</div></div>
+          <div class="field"><label>Fat</label><div class="input focus">17</div></div>
+        </div>
+        <p class="check">✓ Macros add up to ≈ 445 kcal, close to the label</p>
+        <div style="flex: 1"></div>
+        <button class="btn primary">Save and add amount</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const btn = document.getElementById('theme-toggle');
+  btn.onclick = () => {
+    const light = document.documentElement.dataset.theme !== 'light';
+    document.documentElement.dataset.theme = light ? 'light' : 'dark';
+    btn.textContent = light ? 'Switch to dark' : 'Switch to light';
+  };
+</script>
+</body>
+</html>

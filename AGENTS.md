@@ -323,14 +323,17 @@ checks do not make the Blueprint unusable.
 
 ## Commands
 
-Expo (React Native + TypeScript + Expo Router), npm. The app is not scaffolded
-yet. These are the standard Expo template commands. Confirm them against
-`package.json` after scaffolding, and remove any that don't exist.
+Expo SDK 58 (React Native + TypeScript + Expo Router), npm. The mobile app lives
+in `apps/mobile/`; run every command below from that folder. Its own
+`apps/mobile/AGENTS.md` holds Expo's agent notes (read the versioned Expo docs
+instead of relying on memory, and add packages with `npx expo install`).
 
+- Install: `npm install`
 - Dev server: `npx expo start` (open on the phone with Expo Go)
 - Android: `npx expo start --android`
 - Lint: `npx expo lint`
-- Typecheck: `npx tsc --noEmit`
+- Typecheck: `npx tsc --noEmit` (also `npm run typecheck`)
+- Expo health check: `npx expo-doctor`
 - Android preview build (APK): `eas build -p android --profile preview`
   (needs `eas.json`; set up when the standalone build is due)
 

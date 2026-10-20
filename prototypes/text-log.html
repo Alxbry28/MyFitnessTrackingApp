@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text log - prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--desk); color: var(--text); font-family: var(--font-sans); font-variant-numeric: tabular-nums; min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: var(--space-5); padding: var(--space-6) var(--space-4); }
+  .toolbar { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-sm); color: var(--muted); }
+  .toolbar a { color: var(--accent-text); }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .toggle { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: var(--space-2) var(--space-4); }
+  .frames { display: flex; gap: var(--space-6); flex-wrap: wrap; justify-content: center; }
+  .frame-label { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2); text-align: center; }
+  .phone { width: 360px; height: 760px; background: var(--bg); border: 1px solid var(--border); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+  .status { height: 28px; flex: none; padding: 0 var(--space-5); display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--muted); }
+  .appbar { padding: var(--space-2) var(--space-4) var(--space-3); display: flex; align-items: center; gap: var(--space-2); }
+  .appbar h2 { font-size: var(--text-lg); font-weight: 700; flex: 1; }
+  .appbar .sub { font-size: var(--text-sm); color: var(--muted); }
+  .icon-btn { width: var(--tap); height: var(--tap); margin-left: calc(-1 * var(--space-3)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--muted); flex: none; }
+  .content { flex: 1; overflow: hidden; padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+  svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .chip { height: 32px; padding: 0 var(--space-3); border-radius: 999px; background: var(--surface-2); font-size: var(--text-sm); color: var(--muted); display: inline-flex; align-items: center; gap: var(--space-1); }
+  .chip svg { width: 16px; height: 16px; }
+  .btn { height: var(--tap); border-radius: var(--radius); font-weight: 700; font-size: var(--text-md); display: flex; align-items: center; justify-content: center; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.ghost { background: var(--surface-2); color: var(--text); }
+  .est { font-size: var(--text-xs); font-weight: 600; color: var(--estimate); background: var(--estimate-soft); padding: 1px 6px; border-radius: 999px; margin-left: var(--space-1); }
+
+  /* editor */
+  .chips { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .editor { flex: 1; padding: var(--space-4); font-size: var(--text-md); line-height: 1.55; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); overflow: hidden; }
+  .editor .h { font-weight: 700; color: var(--accent-text); }
+  .editor .g { color: var(--muted); }
+  .editor .blank { height: var(--space-2); }
+  .caret { display: inline-block; width: 2px; height: 18px; background: var(--accent); vertical-align: middle; margin-left: 1px; }
+  .format { font-size: var(--text-xs); color: var(--muted); }
+  .format code { font-family: inherit; color: var(--text); background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+
+  /* preview */
+  .summary { display: flex; gap: var(--space-2); }
+  .pill { font-size: var(--text-xs); font-weight: 600; padding: var(--space-1) var(--space-2); border-radius: 999px; }
+  .pill.ok { color: var(--ok); background: var(--surface-2); }
+  .pill.warn { color: var(--estimate); background: var(--estimate-soft); }
+  .pill.bad { color: var(--over); background: var(--over-soft); }
+  .group-head { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4) var(--space-1); }
+  .group-head b { font-size: var(--text-md); font-weight: 600; }
+  .group-head .map { font-size: var(--text-xs); color: var(--muted); display: flex; align-items: center; gap: var(--space-1); }
+  .group-head .map span { color: var(--accent-text); font-weight: 600; background: var(--accent-soft); padding: 2px 8px; border-radius: 999px; }
+  .group-head .sum { font-size: var(--text-sm); color: var(--muted); }
+  .line { display: flex; align-items: center; gap: var(--space-3); min-height: 48px; padding: var(--space-2) var(--space-4); border-top: 1px solid var(--border); }
+  .line .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--ok); }
+  .line.warn .dot { background: var(--estimate); }
+  .line.bad .dot { background: var(--over); }
+  .line .info { flex: 1; min-width: 0; }
+  .line .name { font-size: var(--text-sm); font-weight: 500; }
+  .line .src { font-size: var(--text-xs); color: var(--faint); }
+  .line.warn .src { color: var(--estimate); }
+  .line.bad .src { color: var(--over); }
+  .line .kcal { font-size: var(--text-sm); font-weight: 600; }
+  .line .fix { height: 32px; padding: 0 var(--space-3); border-radius: 999px; font-size: var(--text-xs); font-weight: 700; background: var(--accent-soft); color: var(--accent-text); }
+  .bottom { flex: none; padding: var(--space-3) var(--space-4) var(--space-4); border-top: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; gap: var(--space-3); }
+  .bottom .tot { display: flex; justify-content: space-between; align-items: baseline; font-size: var(--text-sm); color: var(--muted); }
+  .bottom .tot b { font-size: var(--text-lg); color: var(--text); }
+  .bottom .row { display: grid; grid-template-columns: 1fr 2fr; gap: var(--space-2); }
+
+  /* match picker sheet */
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-2) var(--space-4) var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+  .grabber { width: 36px; height: 4px; border-radius: 2px; background: var(--faint); margin: 0 auto; }
+  .sheet h3 { font-size: var(--text-lg); font-weight: 700; }
+  .sheet .q { font-size: var(--text-sm); color: var(--muted); }
+  .sheet .q b { color: var(--text); }
+  .opt { display: flex; align-items: center; gap: var(--space-3); min-height: 60px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+  .opt.on { border-color: var(--accent); background: var(--accent-soft); }
+  .opt .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--faint); flex: none; }
+  .opt.on .radio { border: 6px solid var(--accent); }
+  .opt .info { flex: 1; }
+  .opt .name { font-size: var(--text-md); font-weight: 500; }
+  .opt .meta { font-size: var(--text-sm); color: var(--muted); }
+  .opt .kcal { font-weight: 600; }
+  .remember { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--muted); }
+  .box { width: 20px; height: 20px; border-radius: 5px; background: var(--accent); color: var(--accent-ink); display: flex; align-items: center; justify-content: center; font-size: var(--text-xs); font-weight: 700; }
+  :where(.phone a) { color: inherit; text-decoration: none; }
+  .nav b { color: var(--text); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="toggle" id="theme-toggle">Switch to light</button>
+  <span class="nav"><a href="onboarding.html">Setup</a> · <a href="today.html">Today</a> · <a href="log.html">Log</a> · <a href="history.html">History</a> · <a href="search.html">Search</a> · <b>Text log</b> · <a href="products.html">Products</a> · <a href="settings.html">Settings</a></span>
+</div>
+
+<div class="frames">
+  <!-- Frame 1: write / paste -->
+  <div>
+    <p class="frame-label">1 · Type or paste the day</p>
+    <div class="phone">
+      <div class="status"><span>21:30</span><span>●●● 38%</span></div>
+      <div class="appbar">
+        <button class="icon-btn" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        <h2>Text log</h2><span class="sub">Tue, Oct 20</span>
+      </div>
+      <div class="content">
+        <div class="chips">
+          <span class="chip"><svg class="i" viewBox="0 0 24 24"><rect x="8" y="4" width="11" height="14" rx="2"/><path d="M5 8v11a1 1 0 0 0 1 1h9"/></svg>Paste</span>
+          <span class="chip"><svg class="i" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4"/></svg>Copy yesterday</span>
+          <span class="chip">Lunch → Dinner</span>
+        </div>
+        <div class="card editor">
+          <div class="h">Breakfast:</div>
+          <div><span class="g">220g</span> taho</div>
+          <div class="blank"></div>
+          <div class="h">Lunch:</div>
+          <div><span class="g">250g</span> white rice</div>
+          <div><span class="g">110g</span> boiled eggs</div>
+          <div><span class="g">250g</span> boiled chicken breast</div>
+          <div><span class="g">50g</span> okra</div>
+          <div class="blank"></div>
+          <div class="h">Pre-Workout:</div>
+          <div><span class="g">7g</span> Wake Pre workout</div>
+          <div><span class="g">5g</span> creatine</div>
+          <div class="blank"></div>
+          <div class="h">Dinner:</div>
+          <div><span class="g">250g</span> white rice</div>
+          <div><span class="g">110g</span> boiled eggs</div>
+          <div><span class="g">250g</span> boiled chicken breast</div>
+          <div><span class="g">50g</span> okra</div>
+          <div class="blank"></div>
+          <div class="h">Post-workout:</div>
+          <div><span class="g">30g</span> just whey<span class="caret"></span></div>
+        </div>
+        <p class="format">One header per meal, then one food per line: <code>250g white rice</code>, <code>250ml milk</code> or <code>8oz chicken</code>. Matched against your library, works offline.</p>
+        <button class="btn primary">Preview 12 foods</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 2: parsed preview -->
+  <div>
+    <p class="frame-label">2 · Check matches, then log</p>
+    <div class="phone">
+      <div class="status"><span>21:31</span><span>●●● 38%</span></div>
+      <div class="appbar">
+        <button class="icon-btn" aria-label="Back to text"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <h2>Preview</h2><span class="sub">Tue, Oct 20</span>
+      </div>
+      <div class="content">
+        <div class="summary"><span class="pill ok">10 matched</span><span class="pill warn">1 to check</span><span class="pill bad">1 not found</span></div>
+        <div class="card">
+          <div class="group-head"><b>Breakfast</b><span class="sum">194 kcal</span></div>
+          <div class="line"><span class="dot"></span><div class="info"><div class="name">Taho, homemade <span class="est">est.</span></div><div class="src">220g taho</div></div><span class="kcal">194</span></div>
+        </div>
+        <div class="card">
+          <div class="group-head"><b>Lunch</b><span class="sum">920 kcal</span></div>
+          <div class="line warn"><span class="dot"></span><div class="info"><div class="name">White rice, cooked</div><div class="src">250g white rice · 2 matches</div></div><a class="fix" href="#pick">Check</a></div>
+          <div class="line"><span class="dot"></span><div class="info"><div class="name">Egg, boiled</div><div class="src">110g boiled eggs</div></div><span class="kcal">171</span></div>
+          <div class="line"><span class="dot"></span><div class="info"><div class="name">Chicken breast, boiled</div><div class="src">250g boiled chicken breast</div></div><span class="kcal">413</span></div>
+          <div class="line"><span class="dot"></span><div class="info"><div class="name">Okra, boiled</div><div class="src">50g okra</div></div><span class="kcal">11</span></div>
+        </div>
+        <div class="card">
+          <div class="group-head"><b>Pre-Workout</b><span class="map">logs as <span>Snack ▾</span></span></div>
+          <div class="line bad"><span class="dot"></span><div class="info"><div class="name">Wake Pre workout</div><div class="src">7g · not in your library</div></div><a class="fix" href="products.html">Add</a></div>
+          <div class="line"><span class="dot"></span><div class="info"><div class="name">Creatine monohydrate</div><div class="src">5g creatine</div></div><span class="kcal">0</span></div>
+        </div>
+        <div class="card">
+          <div class="group-head"><b>Dinner</b><span class="sum">920 kcal</span></div>
+          <div class="line"><span class="dot"></span><div class="info"><div class="name">White rice, cooked</div><div class="src">250g white rice · same as lunch</div></div><span class="kcal">325</span></div>
+        </div>
+      </div>
+      <div class="bottom">
+        <div class="tot"><span>Total so far</span><b>2,154 kcal</b></div>
+        <div class="row"><button class="btn ghost">Edit text</button><button class="btn primary">Log 11, skip 1</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 3: resolve an ambiguous match -->
+  <div>
+    <p class="frame-label" id="pick">3 · Pick a match once, remembered after</p>
+    <div class="phone">
+      <div class="status"><span>21:31</span><span>●●● 38%</span></div>
+      <div class="appbar"><h2>Preview</h2></div>
+      <div class="content">
+        <div class="card">
+          <div class="group-head"><b>Lunch</b><span class="sum">920 kcal</span></div>
+          <div class="line warn"><span class="dot"></span><div class="info"><div class="name">White rice, cooked</div><div class="src">250g white rice · 2 matches</div></div><button class="fix">Check</button></div>
+        </div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <h3>Which white rice?</h3>
+        <p class="q">For <b>250g white rice</b> in Lunch and Dinner</p>
+        <div class="opt on"><span class="radio"></span><div class="info"><div class="name">White rice, cooked</div><div class="meta">Custom · 130 kcal / 100 g</div></div><span class="kcal">325</span></div>
+        <div class="opt"><span class="radio"></span><div class="info"><div class="name">Jasmine rice, uncooked</div><div class="meta">Royal Umbrella · 356 kcal / 100 g</div></div><span class="kcal">890</span></div>
+        <div class="remember"><span class="box">✓</span>Always use this for "white rice"</div>
+        <button class="btn primary">Use White rice, cooked</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const btn = document.getElementById('theme-toggle');
+  btn.onclick = () => {
+    const light = document.documentElement.dataset.theme !== 'light';
+    document.documentElement.dataset.theme = light ? 'light' : 'dark';
+    btn.textContent = light ? 'Switch to dark' : 'Switch to light';
+  };
+</script>
+</body>
+</html>
