@@ -8,7 +8,7 @@ progress, workouts, and AI help.
 It replaces a MyFitnessPal + ChatGPT routine: MyFitnessPal is cluttered with
 wrong foods, and ChatGPT has no memory and can't scan a barcode.
 
-> **Status:** planning complete, app not scaffolded yet. v1 (nutrition) is due
+> **Status:** building v1, starting with the product library. v1 (nutrition) is due
 > **Oct 31, 2026**. See the [build plan](blueprint/build-plan.md).
 
 ---
@@ -266,15 +266,97 @@ the Apple Developer Program; the code stays cross-platform.
 
 ## Getting started
 
-The app isn't scaffolded yet. Once it is, these are the planned commands:
+Only the mobile app exists so far. The web dashboard and API come later (see
+[Roadmap](#roadmap)). The app runs on Android. There is no web build.
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) LTS and npm
+- Git
+- One way to run the app:
+  - **An Android phone** with [Expo Go](https://expo.dev/go) from the Play
+    Store (easiest). The Expo Go version must support the project's Expo SDK,
+    which is the `expo` version in [apps/mobile/package.json](apps/mobile/package.json).
+  - **An Android emulator** from [Android Studio](https://developer.android.com/studio)
+    (Device Manager, then create and start a virtual device).
+
+### 1. Install
 
 ```bash
+git clone <this-repo-url>
+cd <repo-folder>/apps/mobile
 npm install
-npx expo start            # open on the phone with Expo Go
-npx expo start --android  # launch on a connected Android device or emulator
-npx expo lint             # lint
-npx tsc --noEmit          # typecheck
-eas build -p android --profile preview   # shareable APK
+```
+
+Run every command below from `apps/mobile/`.
+
+### 2. Run on your phone (Expo Go)
+
+```bash
+npx expo start            # or: npm start
+```
+
+1. Connect the phone and the computer to the **same Wi-Fi network**.
+2. Open Expo Go on the phone and scan the QR code shown in the terminal.
+3. The app loads and reloads automatically when you save a file.
+
+If the phone can't connect (for example on a school, office or public
+network), use a tunnel instead:
+
+```bash
+npx expo start --tunnel
+```
+
+### 3. Run on an Android emulator
+
+Start the emulator in Android Studio first, then:
+
+```bash
+npx expo start --android  # or: npm run android
+```
+
+You can also press `a` in a running `npx expo start` terminal to open the app
+on the emulator.
+
+### Useful keys in the Expo terminal
+
+| Key | Action |
+|-----|--------|
+| `a` | Open on Android emulator or connected device |
+| `r` | Reload the app |
+| `j` | Open the debugger |
+| `m` | Toggle the dev menu |
+| `Ctrl+C` | Stop the dev server |
+
+### Checks
+
+```bash
+npx tsc --noEmit          # typecheck (or: npm run typecheck)
+npx expo lint             # lint (or: npm run lint)
+npx expo-doctor           # Expo project health check
+```
+
+There's no test runner yet. Unit tests for the calculation logic are planned.
+
+### Troubleshooting
+
+- **Stale or odd behavior after pulling changes:** clear the bundler cache with
+  `npx expo start --clear`.
+- **"Cannot find module" errors:** delete `node_modules` and run `npm install`
+  again.
+- **Expo Go says the project's SDK is not supported:** update Expo Go from the
+  Play Store, or use an emulator with a matching Expo Go version.
+- **Reset the local database:** the data lives only on the device. Clear the app
+  data for Expo Go in Android settings (this also clears other Expo Go
+  projects).
+
+### Shareable APK (later)
+
+A standalone Android build will use [EAS Build](https://docs.expo.dev/build/introduction/)
+once `eas.json` is set up:
+
+```bash
+eas build -p android --profile preview
 ```
 
 ---
