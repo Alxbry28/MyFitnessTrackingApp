@@ -1,6 +1,6 @@
 # MyFitnessTrackingApp - Project Overview
 
-<!-- blueprint:source-hash 7f0226b2349c4dabbb6ee667b2c8939dd334d1ed00366ba451d18e4ddfcb42f1 -->
+<!-- blueprint:source-hash 1f3c626b2b4d389e8c2d0fb6da5b8037314704fef75b31afb0e2569fedf8f05b -->
 
 > A personal, local-first Android fitness tracker: scan a barcode, save your own
 > product once, log meals in a few taps. Later it adds pantry, body progress,

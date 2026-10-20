@@ -1,11 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { router } from "expo-router";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
-import { ExportCard } from "@/modules/backup/components/ExportCard";
+import { DataCard } from "@/modules/backup/components/DataCard";
 import { useCalorieGoal } from "@/modules/nutrition/hooks/useCalorieGoal";
 import { goalSchema, type GoalFormValues, type GoalInput } from "@/modules/nutrition/services/goalSchema";
 
@@ -40,15 +39,7 @@ export default function SettingsScreen() {
       <Text style={[styles.section, styles.sectionGap]} accessibilityRole="header">
         Your data
       </Text>
-      <ExportCard />
-      <Pressable
-        onPress={() => router.push("/import-weight")}
-        accessibilityRole="button"
-        style={({ pressed }) => [styles.card, styles.linkRow, pressed && styles.savePressed]}
-      >
-        <Text style={styles.linkLabel}>Import weight history (CSV)</Text>
-        <Text style={styles.chevron}>›</Text>
-      </Pressable>
+      <DataCard />
     </ScrollView>
   );
 }
@@ -140,9 +131,6 @@ function makeStyles(theme: Theme) {
     },
     sectionGap: { marginTop: space[4] },
     card: { padding: space[4], borderRadius: radius.md, backgroundColor: colors.surface },
-    linkRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: space[2] },
-    linkLabel: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
-    chevron: { color: colors.muted, fontSize: fontSize.lg },
     center: { alignItems: "center", gap: space[3] },
     message: { color: colors.muted, fontSize: fontSize.md, textAlign: "center" },
     form: { gap: space[3] },

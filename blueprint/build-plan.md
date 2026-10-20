@@ -21,7 +21,7 @@ Pre-build (not features): scaffold the Expo app, run it in Expo Go.
 
 - [x] 29. **Paste text log** - built to `prototypes/text-log.html`: "Type or paste a meal list" on Today and Log opens a text screen (Paste, Copy yesterday and Lunch → Dinner chips); rules (no AI, offline) read `Meal:` headings and `250g`, `250ml` (1 ml = 1 g) or `8oz` (28.35 g) food lines; a heading that is not a meal logs as Snack unless changed; a Preview screen matches lines to my products and shows matched, to check and not found; fix a line by choosing or creating a product, with "Always use this" to remember it; when online, a "not found" line can search Open Food Facts by name to prefill the new-product form for review; Log saves the matched lines and skips the rest; nothing saves until Log
 - [x] 11. **Body weight and BMI** - body profile, weight log, 7-day trend, BMI on a Progress screen, Xiaomi CSV import
-- [ ] 14. **Backup restore** - import a JSON backup safely
+- [x] 14. **Backup restore** - import a JSON backup safely
 - [ ] 13. **First-run setup** - goal, units, height, sex, birth date, BMI scale, current weight, activity level; formula TDEE (Mifflin-St Jeor) suggests a calorie goal to accept or override; personal values become settings
 
 After 13 (not a feature): build the Android APK with `eas build -p android --profile preview` and use it daily.

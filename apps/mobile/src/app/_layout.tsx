@@ -31,6 +31,7 @@ export default function RootLayout() {
             <Stack.Screen name="body-profile" options={{ title: "Body profile" }} />
             <Stack.Screen name="import-weight" options={{ title: "Import weight history" }} />
             <Stack.Screen name="paste-log" options={{ title: "Text log", headerShown: false }} />
+            <Stack.Screen name="restore" options={{ title: "Restore backup" }} />
           </Stack>
         </SQLiteProvider>
       </Suspense>
