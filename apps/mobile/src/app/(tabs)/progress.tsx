@@ -132,7 +132,20 @@ export default function ProgressScreen() {
               </View>
             )}
           </View>
-          <Text style={styles.measureArrow}>›</Text>
+          <View style={styles.measureRightRow}>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                router.push("/measurements/guide" as any);
+              }}
+              accessibilityRole="button"
+              hitSlop={8}
+              style={styles.guideLinkPill}
+            >
+              <Text style={styles.guideLinkText}>Guide</Text>
+            </Pressable>
+            <Text style={styles.measureArrow}>›</Text>
+          </View>
         </View>
 
         {measurements.deltas.length > 0 ? (
@@ -255,6 +268,22 @@ function makeStyles(theme: Theme) {
     },
     wthTextWarning: {
       color: "#ed6c02",
+    },
+    measureRightRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    guideLinkPill: {
+      paddingVertical: 2,
+      paddingHorizontal: 8,
+      backgroundColor: colors.accentSoft,
+      borderRadius: 10,
+    },
+    guideLinkText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.accentText,
     },
     measureArrow: {
       fontSize: fontSize.lg,

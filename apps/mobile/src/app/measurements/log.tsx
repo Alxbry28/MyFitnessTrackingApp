@@ -230,12 +230,23 @@ export default function MeasurementLogScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
             <Text style={styles.cardSectionTitle}>Body Sites (cm)</Text>
-            <Pressable
-              onPress={() => router.push("/measurements/sites" as any)}
-              accessibilityRole="button"
-            >
-              <Text style={styles.editSitesText}>Edit sites</Text>
-            </Pressable>
+            <View style={styles.cardHeaderActions}>
+              <Pressable
+                onPress={() => router.push("/measurements/guide" as any)}
+                accessibilityRole="button"
+                hitSlop={8}
+                style={styles.guideHeaderBtn}
+              >
+                <Text style={styles.guideHeaderText}>Guide 📖</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => router.push("/measurements/sites" as any)}
+                accessibilityRole="button"
+                hitSlop={8}
+              >
+                <Text style={styles.editSitesText}>Edit sites</Text>
+              </Pressable>
+            </View>
           </View>
 
           {trackedConfigs.map((config, index) => {
@@ -364,6 +375,22 @@ function makeStyles(theme: Theme) {
       fontSize: 15,
       fontWeight: "700",
       color: theme.colors.text,
+    },
+    cardHeaderActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    guideHeaderBtn: {
+      paddingVertical: 2,
+      paddingHorizontal: 8,
+      backgroundColor: theme.colors.accentSoft,
+      borderRadius: 10,
+    },
+    guideHeaderText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: theme.colors.accentText,
     },
     editSitesText: {
       fontSize: 13,

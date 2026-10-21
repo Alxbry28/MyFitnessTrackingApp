@@ -53,14 +53,24 @@ export default function MeasurementsHubScreen() {
           <Text style={styles.backText}>‹ Progress</Text>
         </Pressable>
         <Text style={styles.appbarTitle}>Measurements</Text>
-        <Pressable
-          onPress={() => router.push("/measurements/sites" as any)}
-          accessibilityRole="button"
-          hitSlop={8}
-          style={styles.headerActionBtn}
-        >
-          <Text style={styles.headerActionText}>Sites & Guide</Text>
-        </Pressable>
+        <View style={styles.appbarRightActions}>
+          <Pressable
+            onPress={() => router.push("/measurements/guide" as any)}
+            accessibilityRole="button"
+            hitSlop={8}
+            style={styles.headerActionBtn}
+          >
+            <Text style={styles.headerActionText}>Guide</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/measurements/sites" as any)}
+            accessibilityRole="button"
+            hitSlop={8}
+            style={styles.headerActionBtn}
+          >
+            <Text style={styles.headerActionText}>Sites</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -105,6 +115,21 @@ export default function MeasurementsHubScreen() {
                 </Text>
               </View>
             )}
+
+            {/* Guide Banner Card */}
+            <Pressable
+              onPress={() => router.push("/measurements/guide" as any)}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.guideBannerCard, pressed && styles.pressed]}
+            >
+              <View style={styles.guideBannerLeft}>
+                <Text style={styles.guideBannerTitle}>How to Measure Consistently</Text>
+                <Text style={styles.guideBannerSubtitle}>
+                  Interactive body map, tape placement & golden rules • 2 min read
+                </Text>
+              </View>
+              <Text style={styles.guideBannerArrow}>›</Text>
+            </Pressable>
 
             {/* Quick Action: Log Session */}
             <Pressable
@@ -256,6 +281,11 @@ function makeStyles(theme: Theme) {
       fontWeight: "700",
       color: theme.colors.text,
     },
+    appbarRightActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
     headerActionBtn: {
       paddingVertical: 4,
       paddingHorizontal: 8,
@@ -268,6 +298,40 @@ function makeStyles(theme: Theme) {
       fontSize: 12,
       fontWeight: "600",
       color: theme.colors.accent,
+    },
+    guideBannerCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: theme.colors.accentSoft,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.colors.accent,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+    },
+    guideBannerLeft: {
+      flex: 1,
+      gap: 2,
+    },
+    guideBannerTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: theme.colors.accentText,
+    },
+    guideBannerSubtitle: {
+      fontSize: 11,
+      color: theme.colors.text,
+      lineHeight: 15,
+    },
+    guideBannerArrow: {
+      fontSize: 20,
+      fontWeight: "600",
+      color: theme.colors.accentText,
+      marginLeft: 8,
+    },
+    pressed: {
+      opacity: 0.75,
     },
     content: {
       padding: 16,

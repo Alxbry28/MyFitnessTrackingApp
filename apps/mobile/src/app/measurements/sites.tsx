@@ -106,6 +106,13 @@ export default function MeasurementSitesScreen() {
       >
         {/* Consistency Guide Card */}
         <View style={styles.guideCard}>
+          <Pressable
+            onPress={() => router.push("/measurements/guide" as any)}
+            accessibilityRole="button"
+            style={styles.guideBanner}
+          >
+            <Text style={styles.guideBannerText}>📖 View visual guide with body map ›</Text>
+          </Pressable>
           <Text style={styles.guideTitle}>HOW TO MEASURE CONSISTENTLY</Text>
           <View style={styles.guidePoints}>
             <Text style={styles.guidePoint}>
@@ -221,6 +228,19 @@ function makeStyles(theme: Theme) {
       borderColor: theme.colors.border,
       padding: 16,
       gap: 10,
+    },
+    guideBanner: {
+      backgroundColor: theme.colors.accentSoft,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      marginBottom: 6,
+    },
+    guideBannerText: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: theme.colors.accentText,
+      textAlign: "center",
     },
     guideTitle: {
       fontSize: 11,
