@@ -166,3 +166,51 @@
 **Why it matters:** Copied per-100 g macros are nullable, and `formatMacro(null)` returns "-", so an entry with no fat value shows "- g" in the Fat column with a coloured line, as if a value existed. The prototype has no unknown-macro state; the empty state uses "—" in `faint` with a `track` line.
 **Suggested fix:** For a null macro show the empty treatment for that column only ("—" in `faint`, `track` line, no " g"). No current requirement is lost.
 **Resolution:**
+
+### F-34 [P3] open - Switching units converts typed weights but not a typed height
+
+**File:** apps/mobile/src/app/setup.tsx:121
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** `changeUnits` converts weight and target, but cm and ft/in are separate fields: a height typed as 170 cm leaves the ft/in fields empty (or holding the saved profile height) after switching to lb · ft, so the user must retype it or may submit a stale prefilled height.
+**Suggested fix:** On a switch, convert a valid typed height with `cmToFtIn` or `ftInToCm` into the other fields. No current requirement is lost.
+**Resolution:** Re-examined (2026-10-21 independent review of e9bd83b (fresh subagent, claude-opus-5-5)): still present. `changeUnits` (setup.tsx:122-128) converts only `weight` and `target`; `heightCm`, `heightFt` and `heightIn` are untouched. Stays open.
+
+### F-35 [P3] unverified - Imperial ft and in inputs may be too narrow for a two-digit value
+
+**File:** apps/mobile/src/modules/body/components/setup/SetupSteps.tsx:136
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** In imperial mode the half-width height column holds two inputs, each with 16 dp side padding, an 8 dp gap and a unit label. On a 360 dp phone that leaves roughly 20 dp for an `lg` 600 value, so "11" in inches may clip. Not checked on a device.
+**Suggested fix:** Check on the phone; if it clips, reduce the inner padding for the ft/in pair or give the height column more width. No current requirement is lost.
+**Resolution:** Re-examined (2026-10-21 independent review of e9bd83b (fresh subagent, claude-opus-5-5)): still unverified. Arithmetic at 360 dp: content 328, height column (328-12)/2 = 158, each ft/in input (158-12)/2 = 73, minus 32 padding, 8 gap and a ~12 dp unit leaves ~21 dp for the `lg` 600 TextInput. Clipping of "11" is plausible but needs a device screenshot.
+
+### F-36 [P2] open - Skip stacks a second tab navigator over the existing one instead of returning to it
+
+**File:** apps/mobile/src/app/setup.tsx:193
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** First-run setup is pushed over `(tabs)` (useFirstRun.ts:16), so the root stack is `[(tabs), setup]`. `router.replace("/settings")` resolves through expo-router 57 `findDivergentState` (diverges at the root stack because the focused route is `setup`) and the stack router's `REPLACE` case (build/react-navigation/routers/StackRouter.js:154-171), which swaps `setup` for a new `(tabs)` route. The result is `[(tabs), (tabs)]`: the original Today tree stays mounted underneath, and hardware back from Settings goes to a second Today, then the original Today, before leaving the app. A double tap on Skip can stack a third.
+**Suggested fix:** Use `router.dismissTo("/settings")` (already the project pattern in add/[productId].tsx:53), which pops setup and jumps to the Settings tab of the existing navigator. No current requirement is lost.
+**Resolution:**
+
+### F-37 [P3] open - Imperial current weight reads back 0.1 lb off, so 165 to 160 lb shows "-4.9 lb"
+
+**File:** apps/mobile/src/app/setup.tsx:213
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** Step 1 keeps only the kg value rounded to 0.1 (setupSchema.ts:140). Typing 165 lb stores 74.8 kg, and step 3 compares the target against `kgToLb(74.8)` = 164.905 lb, so a 160 lb target shows "lb · −4.9 lb" instead of −5, and Maintain's results line reads "Keep around 164.9 lb" (setup.tsx:61, 246). The numbers the user typed come back changed.
+**Suggested fix:** Keep the typed display weight from step 1 for the difference and the results line (or round the converted value to the input's precision) while still saving kg with one decimal. No current requirement is lost.
+**Resolution:**
+
+### F-38 [P3] open - Recalculate saves an old latest weight as today's typed weigh-in
+
+**File:** apps/mobile/src/modules/body/repositories/setupRepo.ts:28
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** Recalculate prefills Current weight from the most recent day with any reading (useSetup.ts:31, `listLatestDay`), and "Start tracking" always writes that value through `saveManual` for today. Someone who last weighed two weeks ago and only changes their activity level gets a new manual weigh-in today with the two-week-old value, which enters the Progress trend; on a day with an imported reading, the copy (rounded to 0.1 kg) becomes the day's value because a typed weight wins. The spec does ask setup to save today's weight, so this needs an owner decision rather than a silent change.
+**Suggested fix:** Save today's weight only when the field was edited or when the latest reading is already today's, or show the prefilled date next to the field. Requires an explicit owner decision because it changes specified behavior.
+**Resolution:**
+
+### F-39 [P3] open - Recalculate link is an 11 sp inline text, well under the 48 dp touch target
+
+**File:** apps/mobile/src/app/(tabs)/settings.tsx:102
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** The only entry to setup after first run is a nested `Text` with `onPress` inside an `xs` helper line, so its touch area is the word's glyph box (about 16 dp tall) with no hit slop. The app's minimum touch target is `tap` = 48 dp (tokens.ts:102), and F-24 records the same issue for another link.
+**Suggested fix:** Keep the inline look from settings.html but make Recalculate a `Pressable` with `hitSlop` (or a 48 dp-tall row) holding the accentText label. No current requirement is lost.
+**Resolution:**

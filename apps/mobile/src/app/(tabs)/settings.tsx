@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { router } from "expo-router";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
@@ -96,6 +97,16 @@ function GoalForm({ goal, onSave, styles, theme }: GoalFormProps) {
               style={[styles.input, fieldState.error && styles.inputError]}
             />
             {fieldState.error?.message && <Text style={styles.error}>{fieldState.error.message}</Text>}
+            <Text style={styles.helper}>
+              Get a suggestion from your profile.{" "}
+              <Text
+                onPress={() => router.push({ pathname: "/setup", params: { from: "settings" } })}
+                accessibilityRole="link"
+                style={styles.helperLink}
+              >
+                Recalculate
+              </Text>
+            </Text>
           </View>
         )}
       />
@@ -148,6 +159,8 @@ function makeStyles(theme: Theme) {
       fontVariant: ["tabular-nums"],
     },
     inputError: { borderColor: colors.over },
+    helper: { color: colors.muted, fontSize: fontSize.xs, marginTop: space[1] },
+    helperLink: { color: colors.accentText, fontWeight: "600" },
     error: { color: colors.over, fontSize: fontSize.sm },
     saved: { color: colors.ok, fontSize: fontSize.sm, fontWeight: "600" },
     save: {

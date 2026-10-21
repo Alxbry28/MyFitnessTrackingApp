@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
+import { useFirstRun } from "@/modules/body/hooks/useFirstRun";
 import { MealCard } from "@/modules/nutrition/components/MealCard";
 import { QuickAddSheet } from "@/modules/nutrition/components/QuickAddSheet";
 import { TodaySummary } from "@/modules/nutrition/components/TodaySummary";
@@ -21,6 +22,7 @@ export default function TodayScreen() {
   const log = useDayLog(today);
   const goal = useCalorieGoal();
   const [sheetOpen, setSheetOpen] = useState(false);
+  useFirstRun();
 
   let body;
   if (log.status === "loading" || goal.state.status === "loading") {

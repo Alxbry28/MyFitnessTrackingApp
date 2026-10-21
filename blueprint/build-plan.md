@@ -25,7 +25,7 @@ Pre-build (not features): scaffold the Expo app, run it in Expo Go.
 - [x] 30. **Match shipped screens to prototypes** - screens built before the prototypes became the contract are rebuilt to their HTML frames; prototype parts that need data from later features are listed as gaps
   - [x] 30a. **Today screen to prototype** - `today.html`: Today app bar with date, calorie ring card (eaten, goal, remaining, burned), macro bars, meal cards with foods and + Add, Log food button opening the quick-add sheet (meal chips, Scan / Search / Type or paste, Recent); "Snacks" label app-wide
   - [x] 30b. **Log screen to prototype** - `log.html`: date nav with calendar hint, total card with over badge and bar, meal group cards, swipe to delete, entry edit per `entry-edit.html`
-- [ ] 13. **First-run setup** - goal, units, height, sex, birth date, BMI scale, current weight, activity level; formula TDEE (Mifflin-St Jeor) suggests a calorie goal to accept or override; personal values become settings
+- [x] 13. **First-run setup** - goal, units, height, sex, birth date, BMI scale, current weight, activity level; formula TDEE (Mifflin-St Jeor) suggests a calorie goal to accept or override; personal values become settings
 
 After 13 (not a feature): build the Android APK with `eas build -p android --profile preview` and use it daily.
 

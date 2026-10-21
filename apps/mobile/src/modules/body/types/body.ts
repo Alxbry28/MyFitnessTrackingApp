@@ -1,3 +1,5 @@
+import type { ActivityLevel, Goal, Sex } from "../services/setupCalc";
+
 export const BMI_SCALES = ["asia_pacific", "who"] as const;
 export type BmiScale = (typeof BMI_SCALES)[number];
 
@@ -13,6 +15,14 @@ export type WeighIn = {
 };
 
 export type BodyProfile = { heightCm: number | null; bmiScale: BmiScale };
+
+// The first-run setup answers; every field is null until setup has been finished once.
+export type SetupProfile = BodyProfile & {
+  sex: Sex | null;
+  birthDate: string | null;
+  activityLevel: ActivityLevel | null;
+  goal: Goal | null;
+};
 
 export type ImportRun = {
   id: string;
