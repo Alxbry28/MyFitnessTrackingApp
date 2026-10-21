@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import { dayKey } from "@/modules/nutrition/services/mealTime";
+import { AddStockSheet } from "@/modules/pantry/components/AddStockSheet";
 import { PantryRow } from "@/modules/pantry/components/PantryRow";
 import { usePantry } from "@/modules/pantry/hooks/usePantry";
 import { GROUP_LABELS, GROUP_ORDER, groupOf, locationsText, type PantryGroup } from "@/modules/pantry/services/pantryStock";
@@ -32,6 +33,7 @@ export default function PantryScreen() {
   const { state, retry } = usePantry();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [sheetOpen, setSheetOpen] = useState(false);
   const today = dayKey(new Date());
   const count = state.status === "ready" ? state.items.length : 0;
 
@@ -48,7 +50,45 @@ export default function PantryScreen() {
       </View>
     );
   } else if (state.items.length === 0) {
-    body = <Text style={styles.message}>Nothing in your pantry yet. Tap + Add stock after you shop.</Text>;
+    body = (
+      <View style={styles.emptyCard}>
+        <View style={styles.emptyIconWrap}>
+          <SymbolView name={{ android: "kitchen", web: "kitchen" }} tintColor={theme.colors.accent} size={28} />
+        </View>
+        <Text style={styles.emptyTitle}>Your pantry is empty</Text>
+        <Text style={styles.emptySubtitle}>
+          Track supplements, groceries, and cooked batches with low-stock warnings and run-out forecasts.
+        </Text>
+        <View style={styles.emptyActions}>
+          <Pressable
+            onPress={() => router.push("/pantry/new-supplement")}
+            accessibilityRole="button"
+            style={[styles.emptyBtn, styles.emptyBtnPrimary]}
+          >
+            <SymbolView name={{ android: "medication", web: "medication" }} tintColor={theme.colors.accentInk} size={18} />
+            <Text style={styles.emptyBtnPrimaryLabel}>+ Add a supplement</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push({ pathname: "/add", params: { for: "pantry" } })}
+            accessibilityRole="button"
+            style={styles.emptyBtn}
+          >
+            <SymbolView name={{ android: "search", web: "search" }} tintColor={theme.colors.text} size={18} />
+            <Text style={styles.emptyBtnLabel}>Search food library</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push({ pathname: "/scan", params: { for: "pantry" } })}
+            accessibilityRole="button"
+            style={styles.emptyBtn}
+          >
+            <SymbolView name={{ android: "barcode_scanner", web: "barcode_scanner" }} tintColor={theme.colors.text} size={18} />
+            <Text style={styles.emptyBtnLabel}>Scan barcode</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
   } else {
     const q = query.trim().toLowerCase();
     const matching = state.items.filter((i) => !q || i.name.toLowerCase().includes(q));
@@ -74,6 +114,26 @@ export default function PantryScreen() {
       ));
     } else if (q) {
       body = <Text style={styles.message}>{`Nothing matches '${query.trim()}'`}</Text>;
+    } else if (filter === "supplements") {
+      body = (
+        <View style={styles.emptyCard}>
+          <View style={styles.emptyIconWrap}>
+            <SymbolView name={{ android: "medication", web: "medication" }} tintColor={theme.colors.accent} size={28} />
+          </View>
+          <Text style={styles.emptyTitle}>No supplements stocked</Text>
+          <Text style={styles.emptySubtitle}>
+            Stock protein powder or creatine in grams, or multivitamins in tabs/caps to track daily use and days left.
+          </Text>
+          <Pressable
+            onPress={() => router.push("/pantry/new-supplement")}
+            accessibilityRole="button"
+            style={[styles.emptyBtn, styles.emptyBtnPrimary]}
+          >
+            <SymbolView name={{ android: "add", web: "add" }} tintColor={theme.colors.accentInk} size={18} />
+            <Text style={styles.emptyBtnPrimaryLabel}>+ Add a supplement</Text>
+          </Pressable>
+        </View>
+      );
     } else {
       body = <Text style={styles.message}>{filter === "all" ? "" : EMPTY_GROUP[filter]}</Text>;
     }
@@ -115,14 +175,17 @@ export default function PantryScreen() {
         </View>
         {body}
       </ScrollView>
+
       <Pressable
-        onPress={() => router.push({ pathname: "/scan", params: { for: "pantry" } })}
+        onPress={() => setSheetOpen(true)}
         accessibilityRole="button"
         style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
       >
         <SymbolView name={{ android: "add", web: "add" }} tintColor={theme.colors.accentInk} size={22} />
         <Text style={styles.fabLabel}>Add stock</Text>
       </Pressable>
+
+      <AddStockSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} />
     </View>
   );
 }
@@ -173,6 +236,67 @@ function makeStyles(theme: Theme) {
     message: { color: colors.muted, fontSize: fontSize.md, textAlign: "center", paddingVertical: space[3] },
     retry: { minHeight: tap, justifyContent: "center", paddingHorizontal: space[5], borderRadius: radius.md, backgroundColor: colors.surface2 },
     retryLabel: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
+    emptyCard: {
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      padding: space[5],
+      alignItems: "center",
+      gap: space[3],
+      marginTop: space[2],
+    },
+    emptyIconWrap: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.accentSoft,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    emptyTitle: {
+      color: colors.text,
+      fontSize: fontSize.lg,
+      fontWeight: "700",
+      textAlign: "center",
+    },
+    emptySubtitle: {
+      color: colors.muted,
+      fontSize: fontSize.sm,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    emptyActions: {
+      width: "100%",
+      gap: space[2],
+      marginTop: space[2],
+    },
+    emptyBtn: {
+      minHeight: tap,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: space[2],
+      paddingHorizontal: space[4],
+      borderRadius: radius.md,
+      backgroundColor: colors.surface2,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    emptyBtnPrimary: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    emptyBtnLabel: {
+      color: colors.text,
+      fontSize: fontSize.sm,
+      fontWeight: "600",
+    },
+    emptyBtnPrimaryLabel: {
+      color: colors.accentInk,
+      fontSize: fontSize.sm,
+      fontWeight: "700",
+    },
     fab: {
       position: "absolute",
       right: space[4],

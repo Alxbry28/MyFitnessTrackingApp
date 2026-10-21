@@ -405,3 +405,71 @@ export async function adjustStock(db: SQLiteDatabase, input: { itemId: string; a
     await checkForeignKeys(txn);
   });
 }
+
+export type UpdateSupplementInput = {
+  itemId: string;
+  productId: string;
+  name: string;
+  brand: string | null;
+  barcode: string | null;
+  unit: SupplementUnit;
+  netWeightG: number;
+  servingGrams: number | null;
+  location: PantryLocation;
+  expiresAt: string | null;
+  currentStock?: number;
+};
+
+// Edit supplement details (product name, brand, barcode, container size, scoop dose, and pantry unit/stock)
+export async function updateSupplement(db: SQLiteDatabase, input: UpdateSupplementInput): Promise<void> {
+  await db.withExclusiveTransactionAsync(async (txn) => {
+    const now = new Date().toISOString();
+    const servingLabel =
+      input.unit === "g"
+        ? input.servingGrams ? `${input.servingGrams} g scoop` : "1 scoop"
+        : input.servingGrams ? `${input.servingGrams} ${input.unit}` : `1 ${input.unit}`;
+
+    await txn.runAsync(
+      `UPDATE products SET name = ?, brand = ?, barcode = ?, net_weight_g = ?, serving_grams = ?,
+         serving_size = ?, updated_at = ?
+       WHERE id = ? AND deleted_at IS NULL`,
+      input.name,
+      input.brand,
+      input.barcode,
+      input.netWeightG,
+      input.servingGrams,
+      servingLabel,
+      now,
+      input.productId,
+    );
+
+    await txn.runAsync(
+      `UPDATE pantry_items SET location = ?, expires_at = ?, unit = ?, updated_at = ?
+       WHERE id = ? AND deleted_at IS NULL`,
+      input.location,
+      input.expiresAt,
+      input.unit,
+      now,
+      input.itemId,
+    );
+
+    if (typeof input.currentStock === "number" && Number.isFinite(input.currentStock) && input.currentStock >= 0) {
+      const current = await gramsLeftIn(txn, input.itemId);
+      const delta = Math.round((input.currentStock - current) * 100) / 100;
+      if (Math.abs(delta) >= ADJUST_MIN_CHANGE) {
+        await insertMovement(txn, input.itemId, delta, "adjustment", null);
+      }
+    }
+
+    await checkForeignKeys(txn);
+  });
+}
+
+// Soft-deletes a pantry item so it no longer appears in the list
+export async function deletePantryItem(db: SQLiteDatabase, itemId: string): Promise<void> {
+  await db.withExclusiveTransactionAsync(async (txn) => {
+    const now = new Date().toISOString();
+    await txn.runAsync(`UPDATE pantry_items SET deleted_at = ?, updated_at = ? WHERE id = ?`, now, now, itemId);
+    await checkForeignKeys(txn);
+  });
+}

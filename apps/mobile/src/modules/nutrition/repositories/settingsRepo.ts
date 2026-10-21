@@ -65,26 +65,110 @@ export async function markSetupDone(db: SQLiteDatabase): Promise<void> {
   await setValue(db, SETUP_DONE, true);
 }
 
-const AI_API_KEY = "ai_api_key";
+export const AI_API_KEY_SETTING = "ai_api_key";
 const AI_PROVIDER = "ai_provider";
+const AI_MODEL = "ai_model";
+const AI_BASE_URL = "ai_base_url";
 
-export type AiProvider = "gemini" | "openai";
+export type AiProvider = "gemini" | "groq" | "meta" | "openai" | "custom";
+
+export const DEFAULT_AI_MODELS: Record<AiProvider, string> = {
+  gemini: "gemini-2.5-flash",
+  groq: "llama-3.3-70b-versatile",
+  meta: "llama-3.3-70b-instruct",
+  openai: "gpt-4o-mini",
+  custom: "openai/gpt-4o-mini",
+};
+
+export const AI_MODEL_PRESETS: Record<AiProvider, string[]> = {
+  gemini: [
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-2.5-pro",
+  ],
+  groq: [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+    "mixtral-8x7b-32768",
+    "gemma2-9b-it",
+  ],
+  meta: [
+    "llama-3.3-70b-instruct",
+    "llama-3.1-70b-instruct",
+    "llama-3.1-8b-instruct",
+    "llama-3.2-3b-instruct",
+  ],
+  openai: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1-nano"],
+  custom: [
+    "openai/gpt-4o-mini",
+    "google/gemini-2.5-flash",
+    "anthropic/claude-3.5-haiku",
+    "deepseek/deepseek-chat",
+  ],
+};
+
+export const DEFAULT_CUSTOM_BASE_URL = "https://openrouter.ai/api/v1";
+
+export type AiConfig = {
+  provider: AiProvider;
+  apiKey: string | null;
+  model: string;
+  baseUrl: string;
+};
 
 export async function getAiApiKey(db: SQLiteDatabase): Promise<string | null> {
-  const val = await getValue(db, AI_API_KEY);
+  const val = await getValue(db, AI_API_KEY_SETTING);
   return typeof val === "string" && val.trim() ? val.trim() : null;
 }
 
 export async function setAiApiKey(db: SQLiteDatabase, key: string | null): Promise<void> {
-  await setValue(db, AI_API_KEY, key ? key.trim() : null);
+  await setValue(db, AI_API_KEY_SETTING, key ? key.trim() : null);
 }
 
 export async function getAiProvider(db: SQLiteDatabase): Promise<AiProvider> {
   const val = await getValue(db, AI_PROVIDER);
-  return val === "openai" ? "openai" : "gemini";
+  if (val === "groq" || val === "meta" || val === "openai" || val === "custom") return val;
+  return "gemini";
 }
 
 export async function setAiProvider(db: SQLiteDatabase, provider: AiProvider): Promise<void> {
   await setValue(db, AI_PROVIDER, provider);
 }
 
+export async function getAiModel(db: SQLiteDatabase, provider?: AiProvider): Promise<string> {
+  const resolvedProvider = provider ?? (await getAiProvider(db));
+  const providerKey = `ai_model_${resolvedProvider}`;
+  const providerVal = await getValue(db, providerKey);
+  if (typeof providerVal === "string" && providerVal.trim()) {
+    return providerVal.trim();
+  }
+  const val = await getValue(db, AI_MODEL);
+  return typeof val === "string" && val.trim() ? val.trim() : DEFAULT_AI_MODELS[resolvedProvider];
+}
+
+export async function setAiModel(db: SQLiteDatabase, model: string | null, provider?: AiProvider): Promise<void> {
+  const clean = model ? model.trim() : null;
+  await setValue(db, AI_MODEL, clean);
+  const targetProvider = provider ?? (await getAiProvider(db));
+  await setValue(db, `ai_model_${targetProvider}`, clean);
+}
+
+export async function getAiBaseUrl(db: SQLiteDatabase): Promise<string> {
+  const val = await getValue(db, AI_BASE_URL);
+  return typeof val === "string" && val.trim() ? val.trim() : DEFAULT_CUSTOM_BASE_URL;
+}
+
+export async function setAiBaseUrl(db: SQLiteDatabase, baseUrl: string | null): Promise<void> {
+  await setValue(db, AI_BASE_URL, baseUrl ? baseUrl.trim() : null);
+}
+
+export async function getAiConfig(db: SQLiteDatabase): Promise<AiConfig> {
+  const provider = await getAiProvider(db);
+  const [apiKey, model, baseUrl] = await Promise.all([
+    getAiApiKey(db),
+    getAiModel(db, provider),
+    getAiBaseUrl(db),
+  ]);
+  return { provider, apiKey, model, baseUrl };
+}

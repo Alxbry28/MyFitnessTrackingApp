@@ -77,9 +77,24 @@ export default function PantryItemScreen() {
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {back}
       <View style={styles.appbar}>
-        <Text style={styles.h1} accessibilityRole="header">
+        <Text style={styles.h1} numberOfLines={1} accessibilityRole="header">
           {item.name}
         </Text>
+        <Pressable
+          onPress={() => {
+            if (item.kind === "supplement") {
+              router.push({ pathname: "/pantry/edit-supplement", params: { itemId: item.id } });
+            } else if (item.productId) {
+              router.push({ pathname: "/product/[id]", params: { id: item.productId, then: "pantry" } });
+            }
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`Edit ${item.name}`}
+          hitSlop={8}
+          style={styles.editBtn}
+        >
+          <Text style={styles.editBtnText}>Edit</Text>
+        </Pressable>
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: theme.space[4] + insets.bottom }]}>
         {item.kind === "supplement" ? (
@@ -368,8 +383,28 @@ function makeStyles(theme: Theme) {
     screen: { flex: 1, backgroundColor: colors.bg },
     backBtn: { alignSelf: "flex-start", paddingTop: space[2], paddingHorizontal: space[4] },
     back: { color: colors.accentText, fontSize: fontSize.sm },
-    appbar: { paddingTop: space[2], paddingHorizontal: space[4], paddingBottom: space[3] },
-    h1: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700", letterSpacing: -0.4 },
+    appbar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingTop: space[2],
+      paddingHorizontal: space[4],
+      paddingBottom: space[3],
+    },
+    h1: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontWeight: "700", letterSpacing: -0.4, marginRight: space[2] },
+    editBtn: {
+      paddingHorizontal: space[3],
+      paddingVertical: space[1],
+      borderRadius: radius.pill,
+      backgroundColor: colors.surface2,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    editBtnText: {
+      color: colors.accentText,
+      fontSize: fontSize.sm,
+      fontWeight: "600",
+    },
     center: { flex: 1, alignItems: "center", justifyContent: "center", gap: space[4], padding: space[5] },
     message: { color: colors.muted, fontSize: fontSize.md, textAlign: "center" },
     centerBtn: { minHeight: tap, justifyContent: "center", paddingHorizontal: space[5], borderRadius: radius.md, backgroundColor: colors.surface2 },

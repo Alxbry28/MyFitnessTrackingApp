@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { SymbolView } from "expo-symbols";
 import { useState } from "react";
 import { Controller, useForm, useWatch, type Control } from "react-hook-form";
 import {
@@ -18,6 +19,7 @@ import type { SaveResult } from "../repositories/productRepo";
 import { DRAINED_REFERENCES, type DrainedReference } from "../services/drained";
 import { productSchema, type ProductFormValues } from "../services/productSchema";
 import type { ProductInput } from "../types/product";
+import { BarcodeScanModal } from "./BarcodeScanModal";
 
 type Props = {
   defaultValues: ProductFormValues;
@@ -32,6 +34,7 @@ export function ProductForm({ defaultValues, submitLabel, onSubmit, onSaved }: P
   const theme = useTheme();
   const styles = makeStyles(theme);
   const [formError, setFormError] = useState<string | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const {
     control,
     handleSubmit,
@@ -74,21 +77,39 @@ export function ProductForm({ defaultValues, submitLabel, onSubmit, onSaved }: P
   });
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Field control={control} name="name" label="Name" styles={styles} theme={theme} />
-      <Field control={control} name="brand" label="Brand (optional)" styles={styles} theme={theme} />
-      <Field
-        control={control}
-        name="barcode"
-        label="Barcode (optional)"
-        keyboardType="number-pad"
-        styles={styles}
-        theme={theme}
-      />
+    <>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Field control={control} name="name" label="Name" styles={styles} theme={theme} />
+        <Field control={control} name="brand" label="Brand (optional)" styles={styles} theme={theme} />
+        <View style={styles.barcodeRow}>
+          <View style={styles.barcodeInputWrap}>
+            <Field
+              control={control}
+              name="barcode"
+              label="Barcode (optional)"
+              keyboardType="number-pad"
+              styles={styles}
+              theme={theme}
+            />
+          </View>
+          <Pressable
+            onPress={() => setScannerOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Scan barcode with camera"
+            style={({ pressed }) => [styles.scanBtn, pressed && styles.scanBtnPressed]}
+          >
+            <SymbolView
+              name={{ android: "barcode_scanner", web: "barcode_scanner" }}
+              tintColor={theme.colors.accentText}
+              size={20}
+            />
+            <Text style={styles.scanBtnText}>Scan</Text>
+          </Pressable>
+        </View>
       <View style={styles.row}>
         <Field
           control={control}
@@ -210,6 +231,12 @@ export function ProductForm({ defaultValues, submitLabel, onSubmit, onSaved }: P
         <Text style={styles.saveLabel}>{isSubmitting ? "Saving..." : submitLabel}</Text>
       </Pressable>
     </ScrollView>
+    <BarcodeScanModal
+      visible={scannerOpen}
+      onClose={() => setScannerOpen(false)}
+      onScanned={(code) => setValue("barcode", code, { shouldDirty: true, shouldValidate: true })}
+    />
+  </>
   );
 }
 
@@ -255,6 +282,22 @@ function makeStyles(theme: Theme) {
     screen: { flex: 1, backgroundColor: colors.bg },
     content: { gap: space[3], padding: space[4] },
     row: { flexDirection: "row", gap: space[2] },
+    barcodeRow: { flexDirection: "row", alignItems: "flex-end", gap: space[2] },
+    barcodeInputWrap: { flex: 1 },
+    scanBtn: {
+      height: tap,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: space[1],
+      paddingHorizontal: space[3],
+      borderRadius: radius.sm,
+      backgroundColor: colors.surface2,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    scanBtnPressed: { backgroundColor: colors.accentSoft },
+    scanBtnText: { color: colors.accentText, fontSize: fontSize.sm, fontWeight: "600" },
     field: { flex: 1, gap: space[1] },
     label: { color: colors.muted, fontSize: fontSize.xs, fontWeight: "600" },
     input: {

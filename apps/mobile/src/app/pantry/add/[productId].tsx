@@ -37,7 +37,7 @@ function backToPantry() {
 
 // Built to prototypes/pantry.html frame 3 ("How many did you buy?"), as a screen after the scanner.
 export default function AddStockScreen() {
-  const { productId, fresh } = useLocalSearchParams<{ productId: string; fresh?: string }>();
+  const { productId, fresh, kind } = useLocalSearchParams<{ productId: string; fresh?: string; kind?: string }>();
   const theme = useTheme();
   const styles = makeStyles(theme);
   const { state, retry, save } = useAddStock(productId);
@@ -60,21 +60,34 @@ export default function AddStockScreen() {
       </View>
     );
   }
-  return <AddStockForm product={state.product} stock={state.stock} fresh={fresh === "1"} save={save} styles={styles} theme={theme} />;
+  return (
+    <AddStockForm
+      product={state.product}
+      stock={state.stock}
+      fresh={fresh === "1"}
+      initialKind={kind === "supplement" ? "supplement" : undefined}
+      save={save}
+      styles={styles}
+      theme={theme}
+    />
+  );
 }
 
 type FormProps = {
   product: Product;
   stock: PantryStock | null;
   fresh: boolean;
+  initialKind?: ProductStockKind;
   save: ReturnType<typeof useAddStock>["save"];
   styles: Styles;
   theme: Theme;
 };
 
-function AddStockForm({ product, stock, fresh, save, styles, theme }: FormProps) {
+function AddStockForm({ product, stock, fresh, initialKind, save, styles, theme }: FormProps) {
   const insets = useSafeAreaInsets();
-  const [kind, setKind] = useState<ProductStockKind>(stock?.kind === "supplement" ? "supplement" : "packaged");
+  const [kind, setKind] = useState<ProductStockKind>(
+    initialKind ?? (stock?.kind === "supplement" ? "supplement" : "packaged"),
+  );
   const supplement = kind === "supplement";
   const [unit, setUnit] = useState<SupplementUnit>(stock?.unit ?? "g");
   const [units, setUnits] = useState(1);

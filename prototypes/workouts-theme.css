@@ -1,0 +1,122 @@
+/* Workout theme variables - standalone theme for prototypes/workouts.html.
+   Preserves the base app tokens from theme.css and adds workout-specific tokens
+   (PR trophy gold, live rest timer blue, set states, and anatomical art surface).
+   Dark is the default on :root; light overrides live under [data-theme="light"]. */
+
+:root {
+  color-scheme: dark;
+
+  /* surfaces */
+  --bg: #121110;            /* screen background          */
+  --surface: #1c1a18;       /* cards, tab bar, sheets     */
+  --surface-2: #262320;     /* inputs, pressed rows, chips */
+  --border: #322e2a;
+  --scrim: rgba(0, 0, 0, 0.55);
+
+  /* text */
+  --text: #f3efea;          /* primary                    */
+  --muted: #a59d94;         /* secondary, labels          */
+  --faint: #6b645d;         /* hints, disabled            */
+
+  /* accent - warm orange */
+  --accent: #ff7a1a;        /* primary action fill, ring  */
+  --accent-ink: #1a0f05;    /* text/icons on accent fill  */
+  --accent-text: #ff8f3d;   /* orange text on surfaces    */
+  --accent-soft: rgba(255, 122, 26, 0.14); /* selected chip, focus halo */
+
+  /* status - never reuse the accent for these */
+  --ok: #4cc38a;            /* completed set, under goal  */
+  --ok-soft: rgba(76, 195, 138, 0.14);
+  --over: #f0605a;          /* discard, failure set       */
+  --over-soft: rgba(240, 96, 90, 0.14);
+  --estimate: #e8b44a;      /* "est." labels on 1RM       */
+  --estimate-soft: rgba(232, 180, 74, 0.14);
+
+  /* workout-specific tokens */
+  --pr: #f5b841;            /* PR trophy gold             */
+  --pr-soft: rgba(245, 184, 65, 0.16);
+  --timer: #4ea8de;         /* live rest timer & active bar */
+  --timer-soft: rgba(78, 168, 222, 0.15);
+  --warmup: #e8b44a;        /* warmup 'W' set badge       */
+  --warmup-soft: rgba(232, 180, 74, 0.14);
+  --rpe: #c58af0;           /* RPE badge                  */
+  --rpe-soft: rgba(197, 138, 240, 0.14);
+  --art-bg: #f8f6f2;        /* clean light pad for @bryllim/workout-guide art */
+  --art-ink: #262320;       /* outline ink on art pad     */
+  --art-muscle: #ff6b4a;    /* primary highlighted muscle */
+  --art-secondary: #ffa987; /* secondary muscle highlight */
+
+  /* macros / tracks */
+  --track: #2e2a26;         /* empty bar track            */
+
+  /* mockup-only */
+  --desk: #0b0a09;          /* page around the phone frames */
+  --shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+  /* type */
+  --font-sans: "Inter", "Roboto", system-ui, sans-serif;
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-md: 15px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+  --text-num: 34px;         /* hero numbers               */
+
+  /* spacing (4px grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* shape */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 20px;        /* bottom sheets              */
+  --tap: 48px;              /* minimum touch target       */
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f6f4f1;
+  --surface: #ffffff;
+  --surface-2: #efebe6;
+  --border: #e3ddd6;
+  --scrim: rgba(29, 26, 23, 0.4);
+
+  --text: #1d1a17;
+  --muted: #6e665e;
+  --faint: #a39b92;
+
+  --accent: #f26d12;
+  --accent-ink: #1a0f05;
+  --accent-text: #b44d07;
+  --accent-soft: rgba(242, 109, 18, 0.12);
+
+  --ok: #1f8a57;
+  --ok-soft: rgba(31, 138, 87, 0.11);
+  --over: #d23f39;
+  --over-soft: rgba(210, 63, 57, 0.1);
+  --estimate: #9a6a08;
+  --estimate-soft: rgba(212, 150, 30, 0.14);
+
+  --pr: #b87d04;
+  --pr-soft: rgba(212, 150, 30, 0.16);
+  --timer: #1d70a2;
+  --timer-soft: rgba(29, 112, 162, 0.12);
+  --warmup: #9a6a08;
+  --warmup-soft: rgba(212, 150, 30, 0.14);
+  --rpe: #7e3bb5;
+  --rpe-soft: rgba(126, 59, 181, 0.12);
+  --art-bg: #f4f1ec;
+  --art-ink: #262320;
+  --art-muscle: #e04f2e;
+  --art-secondary: #f29472;
+
+  --track: #ebe5de;
+
+  --desk: #dcd6cf;
+  --shadow: 0 20px 60px rgba(60, 40, 20, 0.18);
+}

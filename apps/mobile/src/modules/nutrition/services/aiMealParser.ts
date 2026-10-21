@@ -1,3 +1,8 @@
+import {
+  DEFAULT_AI_MODELS,
+  DEFAULT_CUSTOM_BASE_URL,
+  type AiProvider,
+} from "../repositories/settingsRepo";
 import type { MealType } from "../types/foodLog";
 
 export type ParsedAiFoodItem = {
@@ -66,14 +71,320 @@ TASK:
 
 No extra text, no markdown backticks, only valid JSON.`;
 
+function resolveEndpointUrl(provider: AiProvider, model: string, baseUrl?: string): string {
+  if (provider === "gemini") {
+    const cleanModel = model.replace(/^models\//, "");
+    return `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cleanModel)}:generateContent`;
+  }
+  if (provider === "groq") {
+    return "https://api.groq.com/openai/v1/chat/completions";
+  }
+  if (provider === "meta") {
+    return "https://api.meta.ai/v1/chat/completions";
+  }
+  const root = (
+    provider === "custom" && baseUrl?.trim()
+      ? baseUrl.trim()
+      : provider === "custom"
+        ? DEFAULT_CUSTOM_BASE_URL
+        : "https://api.openai.com/v1"
+  ).replace(/\/+$/, "");
+  return root.endsWith("/chat/completions") ? root : `${root}/chat/completions`;
+}
+
+function stripJsonFence(raw: string): string {
+  const trimmed = raw.trim();
+  const match = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(trimmed);
+  return match ? match[1].trim() : trimmed;
+}
+
+export type AvailableAiModel = {
+  id: string;
+  name: string;
+  description?: string;
+  isRecommended?: boolean;
+};
+
+export async function fetchAvailableAiModels(params: {
+  provider: AiProvider;
+  apiKey: string;
+  baseUrl?: string;
+}): Promise<AvailableAiModel[]> {
+  const { provider, apiKey } = params;
+  const trimmedKey = apiKey.trim();
+  if (!trimmedKey) {
+    throw new Error("Please paste an API key first.");
+  }
+
+  if (provider === "gemini") {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(trimmedKey)}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      const errBody = await res.text();
+      let extractedMsg = errBody;
+      try {
+        const json = JSON.parse(errBody);
+        if (json.error?.message) extractedMsg = json.error.message;
+      } catch {}
+      throw new Error(`Google API (${res.status}): ${extractedMsg}`);
+    }
+    const data = (await res.json()) as {
+      models?: {
+        name: string;
+        displayName?: string;
+        description?: string;
+        supportedGenerationMethods?: string[];
+      }[];
+    };
+
+    const models = (data.models ?? [])
+      .filter((m) => {
+        const methods = m.supportedGenerationMethods ?? [];
+        return methods.includes("generateContent");
+      })
+      .map((m) => {
+        const cleanId = m.name.replace(/^models\//, "");
+        const isFlash25 = cleanId === "gemini-2.5-flash";
+        const isFlash20 = cleanId === "gemini-2.0-flash";
+        return {
+          id: cleanId,
+          name: m.displayName || cleanId,
+          description: m.description,
+          isRecommended: isFlash25 || isFlash20,
+        };
+      })
+      .sort((a, b) => {
+        if (a.isRecommended && !b.isRecommended) return -1;
+        if (!a.isRecommended && b.isRecommended) return 1;
+        const aFlash = a.id.includes("flash") ? 1 : 0;
+        const bFlash = b.id.includes("flash") ? 1 : 0;
+        if (bFlash !== aFlash) return bFlash - aFlash;
+        return a.id.localeCompare(b.id);
+      });
+
+    return models;
+  }
+
+  if (provider === "groq") {
+    const url = "https://api.groq.com/openai/v1/models";
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${trimmedKey}`,
+      },
+    });
+    if (!res.ok) {
+      const errBody = await res.text();
+      let extractedMsg = errBody;
+      try {
+        const json = JSON.parse(errBody);
+        if (json.error?.message) extractedMsg = json.error.message;
+      } catch {}
+      throw new Error(`Groq API (${res.status}): ${extractedMsg}`);
+    }
+    const data = (await res.json()) as {
+      data?: { id: string; active?: boolean }[];
+    };
+
+    const models = (data.data ?? [])
+      .filter((m) => {
+        const id = m.id.toLowerCase();
+        return !id.includes("whisper") && !id.includes("vision") && m.active !== false;
+      })
+      .map((m) => {
+        const isRec = m.id.includes("llama-3.3-70b") || m.id.includes("llama-3.1-8b");
+        return {
+          id: m.id,
+          name: m.id,
+          isRecommended: isRec,
+        };
+      })
+      .sort((a, b) => {
+        if (a.isRecommended && !b.isRecommended) return -1;
+        if (!a.isRecommended && b.isRecommended) return 1;
+        return a.id.localeCompare(b.id);
+      });
+
+    return models;
+  }
+
+  if (provider === "meta") {
+    const url = "https://api.meta.ai/v1/models";
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${trimmedKey}`,
+      },
+    });
+    if (!res.ok) {
+      const errBody = await res.text();
+      let extractedMsg = errBody;
+      try {
+        const json = JSON.parse(errBody);
+        if (json.error?.message) extractedMsg = json.error.message;
+      } catch {}
+      throw new Error(`Meta API (${res.status}): ${extractedMsg}`);
+    }
+    const data = (await res.json()) as {
+      data?: { id: string; active?: boolean }[];
+    };
+
+    const models = (data.data ?? [])
+      .map((m) => {
+        const isRec = m.id.includes("70b") || m.id.includes("3.3");
+        return {
+          id: m.id,
+          name: m.id,
+          isRecommended: isRec,
+        };
+      })
+      .sort((a, b) => {
+        if (a.isRecommended && !b.isRecommended) return -1;
+        if (!a.isRecommended && b.isRecommended) return 1;
+        return a.id.localeCompare(b.id);
+      });
+
+    return models;
+  }
+
+  // OpenAI or Custom
+  const root = (
+    provider === "custom" && params.baseUrl?.trim()
+      ? params.baseUrl.trim()
+      : provider === "custom"
+        ? DEFAULT_CUSTOM_BASE_URL
+        : "https://api.openai.com/v1"
+  ).replace(/\/+$/, "");
+
+  const url = `${root}/models`;
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${trimmedKey}`,
+    },
+  });
+  if (!res.ok) {
+    const errBody = await res.text();
+    let extractedMsg = errBody;
+    try {
+      const json = JSON.parse(errBody);
+      if (json.error?.message) extractedMsg = json.error.message;
+    } catch {}
+    throw new Error(`API (${res.status}): ${extractedMsg}`);
+  }
+  const data = (await res.json()) as {
+    data?: { id: string; owned_by?: string }[];
+  };
+
+  const models = (data.data ?? [])
+    .filter((m) => {
+      const id = m.id.toLowerCase();
+      return (
+        id.includes("gpt") ||
+        id.includes("o1") ||
+        id.includes("o3") ||
+        id.includes("claude") ||
+        id.includes("gemini")
+      );
+    })
+    .map((m) => {
+      const isRec = m.id === "gpt-4o-mini";
+      return {
+        id: m.id,
+        name: m.id,
+        isRecommended: isRec,
+      };
+    })
+    .sort((a, b) => {
+      if (a.isRecommended && !b.isRecommended) return -1;
+      if (!a.isRecommended && b.isRecommended) return 1;
+      const aMini = a.id.includes("mini") ? 1 : 0;
+      const bMini = b.id.includes("mini") ? 1 : 0;
+      if (bMini !== aMini) return bMini - aMini;
+      return a.id.localeCompare(b.id);
+    });
+
+  return models;
+}
+
+export async function testAiConnection(params: {
+  provider: AiProvider;
+  apiKey: string;
+  model?: string;
+  baseUrl?: string;
+}): Promise<string> {
+  const { provider, apiKey } = params;
+  const trimmedKey = apiKey.trim();
+  if (!trimmedKey) {
+    throw new Error("Please paste an API key first.");
+  }
+  const resolvedModel = params.model?.trim() || DEFAULT_AI_MODELS[provider];
+  const endpoint = resolveEndpointUrl(provider, resolvedModel, params.baseUrl);
+
+  if (provider === "gemini") {
+    const res = await fetch(`${endpoint}?key=${encodeURIComponent(trimmedKey)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: "Say OK" }] }],
+      }),
+    });
+    if (!res.ok) {
+      const errBody = await res.text();
+      let extractedMsg = errBody;
+      try {
+        const json = JSON.parse(errBody);
+        if (json.error?.message) extractedMsg = json.error.message;
+      } catch {
+        // use raw body
+      }
+      throw new Error(`Google API (${res.status}): ${extractedMsg}`);
+    }
+    return resolvedModel;
+  }
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${trimmedKey}`,
+    },
+    body: JSON.stringify({
+      model: resolvedModel,
+      messages: [{ role: "user", content: "Say OK" }],
+      max_tokens: 10,
+    }),
+  });
+  if (!res.ok) {
+    const errBody = await res.text();
+    let extractedMsg = errBody;
+    try {
+      const json = JSON.parse(errBody);
+      if (json.error?.message) extractedMsg = json.error.message;
+    } catch {
+      // use raw body
+    }
+    const label =
+      provider === "groq"
+        ? "Groq"
+        : provider === "meta"
+          ? "Meta AI"
+          : provider === "custom"
+            ? "Custom AI"
+            : "OpenAI";
+    throw new Error(`${label} API (${res.status}): ${extractedMsg}`);
+  }
+  return resolvedModel;
+}
+
 export async function parseMealsWithAi(params: {
   text: string;
   apiKey: string;
-  provider: "gemini" | "openai";
+  provider: AiProvider;
+  model?: string;
+  baseUrl?: string;
 }): Promise<AiMealParseResult> {
   const { text, apiKey, provider } = params;
+  const trimmedKey = apiKey.trim();
 
-  if (!apiKey || !apiKey.trim()) {
+  if (!trimmedKey) {
     throw new Error("No API key configured. Please set your API key in Settings.");
   }
 
@@ -81,11 +392,12 @@ export async function parseMealsWithAi(params: {
     throw new Error("Please enter or paste your meal text.");
   }
 
+  const resolvedModel = params.model?.trim() || DEFAULT_AI_MODELS[provider];
+  const endpoint = resolveEndpointUrl(provider, resolvedModel, params.baseUrl);
   let rawJson = "";
 
   if (provider === "gemini") {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey.trim()}`;
-    const response = await fetch(url, {
+    const response = await fetch(`${endpoint}?key=${encodeURIComponent(trimmedKey)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -107,7 +419,7 @@ export async function parseMealsWithAi(params: {
 
     if (!response.ok) {
       const errText = await response.text();
-      throw new Error(`Gemini API error (${response.status}): ${errText}`);
+      throw new Error(`Gemini API error (${response.status} on ${resolvedModel}): ${errText}`);
     }
 
     const data = (await response.json()) as {
@@ -115,15 +427,14 @@ export async function parseMealsWithAi(params: {
     };
     rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
   } else {
-    // OpenAI
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey.trim()}`,
+        Authorization: `Bearer ${trimmedKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: resolvedModel,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: text },
@@ -135,7 +446,15 @@ export async function parseMealsWithAi(params: {
 
     if (!response.ok) {
       const errText = await response.text();
-      throw new Error(`OpenAI API error (${response.status}): ${errText}`);
+      const label =
+        provider === "groq"
+          ? "Groq"
+          : provider === "meta"
+            ? "Meta AI"
+            : provider === "custom"
+              ? "Custom AI"
+              : "OpenAI";
+      throw new Error(`${label} API error (${response.status} on ${resolvedModel}): ${errText}`);
     }
 
     const data = (await response.json()) as {
@@ -168,7 +487,7 @@ export async function parseMealsWithAi(params: {
   };
 
   try {
-    parsedData = JSON.parse(rawJson);
+    parsedData = JSON.parse(stripJsonFence(rawJson));
   } catch {
     throw new Error("Could not parse AI response as JSON. Please try again.");
   }

@@ -105,12 +105,14 @@ export default function PasteLogScreen() {
     }
 
     const provider = (await settingsRepo.getAiProvider(db)) ?? "gemini";
+    const model = await settingsRepo.getAiModel(db, provider);
     setAiLoading(true);
     try {
       const result = await parseMealsWithAi({
         text: trimmed,
         apiKey,
         provider,
+        model,
       });
       setAiResult(result);
       setMode("ai_preview");
