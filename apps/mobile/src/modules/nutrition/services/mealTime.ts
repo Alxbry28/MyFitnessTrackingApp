@@ -4,7 +4,7 @@ export const MEAL_LABELS: Record<MealType, string> = {
   breakfast: "Breakfast",
   lunch: "Lunch",
   dinner: "Dinner",
-  snack: "Snack",
+  snack: "Snacks",
 };
 
 // Log entries group by the user's local day, not the UTC date of logged_at.
@@ -41,11 +41,17 @@ export function logDay(requested: string | undefined): string {
   return requested && isDayKey(requested) && requested <= today ? requested : today;
 }
 
+// "Tue, Oct 20", as in the Today app bar.
+export function formatDayShort(day: string): string {
+  const date = dayFromKey(day);
+  return `${WEEKDAYS[date.getDay()]}, ${MONTHS[date.getMonth()]} ${date.getDate()}`;
+}
+
 export function formatDayLabel(day: string, today: string): string {
   if (day === today) return "Today";
   if (day === addDays(today, -1)) return "Yesterday";
   const date = dayFromKey(day);
-  const label = `${WEEKDAYS[date.getDay()]}, ${MONTHS[date.getMonth()]} ${date.getDate()}`;
+  const label = formatDayShort(day);
   return day.slice(0, 4) === today.slice(0, 4) ? label : `${label}, ${date.getFullYear()}`;
 }
 

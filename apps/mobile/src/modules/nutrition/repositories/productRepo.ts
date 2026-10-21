@@ -99,29 +99,29 @@ export async function findByBarcode(db: SQLiteDatabase, barcode: string): Promis
   return row ? toProduct(row) : null;
 }
 
-export async function favorites(db: SQLiteDatabase): Promise<Product[]> {
-  const rows = await db.getAllAsync<ProductRow>(
-    `SELECT ${COLUMNS} FROM products
-     WHERE is_favorite = 1 AND deleted_at IS NULL ORDER BY name COLLATE NOCASE LIMIT 12`,
-  );
-  return rows.map(toProduct);
-}
+export type RecentProduct = { product: Product; lastGrams: number };
 
-// Distinct products logged since sinceIso, newest log first (DATABASE.md §3 Recents).
-export async function recentlyLogged(db: SQLiteDatabase, sinceIso: string): Promise<Product[]> {
-  const rows = await db.getAllAsync<ProductRow>(
+// Distinct products logged since sinceIso, newest log first (DATABASE.md §3 Recents),
+// each with the grams of its newest entry for the quick-add meta line.
+export async function recentlyLogged(db: SQLiteDatabase, sinceIso: string, limit: number): Promise<RecentProduct[]> {
+  const rows = await db.getAllAsync<ProductRow & { last_grams: number }>(
     `WITH recent AS (
        SELECT product_id, MAX(logged_at) AS last_at FROM food_log_entries
        WHERE logged_at >= ? AND deleted_at IS NULL AND product_id IS NOT NULL
        GROUP BY product_id
      )
-     SELECT ${COLUMNS} FROM products JOIN recent ON recent.product_id = products.id
+     SELECT ${COLUMNS},
+       (SELECT f.grams FROM food_log_entries f
+        WHERE f.product_id = products.id AND f.deleted_at IS NULL
+        ORDER BY f.logged_at DESC LIMIT 1) AS last_grams
+     FROM products JOIN recent ON recent.product_id = products.id
      WHERE products.deleted_at IS NULL
      ORDER BY recent.last_at DESC
-     LIMIT 12`,
+     LIMIT ?`,
     sinceIso,
+    limit,
   );
-  return rows.map(toProduct);
+  return rows.map((row) => ({ product: toProduct(row), lastGrams: row.last_grams }));
 }
 
 export async function setFavorite(

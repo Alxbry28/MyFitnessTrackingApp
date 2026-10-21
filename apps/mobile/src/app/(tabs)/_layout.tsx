@@ -25,7 +25,7 @@ export default function TabLayout() {
         tabBarLabelStyle: { fontSize: fontSize.sm, fontWeight: "600" },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: "Today", tabBarIcon: tabIcon("schedule") }} />
+      <Tabs.Screen name="index" options={{ title: "Today", headerShown: false, tabBarIcon: tabIcon("schedule") }} />
       <Tabs.Screen name="log" options={{ title: "Log", tabBarIcon: tabIcon("list") }} />
       <Tabs.Screen
         name="products"

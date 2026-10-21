@@ -28,6 +28,17 @@ export function sumTotals(items: Nutrients[]): Nutrients {
   );
 }
 
+export type MacroTargets = { proteinG: number; carbsG: number; fatG: number };
+
+// 30 / 40 / 30 of the calorie goal at 4 / 4 / 9 kcal per gram (today.html, settings.html).
+export function macroTargets(kcal: number): MacroTargets {
+  return {
+    proteinG: Math.round((kcal * 0.3) / 4),
+    carbsG: Math.round((kcal * 0.4) / 4),
+    fatG: Math.round((kcal * 0.3) / 9),
+  };
+}
+
 // Whole kcal with thousands separators, e.g. "2,419" (DESIGN_SYSTEM §9).
 export function formatKcal(kcal: number): string {
   return String(Math.round(kcal)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");

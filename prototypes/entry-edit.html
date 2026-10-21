@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edit entry - prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--desk); color: var(--text); font-family: var(--font-sans); font-variant-numeric: tabular-nums; min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: var(--space-5); padding: var(--space-6) var(--space-4); }
+  .toolbar { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-sm); color: var(--muted); flex-wrap: wrap; justify-content: center; }
+  .toolbar a { color: var(--accent-text); }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .toggle { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: var(--space-2) var(--space-4); }
+  .frames { display: flex; gap: var(--space-6); flex-wrap: wrap; justify-content: center; }
+  .frame-label { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2); text-align: center; max-width: 360px; }
+  .phone { width: 360px; height: 760px; background: var(--bg); border: 1px solid var(--border); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+  .status { height: 28px; padding: 0 var(--space-5); display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--muted); }
+  .nav b { color: var(--text); font-weight: 600; }
+
+  /* header */
+  .header { height: 56px; flex: none; display: flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-2); }
+  .header h1 { flex: 1; font-size: var(--text-lg); font-weight: 700; }
+  .icon-btn { width: var(--tap); height: var(--tap); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+  .icon-btn.danger { color: var(--over); }
+  .icon-btn svg, .field svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .content { flex: 1; overflow: hidden; padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); }
+  .product .name { font-size: var(--text-lg); font-weight: 600; }
+  .product .meta { font-size: var(--text-sm); color: var(--muted); margin-top: var(--space-1); }
+  .label { font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-bottom: var(--space-2); display: flex; justify-content: space-between; }
+  .label .new { text-transform: none; letter-spacing: 0; color: var(--estimate); background: var(--estimate-soft); padding: 0 6px; border-radius: 999px; }
+
+  /* meal chips */
+  .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2); }
+  .chip { min-height: 40px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); font-size: var(--text-sm); color: var(--muted); display: flex; align-items: center; justify-content: center; }
+  .chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+
+  /* fields */
+  .when { display: grid; grid-template-columns: 1fr 120px; gap: var(--space-2); }
+  .field { min-height: var(--tap); border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border); padding: 0 var(--space-3); display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-md); }
+  .field svg { width: 18px; height: 18px; color: var(--muted); flex: none; }
+  .field.changed { border-color: var(--accent); }
+  .field.focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .field.error { border-color: var(--over); box-shadow: 0 0 0 3px var(--over-soft); }
+  .field .value { flex: 1; }
+  .field .unit { color: var(--muted); }
+  .field .ph { color: var(--faint); }
+  .caret { display: inline-block; width: 2px; height: 20px; background: var(--accent); vertical-align: middle; margin-left: 1px; }
+  .hint { font-size: var(--text-sm); color: var(--muted); margin-top: var(--space-2); }
+  .hint.moved { color: var(--accent-text); }
+  .hint.err { color: var(--over); }
+  .amount-row { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+  .amount-row .chip { flex: 1; min-height: 36px; }
+
+  /* preview */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3) var(--space-4); }
+  .preview-top { display: flex; justify-content: space-between; align-items: baseline; }
+  .preview-top .kcal { font-size: var(--text-xl); font-weight: 700; }
+  .preview-top .kcal span { font-size: var(--text-sm); color: var(--muted); font-weight: 400; }
+  .delta { font-size: var(--text-sm); font-weight: 600; padding: var(--space-1) var(--space-3); border-radius: 999px; color: var(--accent-text); background: var(--accent-soft); }
+  .was { font-size: var(--text-sm); color: var(--muted); margin-top: var(--space-1); }
+  .macros { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); margin-top: var(--space-3); }
+  .macro { font-size: var(--text-sm); color: var(--muted); }
+  .macro b { display: block; font-size: var(--text-md); color: var(--text); font-weight: 600; }
+  .macro i { display: block; height: 3px; border-radius: 2px; margin-top: var(--space-1); }
+  .card.empty .kcal, .card.empty .macro b { color: var(--faint); }
+
+  /* footer */
+  .footer { flex: none; padding: var(--space-3) var(--space-4) var(--space-4); border-top: 1px solid var(--border); background: var(--surface); }
+  .primary { width: 100%; min-height: var(--tap); border-radius: var(--radius); background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: var(--text-md); }
+  .primary:disabled { background: var(--surface-2); color: var(--faint); cursor: not-allowed; }
+
+  /* overlays */
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-3) var(--space-4) var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+  .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--border); align-self: center; margin-bottom: var(--space-2); }
+  .sheet h2, .dialog h2 { font-size: var(--text-lg); font-weight: 700; }
+  .sheet p, .dialog p { font-size: var(--text-md); color: var(--muted); line-height: 1.45; }
+  .sheet .summary { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-3); display: flex; justify-content: space-between; font-size: var(--text-md); }
+  .sheet .summary span { color: var(--muted); font-size: var(--text-sm); }
+  .btn-danger { min-height: var(--tap); border-radius: var(--radius); background: var(--over); color: var(--bg); font-weight: 700; }
+  .btn-ghost { min-height: var(--tap); border-radius: var(--radius); background: var(--surface-2); font-weight: 600; }
+  .dialog { position: absolute; left: var(--space-5); right: var(--space-5); top: 50%; transform: translateY(-50%); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+  .dialog ul { list-style: none; font-size: var(--text-sm); color: var(--text); display: flex; flex-direction: column; gap: var(--space-1); }
+  .dialog ul li::before { content: "• "; color: var(--accent-text); }
+  .dialog .actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
+  .dialog .actions button { min-height: var(--tap); padding: 0 var(--space-4); border-radius: var(--radius-sm); font-weight: 600; }
+  .dialog .actions .discard { color: var(--over); }
+  .dialog .actions .keep { background: var(--accent); color: var(--accent-ink); }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="toggle" id="theme-toggle">Switch to light</button>
+  <span class="nav"><a href="today.html">Today</a> · <a href="log.html">Log</a> · <b>Edit entry</b> · <a href="search.html">Search</a> · <a href="products.html">Products</a></span>
+</div>
+
+<div class="frames">
+
+  <!-- 1. Edit filled in -->
+  <div>
+    <p class="frame-label">1 · Tapped "Rolled oats" on the Log, changing 60 g → 80 g</p>
+    <div class="phone">
+      <div class="status"><span>13:46</span><span>●●● 82%</span></div>
+      <div class="header">
+        <a class="icon-btn" href="log.html" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+        <h1>Edit entry</h1>
+        <button class="icon-btn danger" aria-label="Delete entry"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>
+      </div>
+      <div class="content">
+        <div class="product"><div class="name">Rolled oats</div><div class="meta">380 kcal per 100 g · values copied when logged</div></div>
+        <div>
+          <div class="label">Meal</div>
+          <div class="chips"><span class="chip on">Breakfast</span><span class="chip">Lunch</span><span class="chip">Dinner</span><span class="chip">Snacks</span></div>
+        </div>
+        <div>
+          <div class="label">When <span class="new">new</span></div>
+          <div class="when">
+            <div class="field"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span class="value">Mon, Oct 19</span></div>
+            <div class="field"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg><span class="value">7:42 AM</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="label">Amount</div>
+          <div class="field focus"><span class="value">80<span class="caret"></span></span><span class="unit">g</span></div>
+          <div class="amount-row"><span class="chip">−10</span><span class="chip">+10</span><span class="chip">40 g</span><span class="chip">60 g</span></div>
+        </div>
+        <div class="card">
+          <div class="preview-top"><div class="kcal">304 <span>kcal</span></div><span class="delta">+76 kcal</span></div>
+          <div class="was">Was 228 kcal at 60 g</div>
+          <div class="macros">
+            <div class="macro"><b>10.4 g</b>Protein<i style="background: var(--protein)"></i></div>
+            <div class="macro"><b>54.2 g</b>Carbs<i style="background: var(--carbs)"></i></div>
+            <div class="macro"><b>5.2 g</b>Fat<i style="background: var(--fat)"></i></div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><button class="primary">Save changes</button></div>
+    </div>
+  </div>
+
+  <!-- 2. Validation error -->
+  <div>
+    <p class="frame-label">2 · Amount cleared, Save blocked with an inline error</p>
+    <div class="phone">
+      <div class="status"><span>13:47</span><span>●●● 82%</span></div>
+      <div class="header">
+        <a class="icon-btn" href="log.html" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+        <h1>Edit entry</h1>
+        <button class="icon-btn danger" aria-label="Delete entry"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>
+      </div>
+      <div class="content">
+        <div class="product"><div class="name">Jasmine rice, cooked</div><div class="meta">130 kcal per 100 g · values copied when logged</div></div>
+        <div>
+          <div class="label">Meal</div>
+          <div class="chips"><span class="chip">Breakfast</span><span class="chip on">Lunch</span><span class="chip">Dinner</span><span class="chip">Snacks</span></div>
+        </div>
+        <div>
+          <div class="label">When <span class="new">new</span></div>
+          <div class="when">
+            <div class="field"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span class="value">Mon, Oct 19</span></div>
+            <div class="field"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg><span class="value">12:15 PM</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="label">Amount</div>
+          <div class="field error"><span class="value"><span class="caret"></span><span class="ph">e.g. 200</span></span><span class="unit">g</span></div>
+          <div class="hint err">Enter an amount above 0 g. To remove it, use Delete.</div>
+        </div>
+        <div class="card empty">
+          <div class="preview-top"><div class="kcal">— <span>kcal</span></div></div>
+          <div class="was">Was 260 kcal at 200 g</div>
+          <div class="macros">
+            <div class="macro"><b>—</b>Protein<i style="background: var(--track)"></i></div>
+            <div class="macro"><b>—</b>Carbs<i style="background: var(--track)"></i></div>
+            <div class="macro"><b>—</b>Fat<i style="background: var(--track)"></i></div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><button class="primary" disabled>Save changes</button></div>
+    </div>
+  </div>
+
+  <!-- 3. Delete confirm -->
+  <div>
+    <p class="frame-label">3 · Trash icon tapped, confirm sheet</p>
+    <div class="phone">
+      <div class="status"><span>13:48</span><span>●●● 82%</span></div>
+      <div class="header">
+        <span class="icon-btn"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span>
+        <h1>Edit entry</h1>
+        <span class="icon-btn danger"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></span>
+      </div>
+      <div class="content">
+        <div class="product"><div class="name">Dark chocolate 85%</div><div class="meta">567 kcal per 100 g · values copied when logged</div></div>
+        <div>
+          <div class="label">Meal</div>
+          <div class="chips"><span class="chip">Breakfast</span><span class="chip">Lunch</span><span class="chip">Dinner</span><span class="chip on">Snacks</span></div>
+        </div>
+        <div>
+          <div class="label">Amount</div>
+          <div class="field"><span class="value">30</span><span class="unit">g</span></div>
+        </div>
+      </div>
+      <div class="footer"><button class="primary">Save changes</button></div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h2>Delete this entry?</h2>
+        <div class="summary"><div>Dark chocolate 85%<br><span>Snacks · Mon, Oct 19 · 30 g</span></div><b>170 kcal</b></div>
+        <p>Your day total drops to 2,249 kcal. The product stays in your library.</p>
+        <button class="btn-danger">Delete entry</button>
+        <button class="btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Unsaved changes -->
+  <div>
+    <p class="frame-label">4 · Moved to today + Snacks, then pressed Back without saving</p>
+    <div class="phone">
+      <div class="status"><span>13:49</span><span>●●● 82%</span></div>
+      <div class="header">
+        <span class="icon-btn"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span>
+        <h1>Edit entry</h1>
+        <span class="icon-btn danger"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></span>
+      </div>
+      <div class="content">
+        <div class="product"><div class="name">Protein bar, peanut</div><div class="meta">60 g bar · 350 kcal per 100 g</div></div>
+        <div>
+          <div class="label">Meal</div>
+          <div class="chips"><span class="chip">Breakfast</span><span class="chip">Lunch</span><span class="chip">Dinner</span><span class="chip on">Snacks</span></div>
+        </div>
+        <div>
+          <div class="label">When <span class="new">new</span></div>
+          <div class="when">
+            <div class="field changed"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span class="value">Today, Oct 20</span></div>
+            <div class="field changed"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg><span class="value">10:30 AM</span></div>
+          </div>
+          <div class="hint moved">Moves from Mon, Oct 19 to today</div>
+        </div>
+        <div>
+          <div class="label">Amount</div>
+          <div class="field"><span class="value">60</span><span class="unit">g</span></div>
+        </div>
+      </div>
+      <div class="footer"><button class="primary">Save changes</button></div>
+      <div class="scrim"></div>
+      <div class="dialog" role="alertdialog">
+        <h2>Discard changes?</h2>
+        <p>You changed this entry but didn't save:</p>
+        <ul><li>Date: Mon, Oct 19 → Today</li><li>Time: 4:10 PM → 10:30 AM</li></ul>
+        <div class="actions"><button class="discard">Discard</button><button class="keep">Keep editing</button></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const btn = document.getElementById('theme-toggle');
+  btn.onclick = () => {
+    const light = document.documentElement.dataset.theme !== 'light';
+    document.documentElement.dataset.theme = light ? 'light' : 'dark';
+    btn.textContent = light ? 'Switch to dark' : 'Switch to light';
+  };
+</script>
+</body>
+</html>

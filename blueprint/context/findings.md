@@ -31,14 +31,6 @@
 **Suggested fix:** Check on the phone by changing the device clock across midnight with the Log tab open. If stale, compute the day inside `load` (or refresh it on focus/AppState "active") instead of only at render. Feature 7 (day navigation) may replace this anyway. No current requirement is lost.
 **Resolution:**
 
-### F-04 [P3] open - Today can show "0 kcal over" or "0 kcal left" at the goal boundary
-
-**File:** apps/mobile/src/modules/nutrition/components/CalorieSummary.tsx:24
-**Found:** 2026-10-20 by /audit (scope: current; lens: quality; independent review)
-**Why it matters:** `over` is decided on unrounded totals (`eaten > goal`) while the headline rounds the difference. Logged kcal are scaled by grams, so fractional totals are normal: eating 2200.3 kcal against a 2200 goal shows "0 kcal over" in the over color with "Eaten 2,200" and "Goal 2,200" captions, which reads as a contradiction. This follows the spec's formulas, so it is a display polish item, not a contract break.
-**Suggested fix:** Compare on the rounded values for the over/left decision and headline (for example `Math.round(eaten) > goal`), keeping the bar fraction unrounded. No current requirement is lost.
-**Resolution:**
-
 ### F-05 [P3] open - Scanner keeps showing "Camera access is off" after granting in Settings
 
 **File:** apps/mobile/src/app/scan.tsx:22 (Open settings at scan.tsx:85)
@@ -141,4 +133,12 @@
 **Found:** 2026-10-20 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
 **Why it matters:** `restoreBackup` writes a new safety copy before `migrateRows`/`replaceAll`, and nothing removes or marks it when either step then fails (for example a backup with a broken reference, a CHECK or UNIQUE violation, or rows for a table that did not exist at its `schemaVersion`). The screen says "Nothing was changed", but `latestSafetyCopy()` offers only the newest file by name, so the next time Restore opens, "Undo last restore" points at a copy of the data that is still on the phone (a no-op), and the copy taken before the last real restore is no longer reachable from the app. The safety copies live in app-private `Paths.document`, which the user cannot browse without root, so after "restore A, then a failed attempt with B", the data from before A is effectively lost to the user. Within the same screen visit the stale `safetyCopy` state still shows the older copy (restore.tsx:84 refreshes only on success), so the offered undo point also changes silently between visits.
 **Suggested fix:** When `migrateRows` or `replaceAll` throws after the safety copy was written, delete that just-written copy (it duplicates the unchanged data) before rethrowing, mirroring the half-written-copy cleanup already in `writeSafetyCopy`. This conflicts with the spec line "never deleted by the app", so record the owner's decision in the spec first. No new machinery; no current requirement is lost.
+**Resolution:**
+
+### F-22 [P3] open - Scanning an unknown barcode from the quick-add sheet still loses the chosen meal
+
+**File:** apps/mobile/src/app/scan.tsx:43 (also the "Search products" fallback at :55; product form continues to logging at apps/mobile/src/app/product/[id].tsx:49)
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** The sheet now passes `meal` to `/scan` (F-20), but the scanner forwards it only for a barcode already in the library. An unknown barcode goes to `/lookup/[barcode]` with only `barcode`, then the product form with `then=log`, and the amount form falls back to `defaultMeal(new Date())`; the "Search products" fallback also replaces to `/add` without `meal`. So a user who picks "Dinner" at 13:00 and scans a new product (the common first-scan case) lands on Lunch. The spec keeps the scan/add screens out of scope and its Done when ("every action opens its screen with the chosen meal") is met, so this is follow-up polish, not a contract break.
+**Suggested fix:** Thread the optional `meal` param through `/lookup/[barcode]` and `/product/[id]` (when `then=log`) into `/add/[productId]`, and pass it on the scanner's "Search products" fallback, the same way `add/index.tsx` already passes `meal`/`day` through. No new machinery; no current requirement is lost.
 **Resolution:**

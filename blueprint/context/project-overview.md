@@ -1,6 +1,6 @@
 # MyFitnessTrackingApp - Project Overview
 
-<!-- blueprint:source-hash 1f3c626b2b4d389e8c2d0fb6da5b8037314704fef75b31afb0e2569fedf8f05b -->
+<!-- blueprint:source-hash b09f9a14d69ce64fb0395fd28f1a4d605abdaa5355d916d3165b43970afe2c60 -->
 
 > A personal, local-first Android fitness tracker: scan a barcode, save your own
 > product once, log meals in a few taps. Later it adds pantry, body progress,
@@ -52,6 +52,9 @@ scale, region) are settings, never constants.
 29. **Paste text log** - per `prototypes/text-log.html`: text screen (Paste, Copy yesterday, Lunch → Dinner) then Preview; offline parse of `Meal:` headings and g/ml/oz lines (1 ml = 1 g, 1 oz = 28.35 g); non-meal headings log as Snack unless changed; fix lines with optional "Always use this" remembering; online Open Food Facts name search for not-found lines; Log saves matched lines and skips the rest.
 11. **Body weight and BMI** - body profile, weight log, 7-day trend, BMI on Progress, Xiaomi CSV import.
 14. **Backup restore** - safe JSON import.
+30. **Match shipped screens to prototypes** - rebuild screens made before the prototypes became the contract; gaps needing later data are listed.
+    30a. **Today screen to prototype** - `today.html` ring card, macro bars, meal cards, Log food quick-add sheet; "Snacks" label.
+    30b. **Log screen to prototype** - `log.html` date nav, over badge, meal cards, swipe delete, `entry-edit.html`.
 13. **First-run setup** - goal, units, height, sex, birth date, BMI scale, weight, activity; formula TDEE (Mifflin-St Jeor) suggests a calorie goal to accept or override.
 
 After 13, build the Android APK (`eas build -p android --profile preview`) and use it daily.

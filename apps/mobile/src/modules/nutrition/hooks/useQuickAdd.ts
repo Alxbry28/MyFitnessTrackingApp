@@ -3,14 +3,15 @@ import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useRef, useState } from "react";
 
 import * as productRepo from "../repositories/productRepo";
-import type { Product } from "../types/product";
 
 type State =
   | { status: "loading" }
-  | { status: "ready"; recent: Product[]; favorites: Product[] }
+  | { status: "ready"; recent: productRepo.RecentProduct[] }
   | { status: "error" };
 
 const RECENT_DAYS = 7;
+// The quick-add sheet in prototypes/today.html lists four recent foods.
+const RECENT_LIMIT = 4;
 
 export function useQuickAdd() {
   const db = useSQLiteContext();
@@ -21,11 +22,8 @@ export function useQuickAdd() {
     const request = ++latestRequest.current;
     const since = new Date(Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000).toISOString();
     try {
-      const [recent, favorites] = await Promise.all([
-        productRepo.recentlyLogged(db, since),
-        productRepo.favorites(db),
-      ]);
-      if (request === latestRequest.current) setState({ status: "ready", recent, favorites });
+      const recent = await productRepo.recentlyLogged(db, since, RECENT_LIMIT);
+      if (request === latestRequest.current) setState({ status: "ready", recent });
     } catch {
       if (request === latestRequest.current) setState({ status: "error" });
     }
