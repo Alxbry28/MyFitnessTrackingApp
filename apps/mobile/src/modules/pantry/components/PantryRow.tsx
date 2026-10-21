@@ -12,21 +12,33 @@ type Props = { item: PantryStock; today: string; last: boolean };
 // A pantry.html .row; tapping it opens the item (frame 2).
 export function PantryRow({ item, today, last }: Props) {
   const styles = makeStyles(useTheme());
+  const isBatch = item.kind === "batch";
   const supplement = item.kind === "supplement" ? supplementView(item, new Date()) : null;
   const low = supplement?.low && supplement.days !== null ? `low · ${daysText(supplement.days)}` : null;
-  const badge = low ? { text: low, tone: "over" as const } : expiryBadge(item.expiresAt, today);
-  const amount = supplement ? supplement.amount : unitsText(item.gramsLeft, item.netWeightG);
-  // A low supplement says its days in the badge instead (frame 1's Wake row).
-  const grams = supplement
-    ? supplement.days !== null && !supplement.low
-      ? daysText(supplement.days)
-      : null
-    : stockLeftText(item);
-  const meta = supplement
-    ? supplement.meta
-    : [item.netWeightG !== null && `${gramsToText(item.netWeightG)} g each`, item.drained && "eaten drained"]
-        .filter(Boolean)
-        .join(" · ");
+  const badge = isBatch && item.isSettled === false
+    ? { text: "⚠ unsettled", tone: "est" as const }
+    : low
+      ? { text: low, tone: "over" as const }
+      : expiryBadge(item.expiresAt, today);
+  const amount = isBatch
+    ? `${Math.round(item.gramsLeft)} g`
+    : supplement
+      ? supplement.amount
+      : unitsText(item.gramsLeft, item.netWeightG);
+  const grams = isBatch
+    ? null
+    : supplement
+      ? supplement.days !== null && !supplement.low
+        ? daysText(supplement.days)
+        : null
+      : stockLeftText(item);
+  const meta = isBatch
+    ? "Cooked batch"
+    : supplement
+      ? supplement.meta
+      : [item.netWeightG !== null && `${gramsToText(item.netWeightG)} g each`, item.drained && "eaten drained"]
+          .filter(Boolean)
+          .join(" · ");
 
   return (
     <Pressable

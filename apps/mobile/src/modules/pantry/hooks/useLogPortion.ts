@@ -8,6 +8,8 @@ import { formatKcal } from "@/modules/nutrition/services/nutritionCalc";
 import type { EntryInput } from "@/modules/nutrition/types/foodLog";
 import type { Product } from "@/modules/nutrition/types/product";
 
+import { batchRepo } from "@/modules/recipes/repositories/batchRepo";
+
 import * as pantryRepo from "../repositories/pantryRepo";
 import { fitsStock, netToDrained, stockGramsFor } from "../services/pantryStock";
 import type { PantryStock } from "../types/pantry";
@@ -47,9 +49,46 @@ export function useLogPortion(itemId: string, day?: string) {
     pantryRepo
       .findItem(db, itemId)
       .then(async (item) => {
-        const product = item?.productId ? await productRepo.findById(db, item.productId) : null;
+        if (!item) {
+          if (active) setState({ status: "not_found" });
+          return;
+        }
+
+        if (item.kind === "batch" && item.batchId) {
+          const batch = await batchRepo.get(db, item.batchId);
+          if (!active) return;
+          if (batch) {
+            const product: Product = {
+              id: batch.id,
+              barcode: null,
+              name: batch.name,
+              brand: "Batch",
+              servingSize: null,
+              servingGrams: null,
+              kcalPer100g: batch.kcalPer100g,
+              proteinPer100g: batch.proteinPer100g,
+              carbsPer100g: batch.carbsPer100g,
+              fatPer100g: batch.fatPer100g,
+              netWeightG: batch.cookedWeightG,
+              eatenDrained: false,
+              drainedKcalPer100g: null,
+              drainedProteinPer100g: null,
+              drainedCarbsPer100g: null,
+              drainedFatPer100g: null,
+              usualDrainedG: null,
+              source: "manual",
+              isFavorite: false,
+              createdAt: batch.createdAt,
+              updatedAt: batch.updatedAt,
+            };
+            setState({ status: "ready", item, product });
+            return;
+          }
+        }
+
+        const product = item.productId ? await productRepo.findById(db, item.productId) : null;
         if (!active) return;
-        setState(item && product ? { status: "ready", item, product } : { status: "not_found" });
+        setState(product ? { status: "ready", item, product } : { status: "not_found" });
       })
       .catch(() => {
         if (active) setState({ status: "error" });
@@ -66,6 +105,23 @@ export function useLogPortion(itemId: string, day?: string) {
 
   const save = useCallback(
     async (item: PantryStock, product: Product, input: EntryInput, wholeUnit: boolean): Promise<PortionResult> => {
+      if (item.kind === "batch" && item.batchId) {
+        if (!fitsStock(input.grams, item.gramsLeft)) return notEnough(item.gramsLeft, product, item.unit);
+        try {
+          await batchRepo.logPortion(db, {
+            batchId: item.batchId,
+            pantryItemId: item.id,
+            batchName: item.name,
+            grams: input.grams,
+            mealType: input.mealType,
+            day: logDay(day),
+          });
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, message: e instanceof Error ? e.message : "Couldn't log batch portion" };
+        }
+      }
+
       const usual = isDrained(product) ? product.usualDrainedG : null;
       const stockGrams = stockGramsFor(input.grams, wholeUnit && usual !== null, product.netWeightG, usual);
       if (!fitsStock(stockGrams, item.gramsLeft)) return notEnough(item.gramsLeft, product, item.unit);

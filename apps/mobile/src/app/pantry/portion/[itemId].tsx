@@ -76,7 +76,9 @@ export default function LogPortionScreen() {
         grams: gramsToText(
           item.kind === "supplement"
             ? scoopDefault(item.gramsLeft, product.servingGrams)
-            : portionDefault(item.gramsLeft, item.netWeightG),
+            : item.kind === "batch"
+              ? Math.round(Math.min(Math.max(1, item.gramsLeft), 250))
+              : portionDefault(item.gramsLeft, item.netWeightG),
         ),
       }}
       amountLabel={item.kind === "supplement" && item.unit !== "g" ? `Amount (${item.unit})` : undefined}

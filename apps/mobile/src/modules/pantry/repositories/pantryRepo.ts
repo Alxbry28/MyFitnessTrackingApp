@@ -23,6 +23,7 @@ type StockRow = {
   id: string;
   kind: PantryKind;
   product_id: string | null;
+  batch_id: string | null;
   name: string | null;
   net_weight_g: number | null;
   drained: number;
@@ -32,6 +33,7 @@ type StockRow = {
   expires_at: string | null;
   opened_at: string | null;
   unit: string | null;
+  is_settled: number | null;
   grams_left: number | null;
   eaten_recent_g: number | null;
   first_movement_at: string | null;
@@ -39,9 +41,12 @@ type StockRow = {
 
 // Grams left are the sum of the item's live movements (ADR-7); nothing is cached on the item.
 const STOCK_SELECT = `
-  SELECT i.id, i.kind, i.product_id, p.name, p.net_weight_g,
+  SELECT i.id, i.kind, i.product_id, i.batch_id,
+    COALESCE(p.name, b.name) AS name,
+    p.net_weight_g,
     (p.eaten_drained = 1 AND p.drained_kcal_per_100g IS NOT NULL) AS drained, p.usual_drained_g,
     p.serving_grams, i.location, i.expires_at, i.opened_at, i.unit,
+    b.is_settled,
     (SELECT SUM(m.delta_grams) FROM stock_movements m
      WHERE m.pantry_item_id = i.id AND m.deleted_at IS NULL) AS grams_left,
     (SELECT -SUM(m.delta_grams) FROM stock_movements m
@@ -49,7 +54,9 @@ const STOCK_SELECT = `
        AND m.occurred_at >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-14 days')) AS eaten_recent_g,
     (SELECT MIN(m.occurred_at) FROM stock_movements m
      WHERE m.pantry_item_id = i.id AND m.deleted_at IS NULL) AS first_movement_at
-  FROM pantry_items i LEFT JOIN products p ON p.id = i.product_id
+  FROM pantry_items i
+  LEFT JOIN products p ON p.id = i.product_id
+  LEFT JOIN batches b ON b.id = i.batch_id
   WHERE i.deleted_at IS NULL`;
 
 function toStock(row: StockRow): PantryStock {
@@ -57,6 +64,8 @@ function toStock(row: StockRow): PantryStock {
     id: row.id,
     kind: row.kind,
     productId: row.product_id,
+    batchId: row.batch_id,
+    isSettled: row.is_settled === null ? undefined : row.is_settled === 1,
     name: row.name ?? "Unknown item",
     netWeightG: row.net_weight_g,
     drained: row.drained === 1,
@@ -73,7 +82,7 @@ function toStock(row: StockRow): PantryStock {
 }
 
 export async function listStock(db: SQLiteDatabase): Promise<PantryStock[]> {
-  const rows = await db.getAllAsync<StockRow>(`${STOCK_SELECT} ORDER BY p.name COLLATE NOCASE`);
+  const rows = await db.getAllAsync<StockRow>(`${STOCK_SELECT} ORDER BY COALESCE(p.name, b.name) COLLATE NOCASE`);
   return rows.map(toStock);
 }
 

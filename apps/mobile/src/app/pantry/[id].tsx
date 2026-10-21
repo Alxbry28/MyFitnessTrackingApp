@@ -82,11 +82,27 @@ export default function PantryItemScreen() {
         </Text>
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: theme.space[4] + insets.bottom }]}>
-        {item.kind === "supplement" ? <SupplementHero item={item} styles={styles} /> : <Hero item={item} styles={styles} />}
+        {item.kind === "supplement" ? (
+          <SupplementHero item={item} styles={styles} />
+        ) : item.kind === "batch" ? (
+          <BatchHero item={item} styles={styles} />
+        ) : (
+          <Hero item={item} styles={styles} />
+        )}
 
         <View style={[styles.card, styles.fieldsCard]}>
           {item.kind === "supplement" ? (
             <SupplementFields item={item} styles={styles} />
+          ) : item.kind === "batch" ? (
+            <>
+              <Field label="Batch type" value="Cooked batch" styles={styles} />
+              <Field
+                label="Status"
+                value={item.isSettled === false ? "Unsettled estimate" : "Settled"}
+                badge={item.isSettled === false ? "⚠ estimate" : undefined}
+                styles={styles}
+              />
+            </>
           ) : (
             <Field label="Net weight per unit" value={item.netWeightG === null ? "Not set" : `${gramsToText(item.netWeightG)} g`} styles={styles} />
           )}
@@ -113,15 +129,25 @@ export default function PantryItemScreen() {
           >
             <Text style={styles.primaryLabel}>Log a portion</Text>
           </Pressable>
-          <Pressable
-            onPress={() => setSheet("remove")}
-            disabled={!hasStock}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !hasStock }}
-            style={[styles.btn, !hasStock && styles.disabled]}
-          >
-            <Text style={styles.btnLabel}>Remove</Text>
-          </Pressable>
+          {item.kind === "batch" && item.batchId && item.isSettled === false ? (
+            <Pressable
+              onPress={() => router.push({ pathname: "/pantry/settle/[batchId]" as any, params: { batchId: item.batchId } })}
+              accessibilityRole="button"
+              style={[styles.btn, styles.settleBtn]}
+            >
+              <Text style={styles.settleBtnLabel}>Settle</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={() => setSheet("remove")}
+              disabled={!hasStock}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !hasStock }}
+              style={[styles.btn, !hasStock && styles.disabled]}
+            >
+              <Text style={styles.btnLabel}>Remove</Text>
+            </Pressable>
+          )}
           <Pressable onPress={() => setSheet("adjust")} accessibilityRole="button" style={styles.btn}>
             <Text style={styles.btnLabel}>Adjust</Text>
           </Pressable>
@@ -213,6 +239,31 @@ function SupplementHero({ item, styles }: { item: PantryStock; styles: Styles })
         {view.low && view.days !== null && (
           <View style={[styles.badge, styles.badgeOver]}>
             <Text style={[styles.badgeText, styles.badgeTextOver]}>{`low · ${daysText(view.days)}`}</Text>
+          </View>
+        )}
+      </View>
+      <Text style={[styles.note, styles.heroNote]}>{note}</Text>
+    </View>
+  );
+}
+
+function BatchHero({ item, styles }: { item: PantryStock; styles: Styles }) {
+  const empty = !inStock(item);
+  const isUnsettled = item.isSettled === false;
+  const amount = empty ? "0 g" : `${formatKcal(Math.max(0, item.gramsLeft))} g`;
+  const note = empty
+    ? "Batch finished."
+    : isUnsettled
+      ? "Cooked weight is an estimate. Settle when finished or anytime."
+      : "Cooked weight settled.";
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.hero} accessible accessibilityLabel={`${amount} left`}>
+        <HeroPart value={amount} word="left" styles={styles} />
+        {isUnsettled && (
+          <View style={[styles.badge, styles.badgeOver]}>
+            <Text style={[styles.badgeText, styles.badgeTextOver]}>⚠ unsettled</Text>
           </View>
         )}
       </View>
@@ -370,6 +421,8 @@ function makeStyles(theme: Theme) {
     disabled: { opacity: 0.4 },
     btnLabel: { color: colors.text, fontSize: fontSize.sm, fontWeight: "600" },
     primaryLabel: { color: colors.accentInk, fontSize: fontSize.sm, fontWeight: "600" },
+    settleBtn: { backgroundColor: colors.accentSoft },
+    settleBtnLabel: { color: colors.accentText, fontSize: fontSize.sm, fontWeight: "600" },
     sectionLabel: { color: colors.muted, fontSize: fontSize.xs, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.7 },
     listCard: { paddingVertical: 0 },
     empty: { color: colors.muted, fontSize: fontSize.sm, paddingVertical: space[4] },

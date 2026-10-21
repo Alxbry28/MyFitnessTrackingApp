@@ -32,6 +32,10 @@ function productMeta(product: Product, lastGrams: number | undefined): string {
 
 function pantryMeta(item: PantryStock): string {
   if (item.kind === "supplement") return `${formatAmount(item.gramsLeft, item.unit)} left`;
+  if (item.kind === "batch") {
+    const isUnsettled = item.isSettled === false;
+    return `${Math.round(item.gramsLeft)} g left${isUnsettled ? " · ⚠ unsettled" : ""}`;
+  }
   return `${unitsText(item.gramsLeft, item.netWeightG)} · ${stockLeftText(item)}`;
 }
 

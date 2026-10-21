@@ -16,6 +16,8 @@ export type PantryStock = {
   id: string;
   kind: PantryKind;
   productId: string | null;
+  batchId?: string | null;
+  isSettled?: boolean;
   name: string;
   netWeightG: number | null;
   // Eaten drained with drained values; usualDrainedG then turns net grams into drained ones.
