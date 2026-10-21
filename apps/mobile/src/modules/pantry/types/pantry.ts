@@ -13,8 +13,12 @@ export type PantryStock = {
   productId: string | null;
   name: string;
   netWeightG: number | null;
+  // Eaten drained with drained values; usualDrainedG then turns net grams into drained ones.
+  drained: boolean;
+  usualDrainedG: number | null;
   location: PantryLocation;
   expiresAt: string | null;
+  openedAt: string | null;
   gramsLeft: number;
 };
 

@@ -2,13 +2,14 @@ import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useEffect, useState } from "react";
 
 import * as productRepo from "@/modules/nutrition/repositories/productRepo";
+import { isDrained } from "@/modules/nutrition/services/drained";
 import { logDay } from "@/modules/nutrition/services/mealTime";
 import { formatKcal } from "@/modules/nutrition/services/nutritionCalc";
 import type { EntryInput } from "@/modules/nutrition/types/foodLog";
 import type { Product } from "@/modules/nutrition/types/product";
 
 import * as pantryRepo from "../repositories/pantryRepo";
-import { fitsStock } from "../services/pantryStock";
+import { fitsStock, netToDrained, stockGramsFor } from "../services/pantryStock";
 import type { PantryStock } from "../types/pantry";
 
 type State =
@@ -19,8 +20,14 @@ type State =
 
 export type PortionResult = { ok: true } | { ok: false; message: string };
 
-function notEnough(gramsLeft: number): PortionResult {
-  return { ok: false, message: `Only ${formatKcal(gramsLeft)} g left. Use Adjust if there's more.` };
+// Said in drained grams for a drained product, since that's what the amount field holds.
+function notEnough(gramsLeft: number, product: Product): PortionResult {
+  const drained = isDrained(product) && product.usualDrainedG !== null;
+  const shown = drained ? netToDrained(gramsLeft, product.netWeightG, product.usualDrainedG) : gramsLeft;
+  return {
+    ok: false,
+    message: `Only ${formatKcal(shown)} g${drained ? " drained" : ""} left. Use Adjust if there's more.`,
+  };
 }
 
 // Loads the pantry item and its product, whose per-100 g values the log entry copies.
@@ -52,13 +59,15 @@ export function useLogPortion(itemId: string, day?: string) {
   }, []);
 
   const save = useCallback(
-    async (item: PantryStock, product: Product, input: EntryInput): Promise<PortionResult> => {
-      if (!fitsStock(input.grams, item.gramsLeft)) return notEnough(item.gramsLeft);
+    async (item: PantryStock, product: Product, input: EntryInput, wholeUnit: boolean): Promise<PortionResult> => {
+      const usual = isDrained(product) ? product.usualDrainedG : null;
+      const stockGrams = stockGramsFor(input.grams, wholeUnit && usual !== null, product.netWeightG, usual);
+      if (!fitsStock(stockGrams, item.gramsLeft)) return notEnough(item.gramsLeft, product);
       try {
-        await pantryRepo.logPortion(db, { itemId: item.id, product, ...input, day: logDay(day) });
+        await pantryRepo.logPortion(db, { itemId: item.id, product, ...input, day: logDay(day), wholeUnit });
       } catch (e) {
         // The ledger can have changed since the screen loaded; report the stored amount.
-        if (e instanceof pantryRepo.NotEnoughStockError) return notEnough(e.gramsLeft);
+        if (e instanceof pantryRepo.NotEnoughStockError) return notEnough(e.gramsLeft, product);
         throw e;
       }
       return { ok: true };

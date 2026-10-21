@@ -7,7 +7,8 @@ import type { RemoveReason, PantryStock, StockMovement } from "../types/pantry";
 
 type State =
   | { status: "loading" }
-  | { status: "ready"; item: PantryStock; movements: StockMovement[] }
+  // drainedSamples: whole units behind the usual drained weight, for "avg of N".
+  | { status: "ready"; item: PantryStock; movements: StockMovement[]; drainedSamples: number }
   | { status: "not_found" }
   | { status: "error" };
 
@@ -21,8 +22,10 @@ export function usePantryItem(id: string) {
     const request = ++latestRequest.current;
     try {
       const [item, movements] = await Promise.all([pantryRepo.findItem(db, id), pantryRepo.listMovements(db, id)]);
+      const drainedSamples =
+        item?.drained && item.productId ? await pantryRepo.drainedSampleCount(db, item.productId) : 0;
       if (request !== latestRequest.current) return;
-      setState(item ? { status: "ready", item, movements } : { status: "not_found" });
+      setState(item ? { status: "ready", item, movements, drainedSamples } : { status: "not_found" });
     } catch {
       if (request === latestRequest.current) setState({ status: "error" });
     }

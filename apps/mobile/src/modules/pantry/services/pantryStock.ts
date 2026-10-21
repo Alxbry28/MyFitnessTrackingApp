@@ -9,6 +9,41 @@ import type { PantryKind, PantryLocation, PantryStock, StockMovement, StockReaso
 // Below this a "unit" is rounding noise from grams, not food.
 const EMPTY_GRAMS = 0.5;
 
+// Net grams per drained gram. The ledger counts the can's net weight (ADR-7) while a drained
+// product is logged in drained grams; without both weights a drained gram counts as net.
+function drainedRatio(netWeightG: number | null, usualDrainedG: number | null): number {
+  return netWeightG !== null && netWeightG > 0 && usualDrainedG !== null && usualDrainedG > 0
+    ? netWeightG / usualDrainedG
+    : 1;
+}
+
+export function drainedToNet(drainedG: number, netWeightG: number | null, usualDrainedG: number | null): number {
+  return drainedG * drainedRatio(netWeightG, usualDrainedG);
+}
+
+export function netToDrained(netG: number, netWeightG: number | null, usualDrainedG: number | null): number {
+  return netG / drainedRatio(netWeightG, usualDrainedG);
+}
+
+// Net grams the ledger takes for a portion: a whole unit is exactly one net weight, and a
+// drained portion (usualDrainedG set) converts its drained grams.
+export function stockGramsFor(
+  grams: number,
+  wholeUnit: boolean,
+  netWeightG: number | null,
+  usualDrainedG: number | null,
+): number {
+  if (wholeUnit && netWeightG !== null && netWeightG > 0) return netWeightG;
+  return usualDrainedG === null ? grams : drainedToNet(grams, netWeightG, usualDrainedG);
+}
+
+// Net grams in the opened unit, 0 when every unit is sealed.
+export function openedGrams(gramsLeft: number, netWeightG: number | null): number {
+  if (netWeightG === null || netWeightG <= 0 || gramsLeft <= EMPTY_GRAMS) return 0;
+  const part = gramsLeft - Math.floor(gramsLeft / netWeightG + 1e-9) * netWeightG;
+  return part > EMPTY_GRAMS ? part : 0;
+}
+
 export function inStock(item: PantryStock): boolean {
   return item.gramsLeft > EMPTY_GRAMS;
 }
@@ -25,6 +60,15 @@ export function unitsText(gramsLeft: number, netWeightG: number | null): string 
 export function gramsLeftText(gramsLeft: number): string {
   // formatKcal is the shared whole-number formatter with thousands separators.
   return `≈ ${formatKcal(gramsLeft)} g left`;
+}
+
+// The list's small line: a drained product counts drained grams, in the opened unit when
+// there is one (pantry.html frame 1 "≈ 60 g drained left").
+export function stockLeftText(item: PantryStock): string {
+  if (!item.drained || item.usualDrainedG === null) return gramsLeftText(item.gramsLeft);
+  const opened = openedGrams(item.gramsLeft, item.netWeightG);
+  if (opened > 0) return `≈ ${formatKcal(netToDrained(opened, item.netWeightG, item.usualDrainedG))} g drained left`;
+  return `≈ ${formatKcal(netToDrained(item.gramsLeft, item.netWeightG, item.usualDrainedG))} g drained`;
 }
 
 // Whole local days from today to the expiry day (YYYY-MM-DD); negative once past.
@@ -74,6 +118,26 @@ export function unitSplit(gramsLeft: number, netWeightG: number | null): { seale
   return { sealed, opened: gramsLeft - sealed * netWeightG > EMPTY_GRAMS };
 }
 
+// The opened unit's date after a ledger change: today when a part unit appears or a new unit
+// is broken into, kept while the same unit stays open, null once no part is left. Eating a
+// whole sealed unit drops the sealed count but leaves the opened part as it was, so only a
+// fuller part with fewer sealed units means a new unit was opened.
+export function openedAfter(
+  gramsBefore: number,
+  gramsAfter: number,
+  netWeightG: number | null,
+  openedAt: string | null,
+  today: string,
+): string | null {
+  const partAfter = openedGrams(gramsAfter, netWeightG);
+  if (partAfter === 0) return null;
+  const partBefore = openedGrams(gramsBefore, netWeightG);
+  if (partBefore === 0 || openedAt === null) return today;
+  const brokeNewUnit =
+    unitSplit(gramsAfter, netWeightG).sealed < unitSplit(gramsBefore, netWeightG).sealed && partAfter > partBefore;
+  return brokeNewUnit ? today : openedAt;
+}
+
 const MOVEMENT_NAMES: Record<StockReason, string> = {
   bought: "Bought",
   cooked: "Cooked",
@@ -96,7 +160,7 @@ function signed(value: number): string {
 }
 
 export function changeText(m: StockMovement): string {
-  if (m.reason === "bought" && m.deltaUnits !== null) {
+  if (m.deltaUnits !== null) {
     return `${signed(m.deltaUnits)} ${Math.abs(m.deltaUnits) === 1 ? "unit" : "units"}`;
   }
   return `${signed(m.deltaGrams)} g`;
@@ -115,6 +179,12 @@ export function transitionText(from: number, to: number): string {
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// "Oct 20" for a YYYY-MM-DD day, as in "Opened Oct 20".
+export function monthDay(day: string): string {
+  const date = dayFromKey(day);
+  return `${MONTHS[date.getMonth()]} ${date.getDate()}`;
+}
 
 // "Oct 20, 12:35" in local time, as in the history rows.
 export function movementTime(iso: string): string {
@@ -155,7 +225,10 @@ export function fitsStock(grams: number, gramsLeft: number): boolean {
   return grams <= gramsLeft + EMPTY_GRAMS;
 }
 
+// The opened unit is eaten before a sealed one (story L5).
 export function portionDefault(gramsLeft: number, netWeightG: number | null): number {
+  const opened = openedGrams(gramsLeft, netWeightG);
+  if (opened > 0) return Math.round(opened * 100) / 100;
   if (netWeightG === null || netWeightG <= 0 || gramsLeft < netWeightG) return Math.round(gramsLeft * 100) / 100;
   return netWeightG;
 }

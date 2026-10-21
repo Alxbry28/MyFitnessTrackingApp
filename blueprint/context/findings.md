@@ -262,3 +262,27 @@
 **Why it matters:** The previous Add food used a `FlatList`. The rebuild maps every matching product (and every in-stock pantry item) into a plain `ScrollView`, and `useFoodSearch` reloads on each keystroke, so an empty or short query re-renders the full library each time. With a personal library of a few hundred products this is likely fine, but it grows with daily use. No on-device profiling was done, so the cost is unmeasured.
 **Suggested fix:** Render the sections in one `SectionList` (or a `FlatList` with section headers), which keeps the frame 1 layout and restores virtualization. Alternatively, debounce the query in `useFoodSearch`. No current requirement is lost.
 **Resolution:**
+
+### F-53 [P3] open - Opened date can reset to today on a whole-unit log, and misses a new unit broken by a large part
+
+**File:** apps/mobile/src/modules/pantry/services/pantryStock.ts:136 (`openedAfter`)
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** `brokeNewUnit` compares `partAfter > partBefore` with no tolerance. Eating a whole sealed unit (exactly `-netWeightG`) while a part is open should keep the old opened date, but the two parts are recomputed by float subtraction and can differ by about 1e-13. A quick simulation of whole-unit logs after drained part logs (net weights 80 to 400 g) reset the date to today in about 0.6% of cases. The opposite gap: a part portion of at least one net unit plus less than the opened part (for example 1 sealed + 30 g open on a 100 g unit, then a 110 g portion) finishes the old unit and breaks a new one, but `partAfter` (20) is not above `partBefore` (30), so the old opened date is kept for the newly opened unit. The spec's rule is "a new unit is broken into (sealed count dropped while a part remains)", excluding only the whole-unit case.
+**Suggested fix:** Decide from the grams removed rather than from the two parts: a new unit was broken when the sealed count dropped and the removed grams differ from a whole number of net units by more than `EMPTY_GRAMS` (for example `Math.abs((gramsBefore - gramsAfter) - netWeightG * (sealedBefore - sealedAfter)) > EMPTY_GRAMS`). That removes the float noise and covers the large-part case. A pure function, ready for a unit test once a runner exists. No current requirement is lost.
+**Resolution:**
+
+### F-54 [P3] open - Quick add, paste log and match sheet previews show label kcal for a drained product
+
+**File:** apps/mobile/src/modules/nutrition/components/QuickAddSheet.tsx:50, apps/mobile/src/modules/nutrition/hooks/usePasteLog.ts:86, apps/mobile/src/modules/nutrition/components/MatchSheet.tsx:139
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** The spec says logging a drained product anywhere (quick add, recents, paste log) copies the drained values, and the writes do, through `loggedPer100` in `foodLogRepo.create`. But these three previews still call `forGrams(product, ...)` and print `product.kcalPer100g`, so the kcal the user sees before tapping (including the paste-log section totals) differs from the kcal that is then logged. Add food and `add/[productId]` were switched to `loggedPer100`; these were missed.
+**Suggested fix:** Use `forGrams(loggedPer100(product), grams)` and `loggedPer100(product).kcalPer100g` in the three places. No current requirement is lost.
+**Resolution:**
+
+### F-55 [P3] open - Refused pantry entry edit reports net grams for a drained entry
+
+**File:** apps/mobile/src/modules/nutrition/hooks/useEntry.ts:66 (with apps/mobile/src/modules/nutrition/repositories/foodLogRepo.ts:192)
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** `updateFromPantry` now scales a drained part entry's movement by its net-per-drained ratio and returns `gramsLeft` in net grams. The edit form shows drained grams, but the message reads `Only 310 g left in your pantry.` in net grams, so a user who can raise a 60 g drained portion by only about 200 g drained is told a larger, wrong number. `useLogPortion` already converts this message to drained grams for the same product.
+**Suggested fix:** Return the movement's ratio (or the drained equivalent) with `not_enough` from `updateFromPantry`, and word the message as `g drained` for a drained entry, matching `useLogPortion.notEnough`. No current requirement is lost.
+**Resolution:**

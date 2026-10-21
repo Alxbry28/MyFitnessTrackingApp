@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import { gramsToText } from "@/modules/nutrition/services/entrySchema";
 
-import { expiryBadge, gramsLeftText, unitsText } from "../services/pantryStock";
+import { expiryBadge, stockLeftText, unitsText } from "../services/pantryStock";
 import type { PantryStock } from "../types/pantry";
 
 type Props = { item: PantryStock; today: string; last: boolean };
@@ -14,7 +14,10 @@ export function PantryRow({ item, today, last }: Props) {
   const styles = makeStyles(useTheme());
   const badge = expiryBadge(item.expiresAt, today);
   const amount = unitsText(item.gramsLeft, item.netWeightG);
-  const grams = gramsLeftText(item.gramsLeft);
+  const grams = stockLeftText(item);
+  const meta = [item.netWeightG !== null && `${gramsToText(item.netWeightG)} g each`, item.drained && "eaten drained"]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <Pressable
@@ -28,7 +31,7 @@ export function PantryRow({ item, today, last }: Props) {
           {item.name}
         </Text>
         <View style={styles.meta}>
-          {item.netWeightG !== null && <Text style={styles.metaText}>{gramsToText(item.netWeightG)} g each</Text>}
+          {meta !== "" && <Text style={styles.metaText}>{meta}</Text>}
           {badge && (
             <View style={[styles.badge, badge.tone === "over" ? styles.badgeOver : styles.badgeEst]}>
               <Text style={[styles.badgeText, badge.tone === "over" ? styles.badgeTextOver : styles.badgeTextEst]}>

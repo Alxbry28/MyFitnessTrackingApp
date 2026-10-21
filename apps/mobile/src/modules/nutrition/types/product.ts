@@ -12,6 +12,12 @@ export type Product = {
   carbsPer100g: number | null;
   fatPer100g: number | null;
   netWeightG: number | null;
+  eatenDrained: boolean;
+  drainedKcalPer100g: number | null;
+  drainedProteinPer100g: number | null;
+  drainedCarbsPer100g: number | null;
+  drainedFatPer100g: number | null;
+  usualDrainedG: number | null;
   source: ProductSource;
   isFavorite: boolean;
   createdAt: string;
@@ -31,4 +37,10 @@ export type ProductInput = Pick<
   | "carbsPer100g"
   | "fatPer100g"
   | "netWeightG"
+  | "eatenDrained"
+  | "drainedKcalPer100g"
+  | "drainedProteinPer100g"
+  | "drainedCarbsPer100g"
+  | "drainedFatPer100g"
+  | "usualDrainedG"
 >;

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import { gramsToText } from "@/modules/nutrition/services/entrySchema";
+import { isDrained } from "@/modules/nutrition/services/drained";
 import { dayFromKey, dayKey, formatDayShort } from "@/modules/nutrition/services/mealTime";
 import type { Product } from "@/modules/nutrition/types/product";
 import { useAddStock } from "@/modules/pantry/hooks/useAddStock";
@@ -96,7 +97,11 @@ function AddStockForm({ product, stock, fresh, save, styles, theme }: FormProps)
     }
   };
 
-  const sub = [product.netWeightG !== null ? `${gramsToText(product.netWeightG)} g each` : null, "in your library"]
+  const sub = [
+    product.netWeightG !== null ? `${gramsToText(product.netWeightG)} g each` : null,
+    "in your library",
+    isDrained(product) ? "eaten drained" : null,
+  ]
     .filter(Boolean)
     .join(" · ");
 

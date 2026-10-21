@@ -33,7 +33,7 @@ After 13 (not a feature): build the Android APK with `eas build -p android --pro
   - [x] 8a. **Pantry list and adding stock** - `pantry_items` + `stock_movements` tables (stock in grams); tab bar Today · Log · Pantry · Progress · More; Pantry list per `pantry.html` frame 1; "How many did you buy?" after a scan or from a product (frame 3)
   - [x] 8b. **Pantry item detail and removing stock** - item detail with amount left and movement history (frame 2); log a portion from the pantry; remove with reason and adjust to actual (frame 4)
   - [x] 8c. **Pantry in food search and log edits** - "In my pantry" section on Add food; editing or deleting a log entry restores its pantry stock
-- [ ] 9. **Canned and opened items** - drained values, usual drained weight, opened can with grams left
+- [x] 9. **Canned and opened items** - drained values, usual drained weight, opened can with grams left
 - [ ] 10. **Supplements** - supplement pantry items counted in grams per scoop
 - [ ] 12. **Recipes and cooked batches** - recipes, batches with settled cooked weight, per-100 g portions, cooking subtracts tracked items
 - [ ] 19. **Workouts** - exercise library, start/active/complete session, sets with previous hints, history; exercise illustrations from `@bryllim/workout-guide` (ADR-20: art is CC BY-SA 4.0, credit Bryl Lim and Everkinetic, don't edit the art)

@@ -15,6 +15,12 @@ type ProductRow = {
   carbs_per_100g: number | null;
   fat_per_100g: number | null;
   net_weight_g: number | null;
+  eaten_drained: number;
+  drained_kcal_per_100g: number | null;
+  drained_protein_per_100g: number | null;
+  drained_carbs_per_100g: number | null;
+  drained_fat_per_100g: number | null;
+  usual_drained_g: number | null;
   source: ProductSource;
   is_favorite: number;
   created_at: string;
@@ -26,8 +32,9 @@ export type SaveResult =
   | { ok: false; error: "duplicate_barcode" | "not_found" };
 
 const COLUMNS = `id, barcode, name, brand, serving_size, serving_grams, kcal_per_100g,
-  protein_per_100g, carbs_per_100g, fat_per_100g, net_weight_g, source, is_favorite,
-  created_at, updated_at`;
+  protein_per_100g, carbs_per_100g, fat_per_100g, net_weight_g, eaten_drained,
+  drained_kcal_per_100g, drained_protein_per_100g, drained_carbs_per_100g, drained_fat_per_100g,
+  usual_drained_g, source, is_favorite, created_at, updated_at`;
 
 function toProduct(row: ProductRow): Product {
   return {
@@ -42,6 +49,12 @@ function toProduct(row: ProductRow): Product {
     carbsPer100g: row.carbs_per_100g,
     fatPer100g: row.fat_per_100g,
     netWeightG: row.net_weight_g,
+    eatenDrained: row.eaten_drained === 1,
+    drainedKcalPer100g: row.drained_kcal_per_100g,
+    drainedProteinPer100g: row.drained_protein_per_100g,
+    drainedCarbsPer100g: row.drained_carbs_per_100g,
+    drainedFatPer100g: row.drained_fat_per_100g,
+    usualDrainedG: row.usual_drained_g,
     source: row.source,
     isFavorite: row.is_favorite === 1,
     createdAt: row.created_at,
@@ -156,9 +169,10 @@ export async function create(
   try {
     await db.runAsync(
       `INSERT INTO products (id, barcode, name, brand, serving_size, serving_grams, kcal_per_100g,
-         protein_per_100g, carbs_per_100g, fat_per_100g, net_weight_g, source, is_favorite,
-         created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+         protein_per_100g, carbs_per_100g, fat_per_100g, net_weight_g, eaten_drained,
+         drained_kcal_per_100g, drained_protein_per_100g, drained_carbs_per_100g, drained_fat_per_100g,
+         usual_drained_g, source, is_favorite, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
       id,
       input.barcode,
       input.name,
@@ -170,6 +184,12 @@ export async function create(
       input.carbsPer100g,
       input.fatPer100g,
       input.netWeightG,
+      input.eatenDrained ? 1 : 0,
+      input.drainedKcalPer100g,
+      input.drainedProteinPer100g,
+      input.drainedCarbsPer100g,
+      input.drainedFatPer100g,
+      input.usualDrainedG,
       source,
       now,
       now,
@@ -195,7 +215,8 @@ export async function update(
     const result = await db.runAsync(
       `UPDATE products SET barcode = ?, name = ?, brand = ?, serving_size = ?, serving_grams = ?,
          kcal_per_100g = ?, protein_per_100g = ?, carbs_per_100g = ?, fat_per_100g = ?,
-         net_weight_g = ?, updated_at = ?
+         net_weight_g = ?, eaten_drained = ?, drained_kcal_per_100g = ?, drained_protein_per_100g = ?,
+         drained_carbs_per_100g = ?, drained_fat_per_100g = ?, usual_drained_g = ?, updated_at = ?
        WHERE id = ? AND deleted_at IS NULL`,
       input.barcode,
       input.name,
@@ -207,6 +228,12 @@ export async function update(
       input.carbsPer100g,
       input.fatPer100g,
       input.netWeightG,
+      input.eatenDrained ? 1 : 0,
+      input.drainedKcalPer100g,
+      input.drainedProteinPer100g,
+      input.drainedCarbsPer100g,
+      input.drainedFatPer100g,
+      input.usualDrainedG,
       new Date().toISOString(),
       id,
     );

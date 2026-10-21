@@ -14,8 +14,11 @@ import {
   changeTone,
   expiryBadge,
   inStock,
+  monthDay,
   movementName,
   movementTime,
+  netToDrained,
+  openedGrams,
   unitSplit,
 } from "@/modules/pantry/services/pantryStock";
 import type { PantryLocation, PantryStock, StockMovement } from "@/modules/pantry/types/pantry";
@@ -65,7 +68,7 @@ export default function PantryItemScreen() {
     );
   }
 
-  const { item, movements } = state;
+  const { item, movements, drainedSamples } = state;
   const hasStock = inStock(item);
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -80,6 +83,15 @@ export default function PantryItemScreen() {
 
         <View style={[styles.card, styles.fieldsCard]}>
           <Field label="Net weight per unit" value={item.netWeightG === null ? "Not set" : `${gramsToText(item.netWeightG)} g`} styles={styles} />
+          {item.drained && <Field label="Eaten drained" value="Yes · drained values" styles={styles} />}
+          {item.drained && item.usualDrainedG !== null && (
+            <Field
+              label="Usual drained weight"
+              value={`${gramsToText(item.usualDrainedG)} g`}
+              badge={drainedSamples >= 2 ? `avg of ${drainedSamples}` : undefined}
+              styles={styles}
+            />
+          )}
           <Field label="Location" value={LOCATION_LABELS[item.location]} styles={styles} />
           <Field label="Expiry date" value={item.expiresAt ? formatDayShort(item.expiresAt) : "None"} styles={styles} last />
         </View>
@@ -141,9 +153,7 @@ function Hero({ item, styles }: { item: PantryStock; styles: Styles }) {
   const shown = Math.min(shapes, MAX_SHAPES);
   const badge = expiryBadge(item.expiresAt, dayKey(new Date()));
   const empty = shapes === 0;
-  const note = empty
-    ? "Used up. Restock from + Add stock."
-    : [`About ${formatKcal(item.gramsLeft)} g left`, badge?.text].filter(Boolean).join(" · ");
+  const note = empty ? "Used up. Restock from + Add stock." : [...amountNote(item), badge?.text].filter(Boolean).join(" · ");
   const label = empty
     ? "0 left"
     : [sealed > 0 && `${sealed} sealed`, opened && "1 opened"].filter(Boolean).join(", ");
@@ -175,6 +185,16 @@ function Hero({ item, styles }: { item: PantryStock; styles: Styles }) {
   );
 }
 
+// "Opened Oct 20 · about 60 g drained left" for the opened unit, else the whole stock.
+function amountNote(item: PantryStock): string[] {
+  const usual = item.drained ? item.usualDrainedG : null;
+  const word = usual === null ? "left" : "drained left";
+  const toShown = (net: number) => formatKcal(usual === null ? net : netToDrained(net, item.netWeightG, usual));
+  const opened = openedGrams(item.gramsLeft, item.netWeightG);
+  if (opened > 0 && item.openedAt) return [`Opened ${monthDay(item.openedAt)}`, `about ${toShown(opened)} g ${word}`];
+  return [`About ${toShown(item.gramsLeft)} g ${word}`];
+}
+
 function HeroPart({ value, word, styles }: { value: string; word: string; styles: Styles }) {
   return (
     <View style={styles.heroPart}>
@@ -184,11 +204,24 @@ function HeroPart({ value, word, styles }: { value: string; word: string; styles
   );
 }
 
-function Field({ label, value, last, styles }: { label: string; value: string; last?: boolean; styles: Styles }) {
+type FieldProps = { label: string; value: string; badge?: string; last?: boolean; styles: Styles };
+
+function Field({ label, value, badge, last, styles }: FieldProps) {
   return (
-    <View style={[styles.field, last && styles.fieldLast]} accessible accessibilityLabel={`${label}: ${value}`}>
+    <View
+      style={[styles.field, last && styles.fieldLast]}
+      accessible
+      accessibilityLabel={[`${label}: ${value}`, badge].filter(Boolean).join(", ")}
+    >
       <Text style={styles.lbl}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
+      <View style={styles.valueRow}>
+        <Text style={styles.value}>{value}</Text>
+        {badge && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badge}</Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -258,7 +291,10 @@ function makeStyles(theme: Theme) {
     },
     fieldLast: { borderBottomWidth: 0 },
     lbl: { color: colors.muted, fontSize: fontSize.sm },
+    valueRow: { flexDirection: "row", alignItems: "center", gap: space[1], flexShrink: 1 },
     value: { color: colors.text, fontSize: fontSize.sm, flexShrink: 1, textAlign: "right" },
+    badge: { paddingVertical: 1, paddingHorizontal: 6, borderRadius: radius.pill, backgroundColor: colors.estimateSoft },
+    badgeText: { color: colors.estimate, fontSize: fontSize.xs, fontWeight: "600" },
     // .btn-row.three: 1.4fr 1fr 1fr.
     btnRow: { flexDirection: "row", gap: space[2] },
     btn: { flex: 1, height: tap, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: colors.surface2 },

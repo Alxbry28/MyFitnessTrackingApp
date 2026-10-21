@@ -4,6 +4,7 @@ import type { SQLiteDatabase } from "expo-sqlite";
 import * as pantryRepo from "@/modules/pantry/repositories/pantryRepo";
 import { fitsStock } from "@/modules/pantry/services/pantryStock";
 
+import { loggedPer100 } from "../services/drained";
 import { forGrams } from "../services/nutritionCalc";
 import type { EntryInput, FoodLogEntry, MealType } from "../types/foodLog";
 import type { Product } from "../types/product";
@@ -72,7 +73,8 @@ export async function create(
 ): Promise<string> {
   const id = randomUUID();
   const now = new Date().toISOString();
-  const n = forGrams(product, input.grams);
+  const per100 = loggedPer100(product);
+  const n = forGrams(per100, input.grams);
   await db.runAsync(
     `INSERT INTO food_log_entries (id, day, logged_at, meal_type, product_id, product_name, grams,
        kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, kcal, protein_g, carbs_g,
@@ -85,10 +87,10 @@ export async function create(
     product.id,
     product.name,
     input.grams,
-    product.kcalPer100g,
-    product.proteinPer100g,
-    product.carbsPer100g,
-    product.fatPer100g,
+    per100.kcalPer100g,
+    per100.proteinPer100g,
+    per100.carbsPer100g,
+    per100.fatPer100g,
     n.kcal,
     n.proteinG,
     n.carbsG,
@@ -174,10 +176,18 @@ async function updateFromPantry(
       result = { ok: false, error: "not_found" };
       return;
     }
-    const movementId = await pantryRepo.eatenMovementFor(txn, entry.id);
-    if (movementId && entry.pantryItemId) {
-      const left = await pantryRepo.gramsLeftIn(txn, entry.pantryItemId).catch(() => null);
-      const extra = input.grams - current.grams;
+    const movement = await pantryRepo.eatenMovementFor(txn, entry.id);
+    // A whole unit stays one unit whatever drained grams were weighed; a part keeps the
+    // net-per-logged-gram ratio it was saved with (1 for products not eaten drained).
+    const delta = !movement
+      ? null
+      : movement.deltaUnits !== null || current.grams <= 0
+        ? movement.deltaGrams
+        : (movement.deltaGrams * input.grams) / current.grams;
+    let left: number | null = null;
+    if (movement && delta !== null && entry.pantryItemId) {
+      left = await pantryRepo.gramsLeftIn(txn, entry.pantryItemId).catch(() => null);
+      const extra = movement.deltaGrams - delta;
       if (left !== null && extra > 0 && !fitsStock(extra, left)) {
         result = { ok: false, error: "not_enough", gramsLeft: left };
         return;
@@ -200,13 +210,14 @@ async function updateFromPantry(
       now,
       entry.id,
     );
-    if (movementId) {
+    if (movement && delta !== null && delta !== movement.deltaGrams) {
       await txn.runAsync(
         "UPDATE stock_movements SET delta_grams = ?, updated_at = ? WHERE id = ?",
-        -input.grams,
+        delta,
         now,
-        movementId,
+        movement.id,
       );
+      if (entry.pantryItemId && left !== null) await pantryRepo.syncOpened(txn, entry.pantryItemId, left);
     }
     await pantryRepo.checkForeignKeys(txn);
   });
@@ -251,6 +262,12 @@ async function setDeletedWithPantry(db: SQLiteDatabase, id: string, deleted: boo
   let changes = 0;
   await db.withExclusiveTransactionAsync(async (txn) => {
     const now = new Date().toISOString();
+    const link = await txn.getFirstAsync<{ pantry_item_id: string | null }>(
+      "SELECT pantry_item_id FROM food_log_entries WHERE id = ?",
+      id,
+    );
+    const itemId = link?.pantry_item_id ?? null;
+    const gramsBefore = itemId ? await pantryRepo.gramsLeftIn(txn, itemId).catch(() => null) : null;
     const entry = await txn.runAsync(
       deleted
         ? "UPDATE food_log_entries SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL"
@@ -267,6 +284,7 @@ async function setDeletedWithPantry(db: SQLiteDatabase, id: string, deleted: boo
            WHERE food_log_entry_id = ? AND reason = 'eaten' AND deleted_at IS NOT NULL`,
       ...(deleted ? [now, now, id] : [now, id]),
     );
+    if (itemId && gramsBefore !== null) await pantryRepo.syncOpened(txn, itemId, gramsBefore);
     await pantryRepo.checkForeignKeys(txn);
   });
   return changed(changes);

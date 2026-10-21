@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
@@ -19,6 +19,8 @@ type Props = {
   submitLabel: (mealLabel: string) => string;
   onSubmit: (input: EntryInput) => Promise<SubmitResult>;
   onSaved: () => void;
+  // Extra choices shown under the name, such as the pantry's whole or part unit.
+  header?: ReactNode;
 };
 
 function previewGrams(text: string): number | null {
@@ -27,7 +29,7 @@ function previewGrams(text: string): number | null {
 }
 
 // Shared by the add and edit screens: meal choice, grams and a live preview.
-export function AmountForm({ name, per100, defaultValues, submitLabel, onSubmit, onSaved }: Props) {
+export function AmountForm({ name, per100, defaultValues, submitLabel, onSubmit, onSaved, header }: Props) {
   const theme = useTheme();
   const styles = makeStyles(theme);
   const [formError, setFormError] = useState<string | null>(null);
@@ -62,6 +64,7 @@ export function AmountForm({ name, per100, defaultValues, submitLabel, onSubmit,
         <Text style={styles.name}>{name}</Text>
         <Text style={styles.meta}>{formatKcal(per100.kcalPer100g)} kcal per 100 g</Text>
       </View>
+      {header}
 
       <Controller
         control={control}

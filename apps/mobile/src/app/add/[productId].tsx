@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-nati
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import { AmountForm } from "@/modules/nutrition/components/AmountForm";
 import { useAddEntry } from "@/modules/nutrition/hooks/useAddEntry";
+import { loggedPer100 } from "@/modules/nutrition/services/drained";
 import { gramsToText } from "@/modules/nutrition/services/entrySchema";
 import { defaultMeal } from "@/modules/nutrition/services/mealTime";
 import { MEAL_TYPES, type MealType } from "@/modules/nutrition/types/foodLog";
@@ -43,7 +44,7 @@ export default function AddToMealScreen() {
   return (
     <AmountForm
       name={product.name}
-      per100={product}
+      per100={loggedPer100(product)}
       defaultValues={{
         mealType: isMealType(meal) ? meal : defaultMeal(new Date()),
         grams: gramsToText(defaultGrams),
