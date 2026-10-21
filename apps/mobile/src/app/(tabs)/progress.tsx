@@ -5,12 +5,15 @@ import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import { BmiCard } from "@/modules/body/components/BmiCard";
 import { WeighInRow } from "@/modules/body/components/WeighInRow";
 import { WeightCard } from "@/modules/body/components/WeightCard";
+import { useMeasurements } from "@/modules/body/hooks/useMeasurements";
 import { useProgress } from "@/modules/body/hooks/useProgress";
+import { formatCm, formatDelta } from "@/modules/body/services/measurementCalc";
 
 export default function ProgressScreen() {
   const theme = useTheme();
   const styles = makeStyles(theme);
   const { state, retry } = useProgress();
+  const measurements = useMeasurements();
 
   if (state.status === "loading") {
     return (
@@ -45,6 +48,71 @@ export default function ProgressScreen() {
         latest={state.latest}
         onEditProfile={() => router.push("/body-profile")}
       />
+
+      {/* Body Measurements Card */}
+      <Pressable
+        onPress={() => router.push("/measurements" as any)}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.measureCard, pressed && styles.pressed]}
+      >
+        <View style={styles.measureHeader}>
+          <View style={styles.measureTitleRow}>
+            <Text style={styles.measureTitle}>Body Measurements</Text>
+            {measurements.waistToHeight && (
+              <View
+                style={[
+                  styles.wthBadge,
+                  measurements.waistToHeight.category === "healthy"
+                    ? styles.wthHealthy
+                    : styles.wthWarning,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.wthBadgeText,
+                    measurements.waistToHeight.category === "healthy"
+                      ? styles.wthTextHealthy
+                      : styles.wthTextWarning,
+                  ]}
+                >
+                  WHtR {measurements.waistToHeight.ratio.toFixed(2)}
+                </Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.measureArrow}>›</Text>
+        </View>
+
+        {measurements.deltas.length > 0 ? (
+          <View style={styles.measureGrid}>
+            {measurements.deltas.slice(0, 4).map((d) => (
+              <View key={d.siteKey} style={styles.measurePill}>
+                <Text style={styles.pillLabel}>{d.label}</Text>
+                <Text style={styles.pillValue}>{formatCm(d.currentCm)}</Text>
+                {d.deltaLastCm !== null && d.deltaLastCm !== undefined && (
+                  <Text
+                    style={[
+                      styles.pillDelta,
+                      d.deltaLastCm > 0
+                        ? styles.deltaPlus
+                        : d.deltaLastCm < 0
+                          ? styles.deltaMinus
+                          : styles.deltaNeutral,
+                    ]}
+                  >
+                    {formatDelta(d.deltaLastCm)}
+                  </Text>
+                )}
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.measureEmpty}>
+            Track waist, chest, arms and thighs over time. Tap to log measurements.
+          </Text>
+        )}
+      </Pressable>
+
       {state.recent.length > 0 && (
         <>
           <Text style={styles.section} accessibilityRole="header">
@@ -91,5 +159,96 @@ function makeStyles(theme: Theme) {
       backgroundColor: colors.surface2,
     },
     secondaryLabel: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
+    pressed: { opacity: 0.8 },
+    measureCard: {
+      borderRadius: radius.md,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: space[4],
+      gap: space[3],
+    },
+    measureHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    measureTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    measureTitle: {
+      fontSize: fontSize.md,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    wthBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    wthHealthy: {
+      backgroundColor: "#2e7d3222",
+    },
+    wthWarning: {
+      backgroundColor: "#ed6c0222",
+    },
+    wthBadgeText: {
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    wthTextHealthy: {
+      color: "#2e7d32",
+    },
+    wthTextWarning: {
+      color: "#ed6c02",
+    },
+    measureArrow: {
+      fontSize: fontSize.lg,
+      color: colors.faint,
+    },
+    measureGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    measurePill: {
+      flex: 1,
+      minWidth: "45%",
+      backgroundColor: colors.surface2,
+      borderRadius: 10,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      gap: 2,
+    },
+    pillLabel: {
+      fontSize: 11,
+      color: colors.muted,
+      fontWeight: "500",
+    },
+    pillValue: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    pillDelta: {
+      fontSize: 10,
+      fontWeight: "600",
+    },
+    deltaPlus: {
+      color: colors.accent,
+    },
+    deltaMinus: {
+      color: "#0288d1",
+    },
+    deltaNeutral: {
+      color: colors.muted,
+    },
+    measureEmpty: {
+      fontSize: fontSize.sm,
+      color: colors.muted,
+      lineHeight: 18,
+    },
   });
 }
