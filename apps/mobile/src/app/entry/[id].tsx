@@ -1,16 +1,19 @@
 import { router, useLocalSearchParams } from "expo-router";
+import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
-import { AmountForm } from "@/modules/nutrition/components/AmountForm";
+import { EntryEditForm } from "@/modules/nutrition/components/EntryEditForm";
 import { useEntry } from "@/modules/nutrition/hooks/useEntry";
-import { gramsToText } from "@/modules/nutrition/services/entrySchema";
+import { dayKey } from "@/modules/nutrition/services/mealTime";
 
+// Built to prototypes/entry-edit.html; the native header is hidden in _layout.
 export default function EditEntryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
   const styles = makeStyles(theme);
-  const { state, retry, save } = useEntry(id);
+  const { state, retry, save, remove } = useEntry(id);
+  const [today] = useState(() => dayKey(new Date()));
 
   if (state.status === "loading") {
     return (
@@ -33,15 +36,15 @@ export default function EditEntryScreen() {
     );
   }
 
-  const { entry } = state;
   return (
-    <AmountForm
-      name={entry.productName}
-      per100={entry}
-      defaultValues={{ mealType: entry.mealType, grams: gramsToText(entry.grams) }}
-      submitLabel={() => "Save changes"}
-      onSubmit={save}
-      onSaved={() => router.back()}
+    <EntryEditForm
+      entry={state.entry}
+      servingGrams={state.servingGrams}
+      dayKcal={state.dayKcal}
+      today={today}
+      onSave={save}
+      onDelete={remove}
+      onLeave={() => router.back()}
     />
   );
 }

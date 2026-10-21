@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 
@@ -11,43 +12,66 @@ type Props = {
   onDelete: (entry: FoodLogEntry) => void;
 };
 
+const DELETE_WIDTH = 88;
+
+// A log row from prototypes/log.html; swipe left to reveal Delete. Long press and the
+// accessibility action still delete for anyone who can't swipe.
 export function EntryRow({ entry, onPress, onDelete }: Props) {
   const styles = makeStyles(useTheme());
   const grams = formatGrams(entry.grams);
   const kcal = formatKcal(entry.kcal);
 
   return (
-    <Pressable
-      onPress={() => onPress(entry)}
-      onLongPress={() => onDelete(entry)}
-      accessibilityRole="button"
-      accessibilityLabel={`${entry.productName}, ${grams}, ${kcal} kcal. Edit`}
-      accessibilityHint="Long-press to delete"
-      accessibilityActions={[{ name: "delete", label: "Delete" }]}
-      onAccessibilityAction={(e) => {
-        if (e.nativeEvent.actionName === "delete") onDelete(entry);
-      }}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+    <ReanimatedSwipeable
+      friction={1.5}
+      rightThreshold={DELETE_WIDTH / 2}
+      overshootRight={false}
+      renderRightActions={(_progress, _translation, methods) => (
+        <Pressable
+          onPress={() => {
+            methods.close();
+            onDelete(entry);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`Delete ${entry.productName}`}
+          style={styles.delete}
+        >
+          <Text style={styles.deleteLabel}>Delete</Text>
+        </Pressable>
+      )}
     >
-      <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>
-          {entry.productName}
-        </Text>
-        <Text style={styles.qty}>{grams}</Text>
-      </View>
-      <Text style={styles.kcal}>{kcal}</Text>
-    </Pressable>
+      <Pressable
+        onPress={() => onPress(entry)}
+        onLongPress={() => onDelete(entry)}
+        accessibilityRole="button"
+        accessibilityLabel={`${entry.productName}, ${grams}, ${kcal} kcal. Edit`}
+        accessibilityHint="Swipe left or long-press to delete"
+        accessibilityActions={[{ name: "delete", label: "Delete" }]}
+        onAccessibilityAction={(e) => {
+          if (e.nativeEvent.actionName === "delete") onDelete(entry);
+        }}
+        style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      >
+        <View style={styles.info}>
+          <Text style={styles.name} numberOfLines={1}>
+            {entry.productName}
+          </Text>
+          <Text style={styles.qty}>{grams}</Text>
+        </View>
+        <Text style={styles.kcal}>{kcal}</Text>
+      </Pressable>
+    </ReanimatedSwipeable>
   );
 }
 
 function makeStyles(theme: Theme) {
-  const { colors, space, fontSize, tap } = theme;
+  const { colors, space, fontSize } = theme;
   return StyleSheet.create({
     row: {
       flexDirection: "row",
       alignItems: "center",
       gap: space[3],
-      minHeight: tap,
+      minHeight: 52,
       paddingVertical: space[2],
       paddingHorizontal: space[4],
       backgroundColor: colors.surface,
@@ -56,6 +80,8 @@ function makeStyles(theme: Theme) {
     info: { flex: 1, minWidth: 0 },
     name: { color: colors.text, fontSize: fontSize.md },
     qty: { color: colors.muted, fontSize: fontSize.sm },
-    kcal: { color: colors.text, fontSize: fontSize.md, fontWeight: "600", fontVariant: ["tabular-nums"] },
+    kcal: { color: colors.text, fontSize: fontSize.md, fontWeight: "500", fontVariant: ["tabular-nums"] },
+    delete: { width: DELETE_WIDTH, alignItems: "center", justifyContent: "center", backgroundColor: colors.over },
+    deleteLabel: { color: colors.bg, fontSize: fontSize.sm, fontWeight: "700" },
   });
 }

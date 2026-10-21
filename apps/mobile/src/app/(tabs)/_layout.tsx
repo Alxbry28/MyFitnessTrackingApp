@@ -26,7 +26,7 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: "Today", headerShown: false, tabBarIcon: tabIcon("schedule") }} />
-      <Tabs.Screen name="log" options={{ title: "Log", tabBarIcon: tabIcon("list") }} />
+      <Tabs.Screen name="log" options={{ title: "Log", headerShown: false, tabBarIcon: tabIcon("list") }} />
       <Tabs.Screen
         name="products"
         options={{ title: "Products", tabBarIcon: tabIcon("deployed_code") }}

@@ -1,16 +1,28 @@
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
+import { SymbolView } from "expo-symbols";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 
-import { addDays, dayFromKey, dayKey, formatDayLabel } from "../services/mealTime";
+import { addDays, dayFromKey, dayKey, formatDayShort } from "../services/mealTime";
 
 type Props = { day: string; today: string; onChange: (day: string) => void };
 
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function relative(day: string, today: string): string {
+  if (day === today) return "Today";
+  if (day === addDays(today, -1)) return "Yesterday";
+  return WEEKDAYS[dayFromKey(day).getDay()];
+}
+
+// The date nav from prototypes/log.html; the calendar screen isn't built, so the date opens the picker.
 export function DayNavigator({ day, today, onChange }: Props) {
-  const styles = makeStyles(useTheme());
+  const theme = useTheme();
+  const styles = makeStyles(theme);
   const isToday = day === today;
-  const label = formatDayLabel(day, today);
+  const label = formatDayShort(day);
+  const sub = `${relative(day, today)} · tap for calendar`;
 
   const openPicker = () =>
     DateTimePickerAndroid.open({
@@ -23,23 +35,24 @@ export function DayNavigator({ day, today, onChange }: Props) {
     });
 
   return (
-    <View>
+    <View style={styles.wrap}>
       <View style={styles.row}>
         <Pressable
           onPress={() => onChange(addDays(day, -1))}
           accessibilityRole="button"
           accessibilityLabel="Previous day"
-          style={styles.arrow}
+          style={({ pressed }) => [styles.arrow, pressed && styles.pressed]}
         >
-          <Text style={styles.arrowGlyph}>‹</Text>
+          <SymbolView name={{ android: "chevron_left", web: "chevron_left" }} tintColor={theme.colors.muted} size={22} />
         </Pressable>
         <Pressable
           onPress={openPicker}
           accessibilityRole="button"
-          accessibilityLabel={`${label}. Pick a date`}
+          accessibilityLabel={`${label}, ${relative(day, today)}. Pick a date`}
           style={styles.label}
         >
-          <Text style={styles.labelText}>{label}</Text>
+          <Text style={styles.date}>{label} ▾</Text>
+          <Text style={styles.sub}>{sub}</Text>
         </Pressable>
         <Pressable
           onPress={() => onChange(addDays(day, 1))}
@@ -47,16 +60,15 @@ export function DayNavigator({ day, today, onChange }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Next day"
           accessibilityState={{ disabled: isToday }}
-          style={styles.arrow}
+          style={({ pressed }) => [styles.arrow, pressed && styles.pressed]}
         >
-          <Text style={[styles.arrowGlyph, isToday && styles.disabled]}>›</Text>
+          <SymbolView
+            name={{ android: "chevron_right", web: "chevron_right" }}
+            tintColor={isToday ? theme.colors.faint : theme.colors.muted}
+            size={22}
+          />
         </Pressable>
       </View>
-      {!isToday && (
-        <Pressable onPress={() => onChange(today)} accessibilityRole="button" style={styles.today}>
-          <Text style={styles.todayLink}>Back to today</Text>
-        </Pressable>
-      )}
     </View>
   );
 }
@@ -64,13 +76,12 @@ export function DayNavigator({ day, today, onChange }: Props) {
 function makeStyles(theme: Theme) {
   const { colors, space, fontSize, tap } = theme;
   return StyleSheet.create({
+    wrap: { paddingTop: space[2], paddingHorizontal: space[2], paddingBottom: space[3] },
     row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-    arrow: { width: tap, height: tap, alignItems: "center", justifyContent: "center" },
-    arrowGlyph: { color: colors.text, fontSize: fontSize.xl },
-    disabled: { color: colors.faint },
-    label: { flex: 1, alignItems: "center", minHeight: tap, justifyContent: "center" },
-    labelText: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700" },
-    today: { alignSelf: "center", minHeight: tap, justifyContent: "center", paddingHorizontal: space[4] },
-    todayLink: { color: colors.accentText, fontSize: fontSize.sm, fontWeight: "600" },
+    arrow: { width: tap, height: tap, borderRadius: tap / 2, alignItems: "center", justifyContent: "center" },
+    pressed: { backgroundColor: colors.surface2 },
+    label: { flex: 1, alignItems: "center", justifyContent: "center", minHeight: tap },
+    date: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700" },
+    sub: { color: colors.muted, fontSize: fontSize.xs },
   });
 }

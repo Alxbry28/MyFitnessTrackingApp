@@ -142,3 +142,27 @@
 **Why it matters:** The sheet now passes `meal` to `/scan` (F-20), but the scanner forwards it only for a barcode already in the library. An unknown barcode goes to `/lookup/[barcode]` with only `barcode`, then the product form with `then=log`, and the amount form falls back to `defaultMeal(new Date())`; the "Search products" fallback also replaces to `/add` without `meal`. So a user who picks "Dinner" at 13:00 and scans a new product (the common first-scan case) lands on Lunch. The spec keeps the scan/add screens out of scope and its Done when ("every action opens its screen with the chosen meal") is met, so this is follow-up polish, not a contract break.
 **Suggested fix:** Thread the optional `meal` param through `/lookup/[barcode]` and `/product/[id]` (when `then=log`) into `/add/[productId]`, and pass it on the scanner's "Search products" fallback, the same way `add/index.tsx` already passes `meal`/`day` through. No new machinery; no current requirement is lost.
 **Resolution:**
+
+### F-24 [P2] open - Group-head "+ Add" link is smaller than the 48 dp touch target
+
+**File:** apps/mobile/src/modules/nutrition/components/MealSection.tsx:31
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** The new "+ Add" is a bare `sm` (13 dp) text with `hitSlop={8}`, so its hit area is roughly 34 dp tall, below DESIGN_SYSTEM.md's "48 x 48 dp minimum, including ... list-row actions". It sits right above the first entry row, so a slightly low tap opens Edit entry instead of Add. The spec fixes only its look (`accentText` `sm` 600), not its hit area.
+**Suggested fix:** Keep the text style and widen the hit area to 48 dp (for example `hitSlop` of about 16 vertically, or a `minHeight: tap` Pressable with negative vertical margin so the head height stays as in log.html). No current requirement is lost.
+**Resolution:** The "+ Add" Pressable now has `hitSlop` top/bottom 15 and left/right 12, about a 48 dp target, with the head layout unchanged. Awaiting re-review. Re-examined 2026-10-21 by independent re-review at afb968a: reopened. React Native documents that a `hitSlop` touch area "never extends past the parent view bounds and the Z-index of sibling views always takes precedence". Here the parent is `headRight` (one text line tall), the card clips with `overflow: "hidden"` (MealSection.tsx:58), and the first `EntryRow` is a later sibling directly below the head, so the bottom 15 dp of slop lands on the row and the top slop past the head's 12 dp padding is clipped. Even in the best case the effective target is the head's own height, about 12 + 20 + 4 = 36 dp, still below 48. Not observed on a device. A real fix needs the head (or the Pressable inside it) to be 48 dp tall, which adds about 12 dp to every group head versus log.html, so it needs the owner's call between the prototype's head height and the 48 dp rule.
+
+### F-27 [P3] open - Moving an entry to today can save a logged_at later than now
+
+**File:** apps/mobile/src/modules/nutrition/hooks/useEntry.ts:61 (time picker in apps/mobile/src/modules/nutrition/components/EntryEditForm.tsx:85)
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** The date picker caps the day at today and `logDay` clamps it, but the time is free, and moving a past entry to today keeps its original time (frame 4 keeps 4:10 PM until the user changes it). At 13:49, moving yesterday's 4:10 PM entry to today and saving writes `logged_at` for 16:10 today, a future instant. `logged_at` orders `lastGramsForProduct` and the quick-add "recent" list (`productRepo.recentlyLogged`, `ORDER BY f.logged_at DESC`), so that entry's grams shadow any product log made in the next hours. The spec only forbids future days, so this is polish, not a contract break.
+**Suggested fix:** When the chosen day is today, cap the saved minutes at the current time (or reject a later time with a hint). No new machinery; no current requirement is lost.
+**Resolution:**
+
+### F-28 [P3] open - Edit preview shows "- g" for a macro the product doesn't list
+
+**File:** apps/mobile/src/modules/nutrition/components/EntryEditForm.tsx:301
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** Copied per-100 g macros are nullable, and `formatMacro(null)` returns "-", so an entry with no fat value shows "- g" in the Fat column with a coloured line, as if a value existed. The prototype has no unknown-macro state; the empty state uses "—" in `faint` with a `track` line.
+**Suggested fix:** For a null macro show the empty treatment for that column only ("—" in `faint`, `track` line, no " g"). No current requirement is lost.
+**Resolution:**

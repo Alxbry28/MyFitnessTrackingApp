@@ -125,17 +125,19 @@ export async function lastGramsForProduct(
 export async function update(
   db: SQLiteDatabase,
   id: string,
-  input: EntryInput,
+  input: EntryInput & { day: string; loggedAt: string },
 ): Promise<ChangeResult> {
   const entry = await findById(db, id);
   if (!entry) return { ok: false, error: "not_found" };
   const n = forGrams(entry, input.grams);
   const result = await db.runAsync(
-    `UPDATE food_log_entries SET meal_type = ?, grams = ?, kcal = ?, protein_g = ?, carbs_g = ?,
-       fat_g = ?, updated_at = ?
+    `UPDATE food_log_entries SET meal_type = ?, grams = ?, day = ?, logged_at = ?, kcal = ?, protein_g = ?,
+       carbs_g = ?, fat_g = ?, updated_at = ?
      WHERE id = ? AND deleted_at IS NULL`,
     input.mealType,
     input.grams,
+    input.day,
+    input.loggedAt,
     n.kcal,
     n.proteinG,
     n.carbsG,

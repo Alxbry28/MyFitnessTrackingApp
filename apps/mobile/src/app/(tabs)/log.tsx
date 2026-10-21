@@ -1,26 +1,31 @@
 import { router } from "expo-router";
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import { DayNavigator } from "@/modules/nutrition/components/DayNavigator";
+import { DayTotalCard } from "@/modules/nutrition/components/DayTotalCard";
 import { MealSection } from "@/modules/nutrition/components/MealSection";
+import { useCalorieGoal } from "@/modules/nutrition/hooks/useCalorieGoal";
 import { useDayLog } from "@/modules/nutrition/hooks/useDayLog";
-import { dayKey } from "@/modules/nutrition/services/mealTime";
-import { formatKcal, formatMacro } from "@/modules/nutrition/services/nutritionCalc";
-import type { FoodLogEntry } from "@/modules/nutrition/types/foodLog";
+import { dayKey, MEAL_LABELS } from "@/modules/nutrition/services/mealTime";
+import type { FoodLogEntry, MealType } from "@/modules/nutrition/types/foodLog";
 
 function editEntry(entry: FoodLogEntry) {
   router.push({ pathname: "/entry/[id]", params: { id: entry.id } });
 }
 
+// Built to prototypes/log.html.
 export default function LogScreen() {
   const theme = useTheme();
   const styles = makeStyles(theme);
+  const insets = useSafeAreaInsets();
   const today = dayKey(new Date());
   const [day, setDay] = useState(today);
-  const { status, retry, groups, totals, isEmpty, remove, undo, pendingUndo, actionError } =
-    useDayLog(day);
+  const { status, retry, groups, totals, isEmpty, remove, undo, pendingUndo, actionError } = useDayLog(day);
+  const goal = useCalorieGoal();
+  const addTo = (meal: MealType) => router.push({ pathname: "/add", params: { meal, day } });
 
   let body: ReactNode;
   if (status === "loading") {
@@ -39,41 +44,43 @@ export default function LogScreen() {
       </View>
     );
   } else {
+    const filled = groups.filter((g) => g.entries.length > 0);
+    const empty = groups.filter((g) => g.entries.length === 0);
     body = (
       <ScrollView contentContainerStyle={styles.content}>
-        <Pressable
-          onPress={() => router.push({ pathname: "/paste-log", params: { day } })}
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.secondaryButton, styles.addLog, pressed && styles.pressed]}
-        >
-          <Text style={styles.secondaryLabel}>Type or paste a meal list</Text>
-        </Pressable>
-        <View style={styles.total}>
-          <Text style={styles.totalKcal}>
-            {formatKcal(totals.kcal)} <Text style={styles.totalUnit}>kcal</Text>
-          </Text>
-          <Text style={styles.macros}>
-            P {formatMacro(totals.proteinG)} · C {formatMacro(totals.carbsG)} · F {formatMacro(totals.fatG)}
-          </Text>
-        </View>
+        <DayTotalCard eaten={totals.kcal} goal={goal.state.status === "ready" ? goal.state.goal : null} />
         {isEmpty && (
           <Text style={styles.message}>{day === today ? "No food logged today" : "Nothing logged this day"}</Text>
         )}
-        {groups.map((group) => (
-          <MealSection
-            key={group.mealType}
-            group={group}
-            onAdd={(meal) => router.push({ pathname: "/add", params: { meal, day } })}
-            onEdit={editEntry}
-            onDelete={(entry) => void remove(entry)}
-          />
+        {filled.map((group) => (
+          <MealSection key={group.mealType} group={group} onAdd={addTo} onEdit={editEntry} onDelete={(entry) => void remove(entry)} />
         ))}
+        {/* Not in log.html: keeps adding to any meal on any day, which features 2, 7 and 29 shipped. */}
+        <View style={styles.card}>
+          {empty.map((group, index) => (
+            <Pressable
+              key={group.mealType}
+              onPress={() => addTo(group.mealType)}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.addRow, index > 0 && styles.divided, pressed && styles.pressed]}
+            >
+              <Text style={styles.addLabel}>+ Add to {MEAL_LABELS[group.mealType]}</Text>
+            </Pressable>
+          ))}
+          <Pressable
+            onPress={() => router.push({ pathname: "/paste-log", params: { day } })}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.addRow, empty.length > 0 && styles.divided, pressed && styles.pressed]}
+          >
+            <Text style={styles.addLabel}>Type or paste a meal list</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     );
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <DayNavigator day={day} today={today} onChange={setDay} />
       {body}
       {actionError && (
@@ -99,18 +106,20 @@ function makeStyles(theme: Theme) {
   const { colors, space, fontSize, radius, tap } = theme;
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.bg },
-    content: { padding: space[4], paddingBottom: tap * 2, gap: space[1] },
+    content: { paddingHorizontal: space[4], paddingBottom: tap * 2, gap: space[3] },
     center: { flex: 1, alignItems: "center", justifyContent: "center", gap: space[4] },
-    total: {
-      padding: space[4],
-      borderRadius: radius.md,
-      backgroundColor: colors.surface,
-      gap: space[1],
-    },
-    totalKcal: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700", fontVariant: ["tabular-nums"] },
-    totalUnit: { color: colors.muted, fontSize: fontSize.sm, fontWeight: "400" },
-    macros: { color: colors.muted, fontSize: fontSize.sm, fontVariant: ["tabular-nums"] },
     message: { color: colors.muted, fontSize: fontSize.md, textAlign: "center", paddingVertical: space[3] },
+    card: {
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: "hidden",
+      backgroundColor: colors.surface,
+    },
+    addRow: { minHeight: 52, justifyContent: "center", paddingHorizontal: space[4] },
+    addLabel: { color: colors.accentText, fontSize: fontSize.md, fontWeight: "600" },
+    divided: { borderTopWidth: 1, borderTopColor: colors.border },
+    pressed: { backgroundColor: colors.surface2 },
     error: { color: colors.over, fontSize: fontSize.sm, paddingHorizontal: space[4], paddingBottom: space[2] },
     secondaryButton: {
       minHeight: tap,
@@ -120,8 +129,6 @@ function makeStyles(theme: Theme) {
       backgroundColor: colors.surface2,
     },
     secondaryLabel: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
-    addLog: { alignItems: "center", marginBottom: space[2] },
-    pressed: { backgroundColor: colors.border },
     snackbar: {
       position: "absolute",
       left: space[4],
