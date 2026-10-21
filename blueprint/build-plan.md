@@ -52,7 +52,7 @@ After 13 (not a feature): build the Android APK with `eas build -p android --pro
 - [ ] 28. **Receipt OCR** - scan a grocery receipt into a reviewed list of pantry items; remember each confirmed receipt line to product match so repeat items fill in automatically; build only if most shopping turns out to be at supermarkets
 - [ ] 25. **Product and grocery photos** - take or pick a photo for a product or pantry item, upload it through the API to file storage, show it in the product library and pantry; Open Food Facts image as fallback
 - [ ] 17. **Sync** - push and pull local changes through the API with last-write-wins
-- [ ] 18. **AI meal parse** - text to parsed entries, preview, confirm, then save
+- [x] 18. **AI meal parse** - text to parsed entries, preview, confirm, then save
 - [ ] 22. **Scale sync** - read weight from Health Connect when the app opens
 - [ ] 23. **Web dashboard** - separate Vite React app on the same API
 - [ ] 24. **Accounts (Beta 2)** - per-user accounts so testers' data syncs and they can use AI

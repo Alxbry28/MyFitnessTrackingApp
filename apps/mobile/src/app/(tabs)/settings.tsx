@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import { DataCard } from "@/modules/backup/components/DataCard";
+import { AiSettingsCard } from "@/modules/nutrition/components/AiSettingsCard";
 import { useCalorieGoal } from "@/modules/nutrition/hooks/useCalorieGoal";
 import { goalSchema, type GoalFormValues, type GoalInput } from "@/modules/nutrition/services/goalSchema";
 
@@ -37,6 +38,10 @@ export default function SettingsScreen() {
         Daily goal
       </Text>
       <View style={styles.card}>{goalCard}</View>
+      <Text style={[styles.section, styles.sectionGap]} accessibilityRole="header">
+        AI Food Logging
+      </Text>
+      <AiSettingsCard />
       <Text style={[styles.section, styles.sectionGap]} accessibilityRole="header">
         Your data
       </Text>

@@ -1,5 +1,6 @@
 import * as Clipboard from "expo-clipboard";
 import { router, useLocalSearchParams } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
 import { SymbolView, type AndroidSymbol } from "expo-symbols";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
@@ -15,9 +16,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
+import { AiMealPreview } from "@/modules/nutrition/components/AiMealPreview";
 import { MatchSheet } from "@/modules/nutrition/components/MatchSheet";
 import { PasteLogPreview } from "@/modules/nutrition/components/PasteLogPreview";
 import { usePasteLog, type PreviewLine, type PreviewSection } from "@/modules/nutrition/hooks/usePasteLog";
+import * as foodLogRepo from "@/modules/nutrition/repositories/foodLogRepo";
+import * as productRepo from "@/modules/nutrition/repositories/productRepo";
+import * as settingsRepo from "@/modules/nutrition/repositories/settingsRepo";
+import { parseMealsWithAi, type AiMealParseResult } from "@/modules/nutrition/services/aiMealParser";
 import { dayKey, formatDayLabel, MEAL_LABELS } from "@/modules/nutrition/services/mealTime";
 import { formatKcal } from "@/modules/nutrition/services/nutritionCalc";
 import { copyLunchToDinner, editorSpans } from "@/modules/nutrition/services/pasteLog";
@@ -38,21 +44,29 @@ function mealsFor(key: string, sections: PreviewSection[]): string {
 }
 
 export default function PasteLogScreen() {
-  const { day: requestedDay } = useLocalSearchParams<{ day?: string }>();
+  const { day: requestedDay, ai: requestedAi } = useLocalSearchParams<{ day?: string; ai?: string }>();
+  const db = useSQLiteContext();
   const theme = useTheme();
   const styles = makeStyles(theme);
   const insets = useSafeAreaInsets();
   const log = usePasteLog(requestedDay);
-  const [mode, setMode] = useState<"write" | "preview">("write");
+  const [mode, setMode] = useState<"write" | "preview" | "ai_preview">("write");
   const [notice, setNotice] = useState<string | null>(null);
   const [checking, setChecking] = useState<FoodLine | null>(null);
+
+  // AI state
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSaving, setAiSaving] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiResult, setAiResult] = useState<AiMealParseResult | null>(null);
+
   const lunchCopy = useMemo(() => copyLunchToDinner(log.text), [log.text]);
   const spans = useMemo(() => editorSpans(log.text), [log.text]);
   const dayLabel = formatDayLabel(log.day, dayKey(new Date()));
 
-  // Android back on the Preview returns to the text instead of closing the screen.
+  // Android back on the Preview / AI Preview returns to the text instead of closing the screen.
   useEffect(() => {
-    if (mode !== "preview") return;
+    if (mode === "write") return;
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
       setMode("write");
       return true;
@@ -75,13 +89,135 @@ export default function PasteLogScreen() {
     setNotice(await log.copyPreviousDay());
   };
 
+  const handleParseAi = async () => {
+    setNotice(null);
+    setAiError(null);
+    const trimmed = log.text.trim();
+    if (!trimmed) {
+      setNotice("Type or paste your meals first.");
+      return;
+    }
+
+    const apiKey = await settingsRepo.getAiApiKey(db);
+    if (!apiKey) {
+      setAiError("AI API Key not configured. Please add your free Google Gemini API key in Settings.");
+      return;
+    }
+
+    const provider = (await settingsRepo.getAiProvider(db)) ?? "gemini";
+    setAiLoading(true);
+    try {
+      const result = await parseMealsWithAi({
+        text: trimmed,
+        apiKey,
+        provider,
+      });
+      setAiResult(result);
+      setMode("ai_preview");
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Failed to analyze meal with AI.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleRemoveAiItem = (mealIdx: number, itemIdx: number) => {
+    if (!aiResult) return;
+    const newMeals = aiResult.meals.map((meal, mIdx) => {
+      if (mIdx !== mealIdx) return meal;
+      return {
+        ...meal,
+        items: meal.items.filter((_, iIdx) => iIdx !== itemIdx),
+      };
+    });
+    const allItems = newMeals.flatMap((m) => m.items);
+    const totalKcal = allItems.reduce((sum, item) => sum + item.calories, 0);
+    const totalProtein = Math.round(allItems.reduce((sum, item) => sum + item.protein, 0) * 10) / 10;
+    const totalCarbs = Math.round(allItems.reduce((sum, item) => sum + item.carbs, 0) * 10) / 10;
+    const totalFat = Math.round(allItems.reduce((sum, item) => sum + item.fat, 0) * 10) / 10;
+
+    setAiResult({
+      meals: newMeals,
+      totalKcal,
+      totalProtein,
+      totalCarbs,
+      totalFat,
+    });
+  };
+
+  const handleSaveAiLog = async () => {
+    if (!aiResult) return;
+    setAiSaving(true);
+    try {
+      for (const meal of aiResult.meals) {
+        for (const item of meal.items) {
+          const searchResults = await productRepo.search(db, item.name);
+          let product = searchResults.find(
+            (p) => p.name.trim().toLowerCase() === item.name.trim().toLowerCase(),
+          );
+          if (!product) {
+            const createRes = await productRepo.create(
+              db,
+              {
+                barcode: null,
+                name: item.name.trim(),
+                brand: null,
+                servingSize: null,
+                servingGrams: null,
+                kcalPer100g: item.kcalPer100g,
+                proteinPer100g: item.proteinPer100g,
+                carbsPer100g: item.carbsPer100g,
+                fatPer100g: item.fatPer100g,
+                netWeightG: null,
+                eatenDrained: false,
+                drainedKcalPer100g: null,
+                drainedProteinPer100g: null,
+                drainedCarbsPer100g: null,
+                drainedFatPer100g: null,
+                usualDrainedG: null,
+              },
+              "manual",
+            );
+            if (createRes.ok) {
+              const created = await productRepo.findById(db, createRes.id);
+              if (created) product = created;
+            }
+          }
+          if (product) {
+            await foodLogRepo.create(db, product, {
+              day: log.day,
+              mealType: meal.mealType,
+              grams: item.grams,
+            });
+          }
+        }
+      }
+      router.back();
+    } catch {
+      setAiError("Couldn't save parsed items to your log. Please try again.");
+    } finally {
+      setAiSaving(false);
+    }
+  };
+
   const appBar =
     mode === "write" ? (
       <AppBar
         icon="close"
         iconLabel="Close"
         onIcon={() => router.back()}
-        title="Text log"
+        title={requestedAi === "1" ? "AI Meal Parse" : "Text log"}
+        sub={dayLabel}
+        top={insets.top}
+        styles={styles}
+        theme={theme}
+      />
+    ) : mode === "preview" ? (
+      <AppBar
+        icon="arrow_back"
+        iconLabel="Back to text"
+        onIcon={() => setMode("write")}
+        title="Match preview"
         sub={dayLabel}
         top={insets.top}
         styles={styles}
@@ -92,13 +228,29 @@ export default function PasteLogScreen() {
         icon="arrow_back"
         iconLabel="Back to text"
         onIcon={() => setMode("write")}
-        title="Preview"
+        title="AI Breakdown"
         sub={dayLabel}
         top={insets.top}
         styles={styles}
         theme={theme}
       />
     );
+
+  if (mode === "ai_preview" && aiResult) {
+    return (
+      <View style={styles.screen}>
+        {appBar}
+        <AiMealPreview
+          result={aiResult}
+          dayLabel={dayLabel}
+          saving={aiSaving}
+          onSave={() => void handleSaveAiLog()}
+          onBack={() => setMode("write")}
+          onRemoveItem={handleRemoveAiItem}
+        />
+      </View>
+    );
+  }
 
   if (mode === "write") {
     const foods = log.summary.foods;
@@ -119,16 +271,33 @@ export default function PasteLogScreen() {
               <Chip label="Lunch → Dinner" onPress={() => log.setText(lunchCopy)} styles={styles} theme={theme} />
             )}
           </View>
+
+          {aiError && (
+            <View style={styles.aiErrorCard}>
+              <Text style={styles.aiErrorText}>{aiError}</Text>
+              {aiError.includes("Settings") && (
+                <Pressable
+                  onPress={() => router.push("/(tabs)/settings")}
+                  style={styles.aiSettingsBtn}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.aiSettingsBtnText}>Open Settings</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+
           {notice && (
             <Text style={styles.notice} accessibilityLiveRegion="polite">
               {notice}
             </Text>
           )}
+
           <View style={styles.halo}>
             <TextInput
               onChangeText={log.setText}
               multiline
-              placeholder={"Breakfast:\n220g taho\n\nLunch:\n250g white rice"}
+              placeholder={"Breakfast:\n220g taho\n\nLunch:\n250g white rice\n110g boiled eggs\n250g boiled chicken breast\n50g okra"}
               placeholderTextColor={theme.colors.faint}
               accessibilityLabel="Paste your log"
               autoCorrect={false}
@@ -141,7 +310,16 @@ export default function PasteLogScreen() {
                 <Text key={index}>
                   {index > 0 ? "\n" : ""}
                   {line.map((span, i) => (
-                    <Text key={i} style={span.tone === "heading" ? styles.editorHeading : span.tone === "amount" ? styles.editorAmount : undefined}>
+                    <Text
+                      key={i}
+                      style={
+                        span.tone === "heading"
+                          ? styles.editorHeading
+                          : span.tone === "amount"
+                            ? styles.editorAmount
+                            : undefined
+                      }
+                    >
                       {span.text}
                     </Text>
                   ))}
@@ -149,20 +327,59 @@ export default function PasteLogScreen() {
               ))}
             </TextInput>
           </View>
+
           <Text style={styles.format}>
-            One header per meal, then one food per line: <Text style={styles.code}> 250g white rice </Text>,{" "}
-            <Text style={styles.code}> 250ml milk </Text> or <Text style={styles.code}> 8oz chicken </Text>. Matched
-            against your library, works offline.
+            Type or paste meals naturally. Use <Text style={styles.code}>✨ AI Parse</Text> for instant accurate
+            macros lookup, or <Text style={styles.code}>Match</Text> to link with your local offline product library.
           </Text>
-          <Pressable
-            onPress={() => setMode("preview")}
-            disabled={foods === 0}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: foods === 0 }}
-            style={[styles.btn, styles.primary, foods === 0 && styles.disabled]}
-          >
-            <Text style={styles.primaryLabel}>{foods === 1 ? "Preview 1 food" : `Preview ${foods} foods`}</Text>
-          </Pressable>
+
+          <View style={styles.actionsRow}>
+            <Pressable
+              onPress={() => setMode("preview")}
+              disabled={foods === 0 || aiLoading}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: foods === 0 || aiLoading }}
+              style={[
+                styles.btn,
+                styles.ghost,
+                styles.actionHalf,
+                (foods === 0 || aiLoading) && styles.disabled,
+              ]}
+            >
+              <Text style={styles.ghostLabel}>
+                {foods <= 1 ? "Offline Match" : `Match (${foods})`}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => void handleParseAi()}
+              disabled={aiLoading || !log.text.trim()}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: aiLoading || !log.text.trim(), busy: aiLoading }}
+              style={[
+                styles.btn,
+                styles.primary,
+                styles.actionHalf,
+                (aiLoading || !log.text.trim()) && styles.disabled,
+              ]}
+            >
+              {aiLoading ? (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator size="small" color={theme.colors.accentInk} />
+                  <Text style={styles.primaryLabel}>Analyzing...</Text>
+                </View>
+              ) : (
+                <View style={styles.loadingRow}>
+                  <SymbolView
+                    name={{ android: "auto_awesome", web: "auto_awesome" }}
+                    tintColor={theme.colors.accentInk}
+                    size={18}
+                  />
+                  <Text style={styles.primaryLabel}>✨ AI Parse</Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
         </ScrollView>
       </View>
     );
@@ -342,6 +559,31 @@ function makeStyles(theme: Theme) {
     chipPressed: { backgroundColor: colors.border },
     chipLabel: { color: colors.muted, fontSize: fontSize.sm },
     notice: { color: colors.muted, fontSize: fontSize.sm },
+    aiErrorCard: {
+      backgroundColor: colors.overSoft ?? colors.surface2,
+      padding: space[3],
+      borderRadius: radius.md,
+      gap: space[2],
+      borderWidth: 1,
+      borderColor: colors.over,
+    },
+    aiErrorText: {
+      color: colors.over,
+      fontSize: fontSize.sm,
+      fontWeight: "500",
+    },
+    aiSettingsBtn: {
+      alignSelf: "flex-start",
+      backgroundColor: colors.surface,
+      paddingHorizontal: space[3],
+      paddingVertical: 6,
+      borderRadius: radius.sm,
+    },
+    aiSettingsBtnText: {
+      fontSize: fontSize.xs,
+      fontWeight: "700",
+      color: colors.text,
+    },
     // The 3 dp accentSoft ring stands in for the prototype's box-shadow halo.
     halo: { flexGrow: 1, padding: 3, borderRadius: radius.md + 3, backgroundColor: colors.accentSoft },
     editor: {
@@ -363,6 +605,18 @@ function makeStyles(theme: Theme) {
     center: { alignItems: "center", gap: space[4] },
     message: { color: colors.muted, fontSize: fontSize.md, textAlign: "center" },
     error: { color: colors.over, fontSize: fontSize.sm },
+    actionsRow: {
+      flexDirection: "row",
+      gap: space[2],
+    },
+    actionHalf: {
+      flex: 1,
+    },
+    loadingRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: space[2],
+    },
     bottom: {
       gap: space[3],
       paddingTop: space[3],

@@ -1,46 +1,44 @@
-# Feature: Calorie stats
+# Feature: AI meal parse
 
-**From build-plan:** feature 21
+**From build-plan:** feature 18
 **Build attempt:** 1
 **Status:** verified
-**Branch:** `feature/calorie-stats`
+**Branch:** `feature/ai-meal-parse`
 
 ## Goal
 
-Step B3 in `1_docs/plan/10_body_progress.md` (§2, §7 Stories J4, J11–J13):
-1. **Weekly & 30-day averages (J11):** Calculate 7-day and 30-day average daily intake (calories, protein, carbs, fat) and count days on target.
-2. **Learned TDEE (J12):** Calculate estimated maintenance (TDEE). If >= 12 of the last 14 days have food logged and >= 4 weigh-ins exist, use learned TDEE from actual food intake and weight trend (`intake - (deltaWeightKg * 7700 / days)`) labeled "from your data"; otherwise fall back to formula TDEE labeled "estimate".
-3. **Suggested target (J13):** Suggest calorie and protein targets tailored to the user's goal (cut / maintain / bulk) and latest weight in g/kg. The suggestion never replaces the current goal without a confirmation tap.
-4. **30-day intake chart:** Visual representation of daily calories over the past 30 days against the goal line.
-5. **Integration:** Accessible from Progress tab, More tab, and Today summary.
+Epic D / Feature 18 in `1_docs/business_analyst/user_story/01_user_story.md` (§3, D1-D4):
+1. **Natural meal text input:** Paste natural meal logs (e.g., Breakfast: 220g taho; Lunch: 250g white rice, 110g boiled eggs, 250g boiled chicken breast, 50g okra).
+2. **AI Nutrition Lookup (Gemini / OpenAI):** Direct React Native fetch to Google Gemini 1.5 Flash (free tier) or OpenAI. The AI extracts meals, items, portion grams, calories, protein, carbs, and fat per item and per 100g.
+3. **Structured Preview & Review:** Review parsed foods grouped by meal with item macros and meal totals. Allow adjusting grams or values before saving.
+4. **1-Tap Save to SQLite:** Save entries to `food_log_entries`, update Today's calorie ring and macro progress, and automatically save new foods to `products` library for offline reuse.
+5. **AI Settings:** Configure Gemini API key (or OpenAI key) in Settings with a helpful guide link.
 
 ## In scope
 
-- **Pure logic in `calorieStatsCalc.ts`:**
-  - 7-day and 30-day daily calorie & macro averages.
-  - Learned TDEE vs Formula TDEE resolution and labeling.
-  - Suggested calorie and protein targets with explanation.
-  - Days-on-target adherence calculation.
-- **Repository & hooks (`modules/nutrition/`):**
-  - `calorieStatsRepo.ts`: loads 30-day food log daily totals, 14-day weight entries, body profile, and current goal.
-  - Hook `useCalorieStats.ts`: provides computed stats, chart data, and `acceptSuggestion` mutation.
+- **Settings integration (`settingsRepo.ts`):**
+  - Store `ai_api_key` and `ai_provider` (`"gemini" | "openai"`).
+  - UI in `apps/mobile/src/app/(tabs)/settings.tsx` with API key field, provider selector, and instructions for getting a free key from Google AI Studio.
+- **Pure AI parser service (`aiMealParser.ts`):**
+  - Prompt engineering with structured JSON schema for meals, foods, grams, and macros.
+  - Gemini 1.5 Flash & OpenAI compatible callers.
+  - Robust error handling (invalid key, rate limits, network offline, malformed responses).
 - **Screens & UI Integration:**
-  - `apps/mobile/src/app/calorie-stats.tsx`: dedicated Calorie Stats & TDEE screen with TDEE card, accept suggestion button, macro averages, days on target, and 30-day chart.
-  - `apps/mobile/src/app/(tabs)/progress.tsx`: Calorie Stats summary card with TDEE and 7-day average.
-  - `apps/mobile/src/app/(tabs)/more.tsx`: Navigation link to Calorie Stats.
+  - Enhance `apps/mobile/src/app/paste-log.tsx` with a prominent **"✨ Parse with AI"** action and AI review preview.
+  - Add "✨ AI Meal Parse" option to `QuickAddSheet.tsx`.
+  - Save parsed meals directly to local SQLite database (`foodLogRepo` + `productRepo`).
 
 ## Out of scope
 
-- Smartwatch automatic burned calorie sync (Could, J3).
-- Training/rest day alternating calorie cycling (Could, J3).
+- Backend proxy server (runs 100% in React Native).
+- Audio speech-to-text recording (text/paste first).
 
 ## Build steps
 
-- [x] 1. **Pure domain logic & calculations.** `apps/mobile/src/modules/nutrition/services/calorieStatsCalc.ts` with 7/30-day averages, learned TDEE formula, fallback logic, suggested targets, and days on target. Done when typecheck and lint pass.
-- [x] 2. **Repository & query hook.** `apps/mobile/src/modules/nutrition/repositories/calorieStatsRepo.ts` and `apps/mobile/src/modules/nutrition/hooks/useCalorieStats.ts` loading food log totals, weight history, profile, and current goal with goal update handler. Done when typecheck and lint pass.
-- [x] 3. **Calorie stats screen.** Screen `apps/mobile/src/app/calorie-stats.tsx` featuring TDEE badge & explanation, suggested target confirmation action, weekly/monthly macro breakdown, days on target adherence, and 30-day bar chart. Done when typecheck and lint pass.
-- [x] 4. **Progress & navigation integration.** Add Calorie Stats card to `(tabs)/progress.tsx` and menu entry to `(tabs)/more.tsx`. Done when typecheck, lint, and `npx expo-doctor` pass.
+- [x] 1. **Settings persistence & AI config UI.** Add `getAiApiKey`, `setAiApiKey`, `getAiProvider`, `setAiProvider` to `settingsRepo.ts`. Add AI Configuration Card in `apps/mobile/src/app/(tabs)/settings.tsx`. Done when typecheck and lint pass.
+- [x] 2. **AI Meal Parser service.** Create `apps/mobile/src/modules/nutrition/services/aiMealParser.ts` with direct Gemini Flash / OpenAI structured JSON fetch, validation, and schema parsing. Done when typecheck and lint pass.
+- [x] 3. **AI Parse integration & Preview UI.** Update `apps/mobile/src/app/paste-log.tsx` to add "✨ Parse with AI" button, loading state, AI preview review screen, and batch SQLite log + product save. Add AI quick-add button in `QuickAddSheet.tsx`. Done when typecheck, lint, and `npx expo-doctor` pass.
 
 ## Testing
 
-Evidence per step: `npx tsc --noEmit`, `npx expo lint`, and `npx expo-doctor` at the end.
+Evidence per step: `npx tsc --noEmit`, `npx expo lint`, and `npx expo-doctor` passed with zero errors and 21/21 checks.

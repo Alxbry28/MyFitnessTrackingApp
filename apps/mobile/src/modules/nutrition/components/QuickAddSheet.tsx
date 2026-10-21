@@ -106,7 +106,7 @@ export function QuickAddSheet({ day, onClose }: Props) {
             })}
           </View>
           <View style={styles.actions}>
-            <Action icon="barcode_scanner" label="Scan barcode" primary onPress={() => go(() => router.push({ pathname: "/scan", params: { meal } }))} styles={styles} theme={theme} />
+            <Action icon="barcode_scanner" label="Scan barcode" onPress={() => go(() => router.push({ pathname: "/scan", params: { meal } }))} styles={styles} theme={theme} />
             <Action
               icon="search"
               label="Search library"
@@ -116,9 +116,16 @@ export function QuickAddSheet({ day, onClose }: Props) {
             />
             <Action
               icon="edit_note"
-              label="Type or paste a meal list"
-              wide
+              label="Type or paste"
               onPress={() => go(() => router.push({ pathname: "/paste-log", params: { day } }))}
+              styles={styles}
+              theme={theme}
+            />
+            <Action
+              icon="auto_awesome"
+              label="✨ AI Meal Parse"
+              primary
+              onPress={() => go(() => router.push({ pathname: "/paste-log", params: { day, ai: "1" } }))}
               styles={styles}
               theme={theme}
             />

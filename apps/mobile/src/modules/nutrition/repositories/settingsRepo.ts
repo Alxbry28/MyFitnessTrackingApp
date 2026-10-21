@@ -64,3 +64,27 @@ export async function isSetupDone(db: SQLiteDatabase): Promise<boolean> {
 export async function markSetupDone(db: SQLiteDatabase): Promise<void> {
   await setValue(db, SETUP_DONE, true);
 }
+
+const AI_API_KEY = "ai_api_key";
+const AI_PROVIDER = "ai_provider";
+
+export type AiProvider = "gemini" | "openai";
+
+export async function getAiApiKey(db: SQLiteDatabase): Promise<string | null> {
+  const val = await getValue(db, AI_API_KEY);
+  return typeof val === "string" && val.trim() ? val.trim() : null;
+}
+
+export async function setAiApiKey(db: SQLiteDatabase, key: string | null): Promise<void> {
+  await setValue(db, AI_API_KEY, key ? key.trim() : null);
+}
+
+export async function getAiProvider(db: SQLiteDatabase): Promise<AiProvider> {
+  const val = await getValue(db, AI_PROVIDER);
+  return val === "openai" ? "openai" : "gemini";
+}
+
+export async function setAiProvider(db: SQLiteDatabase, provider: AiProvider): Promise<void> {
+  await setValue(db, AI_PROVIDER, provider);
+}
+
