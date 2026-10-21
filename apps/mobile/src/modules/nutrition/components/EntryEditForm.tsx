@@ -77,8 +77,8 @@ export function EntryEditForm({ entry, servingGrams, dayKcal, today, onSave, onD
       value: dayFromKey(day),
       mode: "date",
       maximumDate: dayFromKey(today),
-      onChange: (event, date) => {
-        if (event.type === "set" && date) setDay(dayKey(date));
+      onValueChange: (_event, date) => {
+        setDay(dayKey(date));
       },
     });
 
@@ -86,8 +86,8 @@ export function EntryEditForm({ entry, servingGrams, dayKcal, today, onSave, onD
     DateTimePickerAndroid.open({
       value: new Date(2000, 0, 1, Math.floor(minutes / 60), minutes % 60),
       mode: "time",
-      onChange: (event, date) => {
-        if (event.type === "set" && date) setMinutes(date.getHours() * 60 + date.getMinutes());
+      onValueChange: (_event, date) => {
+        setMinutes(date.getHours() * 60 + date.getMinutes());
       },
     });
 

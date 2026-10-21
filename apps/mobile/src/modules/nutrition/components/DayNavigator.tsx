@@ -29,8 +29,8 @@ export function DayNavigator({ day, today, onChange }: Props) {
       value: dayFromKey(day),
       mode: "date",
       maximumDate: dayFromKey(today),
-      onChange: (event, date) => {
-        if (event.type === "set" && date) onChange(dayKey(date));
+      onValueChange: (_event, date) => {
+        onChange(dayKey(date));
       },
     });
 

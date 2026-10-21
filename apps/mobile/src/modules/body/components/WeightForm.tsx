@@ -84,8 +84,8 @@ export function WeightForm({
       value: dayFromKey(day),
       mode: "date",
       maximumDate: dayFromKey(today),
-      onChange: (event, date) => {
-        if (event.type === "set" && date) setDay(dayKey(date));
+      onValueChange: (_event, date) => {
+        setDay(dayKey(date));
       },
     });
 

@@ -84,8 +84,8 @@ export function AboutStep({ units, onUnits, values, onChange, errors, today, onB
       value: values.birthDate ? dayFromKey(values.birthDate) : new Date(1995, 0, 1, 12),
       mode: "date",
       maximumDate: dayFromKey(today),
-      onChange: (event, date) => {
-        if (event.type === "set" && date) set({ birthDate: dayKey(date) });
+      onValueChange: (_event, date) => {
+        set({ birthDate: dayKey(date) });
       },
     });
   const imperial = units === "imperial";
