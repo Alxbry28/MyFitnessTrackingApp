@@ -8,12 +8,14 @@ import { WeightCard } from "@/modules/body/components/WeightCard";
 import { useMeasurements } from "@/modules/body/hooks/useMeasurements";
 import { useProgress } from "@/modules/body/hooks/useProgress";
 import { formatCm, formatDelta } from "@/modules/body/services/measurementCalc";
+import { useCalorieStats } from "@/modules/nutrition/hooks/useCalorieStats";
 
 export default function ProgressScreen() {
   const theme = useTheme();
   const styles = makeStyles(theme);
   const { state, retry } = useProgress();
   const measurements = useMeasurements();
+  const calorieStats = useCalorieStats();
 
   if (state.status === "loading") {
     return (
@@ -48,6 +50,56 @@ export default function ProgressScreen() {
         latest={state.latest}
         onEditProfile={() => router.push("/body-profile")}
       />
+
+      {/* Calorie Stats & TDEE Card */}
+      {calorieStats.data && (
+        <Pressable
+          onPress={() => router.push("/calorie-stats" as any)}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.measureCard, pressed && styles.pressed]}
+        >
+          <View style={styles.measureHeader}>
+            <View style={styles.measureTitleRow}>
+              <Text style={styles.measureTitle}>Calorie Stats & TDEE</Text>
+              <View
+                style={[
+                  styles.wthBadge,
+                  calorieStats.data.tdee.isLearned ? styles.wthHealthy : styles.wthWarning,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.wthBadgeText,
+                    calorieStats.data.tdee.isLearned ? styles.wthTextHealthy : styles.wthTextWarning,
+                  ]}
+                >
+                  {calorieStats.data.tdee.isLearned ? "LEARNED TDEE" : "ESTIMATED TDEE"}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.measureArrow}>›</Text>
+          </View>
+
+          <View style={styles.measureGrid}>
+            <View style={styles.measurePill}>
+              <Text style={styles.pillLabel}>Maintenance</Text>
+              <Text style={styles.pillValue}>{calorieStats.data.tdee.tdeeKcal.toLocaleString()} kcal</Text>
+              <Text style={styles.pillDelta}>{calorieStats.data.tdee.source}</Text>
+            </View>
+            <View style={styles.measurePill}>
+              <Text style={styles.pillLabel}>7-Day Intake</Text>
+              <Text style={styles.pillValue}>
+                {calorieStats.data.averages7Days.avgKcal > 0
+                  ? `${calorieStats.data.averages7Days.avgKcal.toLocaleString()} kcal`
+                  : "—"}
+              </Text>
+              <Text style={styles.pillDelta}>
+                Goal: {calorieStats.data.currentTargetKcal.toLocaleString()} kcal
+              </Text>
+            </View>
+          </View>
+        </Pressable>
+      )}
 
       {/* Body Measurements Card */}
       <Pressable

@@ -1,53 +1,45 @@
-# Feature: Body measurements
+# Feature: Calorie stats
 
-**From build-plan:** feature 20
+**From build-plan:** feature 21
 **Build attempt:** 1
 **Status:** verified
-**Branch:** `feature/body-measurements`
+**Branch:** `feature/calorie-stats`
 
 ## Goal
 
-Step B2 in `1_docs/plan/10_body_progress.md` (§5, §7 Stories J7–J10):
-1. **Tracked measurement sites (J7):** Select which body sites to measure (arms, chest, shoulders, waist, hips, thighs, calves, neck, forearms) with bilateral L/R support.
-2. **Measurement session logger (J8):** Fast form to log a measurement session with all chosen sites in cm and optional notes; skipped sites stay empty.
-3. **Change tracking (J9):** Calculate and display change since first session (start) and since previous session per site and muscle group.
-4. **Waist-to-height ratio (J6):** Calculate `waist cm / height cm` (< 0.5 healthy rule of thumb) and display alongside BMI and measurements.
-5. **Measurement consistency guide (J10):** In-app guidance on tape placement, breathing, flexed vs relaxed, and measurement frequency (every 2-4 weeks).
-6. **Integration:** Display summary and quick entry on Progress tab screen (`/progress`).
+Step B3 in `1_docs/plan/10_body_progress.md` (§2, §7 Stories J4, J11–J13):
+1. **Weekly & 30-day averages (J11):** Calculate 7-day and 30-day average daily intake (calories, protein, carbs, fat) and count days on target.
+2. **Learned TDEE (J12):** Calculate estimated maintenance (TDEE). If >= 12 of the last 14 days have food logged and >= 4 weigh-ins exist, use learned TDEE from actual food intake and weight trend (`intake - (deltaWeightKg * 7700 / days)`) labeled "from your data"; otherwise fall back to formula TDEE labeled "estimate".
+3. **Suggested target (J13):** Suggest calorie and protein targets tailored to the user's goal (cut / maintain / bulk) and latest weight in g/kg. The suggestion never replaces the current goal without a confirmation tap.
+4. **30-day intake chart:** Visual representation of daily calories over the past 30 days against the goal line.
+5. **Integration:** Accessible from Progress tab, More tab, and Today summary.
 
 ## In scope
 
-- **Migration 013 (`013_measurements.ts`):**
-  - Table `measurement_sessions`: `id`, `measured_on`, `note`, `created_at`, `updated_at`, `deleted_at`.
-  - Table `body_measurements`: `id`, `session_id`, `site`, `side`, `value_cm`, `state`, `created_at`, `updated_at`, `deleted_at`.
-  - Alter `body_profile`: add column `tracked_sites TEXT DEFAULT '["chest", "waist", "arm_left", "arm_right", "thigh_left", "thigh_right"]'`.
-- **Domain logic in `measurementCalc.ts`:**
-  - Standard site definitions, muscle groups, bilateral sides, flexed/relaxed states.
-  - Waist-to-height ratio and health classification.
-  - Changes calculation: current vs last, current vs baseline (first).
-  - Site consistency instructions.
-- **Repositories & hooks (`modules/body/`):**
-  - `measurementRepo.ts`: listSessions, getSession, getLatestSession, getFirstSession, saveSession, deleteSession, getTrackedSites, saveTrackedSites, getWaistToHeight.
-  - Hook `useMeasurements.ts`.
+- **Pure logic in `calorieStatsCalc.ts`:**
+  - 7-day and 30-day daily calorie & macro averages.
+  - Learned TDEE vs Formula TDEE resolution and labeling.
+  - Suggested calorie and protein targets with explanation.
+  - Days-on-target adherence calculation.
+- **Repository & hooks (`modules/nutrition/`):**
+  - `calorieStatsRepo.ts`: loads 30-day food log daily totals, 14-day weight entries, body profile, and current goal.
+  - Hook `useCalorieStats.ts`: provides computed stats, chart data, and `acceptSuggestion` mutation.
 - **Screens & UI Integration:**
-  - `apps/mobile/src/app/measurements/index.tsx`: Measurements hub with waist-to-height card, latest measurements with deltas, and session history timeline.
-  - `apps/mobile/src/app/measurements/log.tsx`: Session entry form for tracked sites with prefilled hints, note, and save.
-  - `apps/mobile/src/app/measurements/sites.tsx`: Customize tracked sites and view measurement guide.
-  - `apps/mobile/src/app/(tabs)/progress.tsx`: Body Measurements card with waist-to-height and latest measurements summary.
+  - `apps/mobile/src/app/calorie-stats.tsx`: dedicated Calorie Stats & TDEE screen with TDEE card, accept suggestion button, macro averages, days on target, and 30-day chart.
+  - `apps/mobile/src/app/(tabs)/progress.tsx`: Calorie Stats summary card with TDEE and 7-day average.
+  - `apps/mobile/src/app/(tabs)/more.tsx`: Navigation link to Calorie Stats.
 
 ## Out of scope
 
-- Progress photos (Could, J15).
-- US Navy body fat % formula (Could, J14).
-- Automatic smart tape Bluetooth integration.
+- Smartwatch automatic burned calorie sync (Could, J3).
+- Training/rest day alternating calorie cycling (Could, J3).
 
 ## Build steps
 
-- [x] 1. **Database migration & pure logic.** Migration `013_measurements.ts` creating `measurement_sessions`, `body_measurements`, and adding `tracked_sites` to `body_profile`. Types in `modules/body/types/measurements.ts`. Pure logic in `modules/body/services/measurementCalc.ts`. Done when migration registered, typecheck and lint pass.
-- [x] 2. **Measurement repository & hooks.** `measurementRepo.ts` with session persistence, history retrieval, change calculations, and tracked sites management. Hook `useMeasurements.ts`. Done when typecheck and lint pass.
-- [x] 3. **Measurements hub & history screen.** Screen `apps/mobile/src/app/measurements/index.tsx` showing waist-to-height card, latest site values with deltas (+/- cm since start and last), and past sessions list. Done when typecheck and lint pass.
-- [x] 4. **Session logger & site selector screens.** `apps/mobile/src/app/measurements/log.tsx` (entry form with inputs for tracked sites, hints, notes) and `apps/mobile/src/app/measurements/sites.tsx` (site customization toggles and measurement guide). Done when typecheck and lint pass.
-- [x] 5. **Progress tab integration.** Update `apps/mobile/src/app/(tabs)/progress.tsx` with a Body Measurements card linking to `/measurements` and showing waist-to-height and recent measurement deltas. Done when typecheck, lint, and `npx expo-doctor` pass.
+- [x] 1. **Pure domain logic & calculations.** `apps/mobile/src/modules/nutrition/services/calorieStatsCalc.ts` with 7/30-day averages, learned TDEE formula, fallback logic, suggested targets, and days on target. Done when typecheck and lint pass.
+- [x] 2. **Repository & query hook.** `apps/mobile/src/modules/nutrition/repositories/calorieStatsRepo.ts` and `apps/mobile/src/modules/nutrition/hooks/useCalorieStats.ts` loading food log totals, weight history, profile, and current goal with goal update handler. Done when typecheck and lint pass.
+- [x] 3. **Calorie stats screen.** Screen `apps/mobile/src/app/calorie-stats.tsx` featuring TDEE badge & explanation, suggested target confirmation action, weekly/monthly macro breakdown, days on target adherence, and 30-day bar chart. Done when typecheck and lint pass.
+- [x] 4. **Progress & navigation integration.** Add Calorie Stats card to `(tabs)/progress.tsx` and menu entry to `(tabs)/more.tsx`. Done when typecheck, lint, and `npx expo-doctor` pass.
 
 ## Testing
 

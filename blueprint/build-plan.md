@@ -38,7 +38,7 @@ After 13 (not a feature): build the Android APK with `eas build -p android --pro
 - [x] 12. **Recipes and cooked batches** - recipes, batches with settled cooked weight, per-100 g portions, cooking subtracts tracked items
 - [x] 19. **Workouts** - exercise library, start/active/complete session, sets with previous hints, history; exercise illustrations from `@bryllim/workout-guide` (ADR-20: art is CC BY-SA 4.0, credit Bryl Lim and Everkinetic, don't edit the art)
 - [x] 20. **Body measurements** - measurement sites, sessions, change since start, waist-to-height
-- [ ] 21. **Calorie stats** - weekly averages, 30-day chart, learned TDEE from logged food and weight trend (formula TDEE ships in 13), suggested target
+- [x] 21. **Calorie stats** - weekly averages, 30-day chart, learned TDEE from logged food and weight trend (formula TDEE ships in 13), suggested target
 
 ## v1.2 - .NET API and friends beta (November)
 

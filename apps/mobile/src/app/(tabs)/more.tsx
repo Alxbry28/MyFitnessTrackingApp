@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 
 const ITEMS = [
+  { name: "Calorie Stats", meta: "TDEE, weekly averages and adherence", href: "/calorie-stats" },
   { name: "Workouts", meta: "Track sessions, exercises and sets", href: "/workouts/index" },
   { name: "Recipes", meta: "Saved recipes and cooked batches", href: "/recipes/index" },
   { name: "Products", meta: "Your food library", href: "/products" },
