@@ -8,6 +8,7 @@ import * as m005 from "./005_text_log_matches";
 import * as m006 from "./006_body_profile_setup";
 import * as m007 from "./007_pantry";
 import * as m008 from "./008_drained";
+import * as m009 from "./009_pantry_product_unique";
 
 export type Migration = {
   version: number;
@@ -26,4 +27,5 @@ export const migrations: Migration[] = [
   { version: 6, name: "006_body_profile_setup", up: m006.up },
   { version: 7, name: "007_pantry", up: m007.up },
   { version: 8, name: "008_drained", up: m008.up },
+  { version: 9, name: "009_pantry_product_unique", up: m009.up },
 ];

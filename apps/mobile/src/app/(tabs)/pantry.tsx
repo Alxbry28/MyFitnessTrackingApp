@@ -21,7 +21,7 @@ const FILTERS: { value: Filter; label: string }[] = [
 const EMPTY_GROUP: Record<PantryGroup, string> = {
   cooked: "Cooked batches arrive with recipes.",
   groceries: "No groceries in your pantry yet.",
-  supplements: "Supplements arrive soon.",
+  supplements: "No supplements yet. Use + Add stock and choose Supplement.",
 };
 
 // Built to prototypes/pantry.html frame 1.

@@ -13,7 +13,7 @@ import { defaultMeal, MEAL_LABELS } from "@/modules/nutrition/services/mealTime"
 import { formatKcal } from "@/modules/nutrition/services/nutritionCalc";
 import { MEAL_TYPES, type MealType } from "@/modules/nutrition/types/foodLog";
 import type { Product } from "@/modules/nutrition/types/product";
-import { stockLeftText, unitsText } from "@/modules/pantry/services/pantryStock";
+import { stockLeftText, unitsText, weightText } from "@/modules/pantry/services/pantryStock";
 import type { PantryStock } from "@/modules/pantry/types/pantry";
 
 function isMealType(value: string | undefined): value is MealType {
@@ -31,6 +31,7 @@ function productMeta(product: Product, lastGrams: number | undefined): string {
 }
 
 function pantryMeta(item: PantryStock): string {
+  if (item.kind === "supplement") return `${weightText(item.gramsLeft)} left`;
   return `${unitsText(item.gramsLeft, item.netWeightG)} · ${stockLeftText(item)}`;
 }
 

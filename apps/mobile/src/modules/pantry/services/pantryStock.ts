@@ -57,6 +57,57 @@ export function unitsText(gramsLeft: number, netWeightG: number | null): string 
   return String(whole);
 }
 
+// Supplements are counted in grams: "1.24 kg" from 1,000 g up, whole grams below.
+export function weightText(grams: number): string {
+  if (grams >= 1000) return `${Math.round(grams / 10) / 100} kg`;
+  return `${formatKcal(grams)} g`;
+}
+
+const USE_WINDOW_DAYS = 14;
+const LOW_STOCK_DAYS = 7;
+const DAY_MS = 86_400_000;
+
+// Average grams a day over the last 14 days, or over the days the item has existed when it's
+// newer (story K3). Null until something was eaten in that window.
+export function dailyUseG(eatenRecentG: number, firstMovementAt: string | null, now: Date): number | null {
+  if (eatenRecentG <= 0 || firstMovementAt === null) return null;
+  const age = Math.ceil((now.getTime() - new Date(firstMovementAt).getTime()) / DAY_MS);
+  return eatenRecentG / Math.min(USE_WINDOW_DAYS, Math.max(1, age));
+}
+
+export function daysLeft(gramsLeft: number, dailyUse: number | null): number | null {
+  return dailyUse === null || dailyUse <= 0 ? null : Math.floor(Math.max(0, gramsLeft) / dailyUse);
+}
+
+// Story K4's warning level.
+export function lowStock(days: number | null): boolean {
+  return days !== null && days < LOW_STOCK_DAYS;
+}
+
+export function daysText(days: number): string {
+  return `~${days} ${days === 1 ? "day" : "days"}`;
+}
+
+export type SupplementView = {
+  dailyUse: number | null;
+  days: number | null;
+  low: boolean;
+  amount: string;
+  meta: string;
+};
+
+// What the list and item screen show for a supplement (pantry.html frame 1 Supplements rows).
+export function supplementView(item: PantryStock, now: Date): SupplementView {
+  const dailyUse = dailyUseG(item.eatenRecentG, item.firstMovementAt, now);
+  const days = daysLeft(item.gramsLeft, dailyUse);
+  const use =
+    dailyUse !== null
+      ? `${formatKcal(dailyUse)} g/day`
+      : item.servingGrams !== null && `${gramsToText(item.servingGrams)} g/scoop`;
+  const meta = [item.netWeightG !== null && `${weightText(item.netWeightG)} container`, use].filter(Boolean).join(" · ");
+  return { dailyUse, days, low: lowStock(days), amount: weightText(item.gramsLeft), meta };
+}
+
 export function gramsLeftText(gramsLeft: number): string {
   // formatKcal is the shared whole-number formatter with thousands separators.
   return `≈ ${formatKcal(gramsLeft)} g left`;
@@ -223,6 +274,12 @@ export function checkAdjust(text: string): AmountCheck {
 // Eating more than the ledger holds would hide a drift that Adjust should fix.
 export function fitsStock(grams: number, gramsLeft: number): boolean {
   return grams <= gramsLeft + EMPTY_GRAMS;
+}
+
+// A supplement defaults to one scoop (its serving grams) while that much is left.
+export function scoopDefault(gramsLeft: number, scoopG: number | null): number {
+  if (scoopG !== null && scoopG > 0 && fitsStock(scoopG, gramsLeft)) return scoopG;
+  return Math.round(Math.max(0, gramsLeft) * 100) / 100;
 }
 
 // The opened unit is eaten before a sealed one (story L5).

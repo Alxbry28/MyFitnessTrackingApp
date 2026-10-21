@@ -12,6 +12,7 @@ import { usePantryItem } from "@/modules/pantry/hooks/usePantryItem";
 import {
   changeText,
   changeTone,
+  daysText,
   expiryBadge,
   inStock,
   monthDay,
@@ -19,7 +20,9 @@ import {
   movementTime,
   netToDrained,
   openedGrams,
+  supplementView,
   unitSplit,
+  weightText,
 } from "@/modules/pantry/services/pantryStock";
 import type { PantryLocation, PantryStock, StockMovement } from "@/modules/pantry/types/pantry";
 
@@ -79,10 +82,14 @@ export default function PantryItemScreen() {
         </Text>
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: theme.space[4] + insets.bottom }]}>
-        <Hero item={item} styles={styles} />
+        {item.kind === "supplement" ? <SupplementHero item={item} styles={styles} /> : <Hero item={item} styles={styles} />}
 
         <View style={[styles.card, styles.fieldsCard]}>
-          <Field label="Net weight per unit" value={item.netWeightG === null ? "Not set" : `${gramsToText(item.netWeightG)} g`} styles={styles} />
+          {item.kind === "supplement" ? (
+            <SupplementFields item={item} styles={styles} />
+          ) : (
+            <Field label="Net weight per unit" value={item.netWeightG === null ? "Not set" : `${gramsToText(item.netWeightG)} g`} styles={styles} />
+          )}
           {item.drained && <Field label="Eaten drained" value="Yes · drained values" styles={styles} />}
           {item.drained && item.usualDrainedG !== null && (
             <Field
@@ -182,6 +189,47 @@ function Hero({ item, styles }: { item: PantryStock; styles: Styles }) {
       )}
       <Text style={[styles.note, styles.heroNote]}>{note}</Text>
     </View>
+  );
+}
+
+// Supplements are counted in grams with a days-left estimate (story K3), so no unit shapes.
+function SupplementHero({ item, styles }: { item: PantryStock; styles: Styles }) {
+  const view = supplementView(item, new Date());
+  const badge = expiryBadge(item.expiresAt, dayKey(new Date()));
+  const empty = !inStock(item);
+  const estimate =
+    view.days !== null && view.dailyUse !== null
+      ? `About ${view.days} ${view.days === 1 ? "day" : "days"} left at ${formatKcal(view.dailyUse)} g a day`
+      : "Log it to see how long it lasts.";
+  const note = empty ? "Used up. Restock from + Add stock." : [estimate, badge?.text].filter(Boolean).join(" · ");
+  const amount = empty ? "0 g" : view.amount;
+  return (
+    <View style={styles.card}>
+      <View style={styles.hero} accessible accessibilityLabel={`${amount} left`}>
+        <HeroPart value={amount} word="left" styles={styles} />
+        {view.low && view.days !== null && (
+          <View style={[styles.badge, styles.badgeOver]}>
+            <Text style={[styles.badgeText, styles.badgeTextOver]}>{`low · ${daysText(view.days)}`}</Text>
+          </View>
+        )}
+      </View>
+      <Text style={[styles.note, styles.heroNote]}>{note}</Text>
+    </View>
+  );
+}
+
+function SupplementFields({ item, styles }: { item: PantryStock; styles: Styles }) {
+  const { dailyUse } = supplementView(item, new Date());
+  return (
+    <>
+      <Field label="Container size" value={item.netWeightG === null ? "Not set" : weightText(item.netWeightG)} styles={styles} />
+      <Field label="Scoop" value={item.servingGrams === null ? "Not set" : `${gramsToText(item.servingGrams)} g`} styles={styles} />
+      <Field
+        label="Daily use"
+        value={dailyUse === null ? "Not enough history" : `${formatKcal(dailyUse)} g a day`}
+        styles={styles}
+      />
+    </>
   );
 }
 
@@ -295,6 +343,8 @@ function makeStyles(theme: Theme) {
     value: { color: colors.text, fontSize: fontSize.sm, flexShrink: 1, textAlign: "right" },
     badge: { paddingVertical: 1, paddingHorizontal: 6, borderRadius: radius.pill, backgroundColor: colors.estimateSoft },
     badgeText: { color: colors.estimate, fontSize: fontSize.xs, fontWeight: "600" },
+    badgeOver: { backgroundColor: colors.overSoft },
+    badgeTextOver: { color: colors.over },
     // .btn-row.three: 1.4fr 1fr 1fr.
     btnRow: { flexDirection: "row", gap: space[2] },
     btn: { flex: 1, height: tap, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: colors.surface2 },

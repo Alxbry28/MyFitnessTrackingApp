@@ -10,7 +10,7 @@ import { defaultMeal } from "@/modules/nutrition/services/mealTime";
 import { MEAL_TYPES, type EntryInput, type MealType } from "@/modules/nutrition/types/foodLog";
 import type { Product } from "@/modules/nutrition/types/product";
 import { useLogPortion, type PortionResult } from "@/modules/pantry/hooks/useLogPortion";
-import { netToDrained, openedGrams, portionDefault, unitSplit } from "@/modules/pantry/services/pantryStock";
+import { netToDrained, openedGrams, portionDefault, scoopDefault, unitSplit } from "@/modules/pantry/services/pantryStock";
 import type { PantryStock } from "@/modules/pantry/types/pantry";
 
 function isMealType(value: string | undefined): value is MealType {
@@ -71,7 +71,14 @@ export default function LogPortionScreen() {
     <AmountForm
       name={product.name}
       per100={loggedPer100(product)}
-      defaultValues={{ mealType, grams: gramsToText(portionDefault(item.gramsLeft, item.netWeightG)) }}
+      defaultValues={{
+        mealType,
+        grams: gramsToText(
+          item.kind === "supplement"
+            ? scoopDefault(item.gramsLeft, product.servingGrams)
+            : portionDefault(item.gramsLeft, item.netWeightG),
+        ),
+      }}
       submitLabel={(label) => `Add to ${label}`}
       onSubmit={(input) => save(item, product, input, false)}
       onSaved={onSaved}

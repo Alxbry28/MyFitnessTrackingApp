@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import { gramsToText } from "@/modules/nutrition/services/entrySchema";
 
-import { expiryBadge, stockLeftText, unitsText } from "../services/pantryStock";
+import { daysText, expiryBadge, stockLeftText, supplementView, unitsText } from "../services/pantryStock";
 import type { PantryStock } from "../types/pantry";
 
 type Props = { item: PantryStock; today: string; last: boolean };
@@ -12,12 +12,21 @@ type Props = { item: PantryStock; today: string; last: boolean };
 // A pantry.html .row; tapping it opens the item (frame 2).
 export function PantryRow({ item, today, last }: Props) {
   const styles = makeStyles(useTheme());
-  const badge = expiryBadge(item.expiresAt, today);
-  const amount = unitsText(item.gramsLeft, item.netWeightG);
-  const grams = stockLeftText(item);
-  const meta = [item.netWeightG !== null && `${gramsToText(item.netWeightG)} g each`, item.drained && "eaten drained"]
-    .filter(Boolean)
-    .join(" · ");
+  const supplement = item.kind === "supplement" ? supplementView(item, new Date()) : null;
+  const low = supplement?.low && supplement.days !== null ? `low · ${daysText(supplement.days)}` : null;
+  const badge = low ? { text: low, tone: "over" as const } : expiryBadge(item.expiresAt, today);
+  const amount = supplement ? supplement.amount : unitsText(item.gramsLeft, item.netWeightG);
+  // A low supplement says its days in the badge instead (frame 1's Wake row).
+  const grams = supplement
+    ? supplement.days !== null && !supplement.low
+      ? daysText(supplement.days)
+      : null
+    : stockLeftText(item);
+  const meta = supplement
+    ? supplement.meta
+    : [item.netWeightG !== null && `${gramsToText(item.netWeightG)} g each`, item.drained && "eaten drained"]
+        .filter(Boolean)
+        .join(" · ");
 
   return (
     <Pressable
@@ -43,7 +52,7 @@ export function PantryRow({ item, today, last }: Props) {
       </View>
       <View>
         <Text style={styles.amt}>{amount}</Text>
-        <Text style={styles.amtSmall}>{grams}</Text>
+        {grams !== null && <Text style={styles.amtSmall}>{grams}</Text>}
       </View>
     </Pressable>
   );
