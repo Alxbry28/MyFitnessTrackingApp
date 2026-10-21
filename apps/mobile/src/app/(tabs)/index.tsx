@@ -1,6 +1,7 @@
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
 import { SymbolView } from "expo-symbols";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -12,17 +13,34 @@ import { TodaySummary } from "@/modules/nutrition/components/TodaySummary";
 import { useCalorieGoal } from "@/modules/nutrition/hooks/useCalorieGoal";
 import { useDayLog } from "@/modules/nutrition/hooks/useDayLog";
 import { dayKey, formatDayShort } from "@/modules/nutrition/services/mealTime";
+import { workoutRepo } from "@/modules/workouts/repositories/workoutRepo";
+import { calculateSessionStats, formatKg } from "@/modules/workouts/services/workoutCalc";
+import type { WorkoutSession } from "@/modules/workouts/types/workouts";
 
 // Built to prototypes/today.html frame 1.
 export default function TodayScreen() {
   const theme = useTheme();
   const styles = makeStyles(theme);
   const insets = useSafeAreaInsets();
+  const db = useSQLiteContext();
   const today = dayKey(new Date());
   const log = useDayLog(today);
   const goal = useCalorieGoal();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [todayWorkout, setTodayWorkout] = useState<WorkoutSession | null>(null);
   useFirstRun();
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      void workoutRepo.getTodaySession(db).then((res) => {
+        if (active) setTodayWorkout(res);
+      });
+      return () => {
+        active = false;
+      };
+    }, [db]),
+  );
 
   let body;
   if (log.status === "loading" || goal.state.status === "loading") {
@@ -51,6 +69,48 @@ export default function TodayScreen() {
     body = (
       <ScrollView contentContainerStyle={styles.content}>
         <TodaySummary totals={log.totals} goal={goal.state.goal} onSetGoal={() => router.navigate("/settings")} />
+        {todayWorkout ? (
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: "/workouts/[id]" as any,
+                params: { id: todayWorkout.id },
+              })
+            }
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.workoutCard,
+              todayWorkout.endedAt ? styles.workoutCardDone : styles.workoutCardActive,
+              pressed && styles.pressed,
+            ]}
+          >
+            <View style={styles.workoutHeader}>
+              <View style={styles.workoutBadgeRow}>
+                <View
+                  style={[
+                    styles.workoutDot,
+                    { backgroundColor: todayWorkout.endedAt ? theme.colors.muted : theme.colors.accent },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.workoutStatus,
+                    { color: todayWorkout.endedAt ? theme.colors.muted : theme.colors.accent },
+                  ]}
+                >
+                  {todayWorkout.endedAt ? "WORKOUT COMPLETED" : "WORKOUT IN PROGRESS"}
+                </Text>
+              </View>
+              <Text style={styles.workoutArrow}>›</Text>
+            </View>
+            <Text style={styles.workoutName}>{todayWorkout.name}</Text>
+            <Text style={styles.workoutMeta}>
+              {todayWorkout.endedAt
+                ? `${todayWorkout.exercises?.length ?? 0} exercises · ${formatKg(calculateSessionStats(todayWorkout).totalVolumeKg)} lifted`
+                : "Tap to resume and log sets"}
+            </Text>
+          </Pressable>
+        ) : null}
         {log.groups.map((group) => (
           <MealCard
             key={group.mealType}
@@ -126,5 +186,53 @@ function makeStyles(theme: Theme) {
     },
     fabPressed: { opacity: 0.85 },
     fabLabel: { color: colors.accentInk, fontSize: fontSize.md, fontWeight: "700" },
+    workoutCard: {
+      borderRadius: radius.md,
+      padding: space[3],
+      gap: 4,
+      backgroundColor: colors.surface,
+    },
+    workoutCardActive: {
+      borderWidth: 1.5,
+      borderColor: colors.accent,
+    },
+    workoutCardDone: {
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    pressed: { opacity: 0.75 },
+    workoutHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    workoutBadgeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    workoutDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+    workoutStatus: {
+      fontSize: 10,
+      fontWeight: "800",
+      letterSpacing: 0.6,
+    },
+    workoutArrow: {
+      fontSize: 16,
+      color: colors.faint,
+    },
+    workoutName: {
+      fontSize: fontSize.md,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    workoutMeta: {
+      fontSize: fontSize.xs,
+      color: colors.muted,
+    },
   });
 }

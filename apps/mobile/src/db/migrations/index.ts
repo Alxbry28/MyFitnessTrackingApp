@@ -11,6 +11,7 @@ import * as m008 from "./008_drained";
 import * as m009 from "./009_pantry_product_unique";
 import * as m010 from "./010_supplement_units";
 import * as m011 from "./011_recipes_and_batches";
+import * as m012 from "./012_workouts";
 
 export type Migration = {
   version: number;
@@ -32,4 +33,5 @@ export const migrations: Migration[] = [
   { version: 9, name: "009_pantry_product_unique", up: m009.up },
   { version: 10, name: "010_supplement_units", up: m010.up },
   { version: 11, name: "011_recipes_and_batches", up: m011.up },
+  { version: 12, name: "012_workouts", up: m012.up },
 ];
