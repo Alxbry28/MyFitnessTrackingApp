@@ -10,12 +10,14 @@ import { normalizeBarcode } from "@/modules/nutrition/services/barcode";
 
 const PAUSE_AFTER_READ_MS = 2000;
 
-function enterManually() {
-  router.replace({ pathname: "/product/[id]", params: { id: "new", then: "log" } });
+// for=pantry comes from the Pantry tab's Add stock: every path ends on the add-stock screen.
+function enterManually(pantry: boolean) {
+  router.replace({ pathname: "/product/[id]", params: { id: "new", then: pantry ? "pantry" : "log" } });
 }
 
 export default function ScanScreen() {
-  const { meal } = useLocalSearchParams<{ meal?: string }>();
+  const { meal, for: target } = useLocalSearchParams<{ meal?: string; for?: string }>();
+  const pantry = target === "pantry";
   const theme = useTheme();
   const styles = makeStyles(theme);
   const db = useSQLiteContext();
@@ -34,7 +36,11 @@ export default function ScanScreen() {
     setError(null);
     try {
       const product = await productRepo.findByBarcode(db, barcode);
-      if (product) {
+      if (product && pantry) {
+        router.replace({ pathname: "/pantry/add/[productId]", params: { productId: product.id } });
+      } else if (pantry) {
+        router.replace({ pathname: "/lookup/[barcode]", params: { barcode, for: "pantry" } });
+      } else if (product) {
         router.replace({
           pathname: "/add/[productId]",
           params: meal ? { productId: product.id, meal } : { productId: product.id },
@@ -52,10 +58,14 @@ export default function ScanScreen() {
 
   const fallbacks = (
     <View style={styles.actions}>
-      <Pressable onPress={() => router.replace("/add")} accessibilityRole="button" style={styles.secondary}>
+      <Pressable
+        onPress={() => router.replace(pantry ? { pathname: "/add", params: { for: "pantry" } } : "/add")}
+        accessibilityRole="button"
+        style={styles.secondary}
+      >
         <Text style={styles.secondaryLabel}>Search products</Text>
       </Pressable>
-      <Pressable onPress={enterManually} accessibilityRole="button" style={styles.secondary}>
+      <Pressable onPress={() => enterManually(pantry)} accessibilityRole="button" style={styles.secondary}>
         <Text style={styles.secondaryLabel}>Enter manually</Text>
       </Pressable>
     </View>
@@ -116,7 +126,7 @@ export default function ScanScreen() {
           >
             <Text style={styles.secondaryLabel}>{torch ? "Torch off" : "Torch on"}</Text>
           </Pressable>
-          <Pressable onPress={enterManually} accessibilityRole="button" style={styles.secondary}>
+          <Pressable onPress={() => enterManually(pantry)} accessibilityRole="button" style={styles.secondary}>
             <Text style={styles.secondaryLabel}>Enter manually</Text>
           </Pressable>
         </View>

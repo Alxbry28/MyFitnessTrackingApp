@@ -8,17 +8,20 @@ import { useProducts } from "@/modules/nutrition/hooks/useProducts";
 import type { Product } from "@/modules/nutrition/types/product";
 
 export default function PickProductScreen() {
-  const { meal, day } = useLocalSearchParams<{ meal?: string; day?: string }>();
+  const { meal, day, for: target } = useLocalSearchParams<{ meal?: string; day?: string; for?: string }>();
   const theme = useTheme();
   const styles = makeStyles(theme);
   const { query, setQuery, products, total, status, retry } = useProducts();
 
   // meal and day pass through from the Log tab; the add screen validates them.
+  // for=pantry comes from the scanner's Search products while adding stock.
   const pick = (product: Product) =>
-    router.push({
-      pathname: "/add/[productId]",
-      params: { productId: product.id, ...(meal ? { meal } : {}), ...(day ? { day } : {}) },
-    });
+    target === "pantry"
+      ? router.push({ pathname: "/pantry/add/[productId]", params: { productId: product.id } })
+      : router.push({
+          pathname: "/add/[productId]",
+          params: { productId: product.id, ...(meal ? { meal } : {}), ...(day ? { day } : {}) },
+        });
 
   let body: ReactNode;
   if (status === "loading") {

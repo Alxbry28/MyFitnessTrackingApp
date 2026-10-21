@@ -19,18 +19,16 @@ export default function TabLayout() {
         headerTintColor: colors.text,
         headerShadowVisible: false,
         sceneStyle: { backgroundColor: colors.bg },
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
         tabBarActiveTintColor: colors.accentText,
         tabBarInactiveTintColor: colors.muted,
-        tabBarLabelStyle: { fontSize: fontSize.sm, fontWeight: "600" },
+        // pantry.html .tabbar: 64 dp, xs labels; the active one is accentText 600.
+        tabBarStyle: { height: 64, backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1 },
+        tabBarLabelStyle: { fontSize: fontSize.xs, fontWeight: "600" },
       }}
     >
       <Tabs.Screen name="index" options={{ title: "Today", headerShown: false, tabBarIcon: tabIcon("schedule") }} />
       <Tabs.Screen name="log" options={{ title: "Log", headerShown: false, tabBarIcon: tabIcon("list") }} />
-      <Tabs.Screen
-        name="products"
-        options={{ title: "Products", tabBarIcon: tabIcon("deployed_code") }}
-      />
+      <Tabs.Screen name="pantry" options={{ title: "Pantry", headerShown: false, tabBarIcon: tabIcon("kitchen") }} />
       <Tabs.Screen
         name="progress"
         options={{
@@ -47,7 +45,10 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen name="settings" options={{ title: "Settings", tabBarIcon: tabIcon("settings") }} />
+      <Tabs.Screen name="more" options={{ title: "More", tabBarIcon: tabIcon("more_horiz") }} />
+      {/* prototypes/pantry.html moves these under More; href: null keeps them as tabs-area screens off the bar. */}
+      <Tabs.Screen name="products" options={{ title: "Products", href: null }} />
+      <Tabs.Screen name="settings" options={{ title: "Settings", href: null }} />
     </Tabs>
   );
 }

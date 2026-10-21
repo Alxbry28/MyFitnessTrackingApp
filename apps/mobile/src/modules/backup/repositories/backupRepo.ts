@@ -1,9 +1,12 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
-// Fixed list: table names are never built from input. Order matches DATABASE.md §6.
+// Fixed list: table names are never built from input. Parents come before the tables that
+// reference them, because restore inserts in this order and deletes in reverse.
 export const BACKUP_TABLES = [
   "products",
+  "pantry_items",
   "food_log_entries",
+  "stock_movements",
   "settings",
   "body_profile",
   "import_runs",

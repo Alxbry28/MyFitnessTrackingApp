@@ -8,6 +8,7 @@ import { newProductForm, productToForm } from "@/modules/nutrition/services/prod
 
 export default function ProductScreen() {
   // barcode and then=log come from the scanner: prefill, then continue to logging.
+  // then=pantry comes from adding stock: continue to "How many did you buy?".
   const { id, barcode, then } = useLocalSearchParams<{ id: string; barcode?: string; then?: string }>();
   const theme = useTheme();
   const styles = makeStyles(theme);
@@ -48,7 +49,9 @@ export default function ProductScreen() {
         onSaved={(savedId) =>
           then === "log"
             ? router.replace({ pathname: "/add/[productId]", params: { productId: savedId } })
-            : router.back()
+            : then === "pantry"
+              ? router.replace({ pathname: "/pantry/add/[productId]", params: { productId: savedId, fresh: "1" } })
+              : router.back()
         }
       />
     );

@@ -1,6 +1,6 @@
 # MyFitnessTrackingApp - Project Overview
 
-<!-- blueprint:source-hash b09f9a14d69ce64fb0395fd28f1a4d605abdaa5355d916d3165b43970afe2c60 -->
+<!-- blueprint:source-hash caab73f92397377ae89797a8817e0bb69dd1609e781b6eca129a8650dfa030aa -->
 
 > A personal, local-first Android fitness tracker: scan a barcode, save your own
 > product once, log meals in a few taps. Later it adds pantry, body progress,
@@ -60,6 +60,9 @@ scale, region) are settings, never constants.
 After 13, build the Android APK (`eas build -p android --profile preview`) and use it daily.
 
 8. **Pantry and groceries** - stock ledger; add after scan; eat from pantry; remove with reason; log edits restore stock.
+    8a. **Pantry list and adding stock** - tables, five-tab bar with More, list (frame 1), "How many did you buy?" (frame 3).
+    8b. **Pantry item detail and removing stock** - history, log a portion, remove and adjust (frames 2, 4).
+    8c. **Pantry in food search and log edits** - In my pantry on Add food; log edits restore stock.
 9. **Canned and opened items** - drained values and weight; opened can with grams left.
 10. **Supplements** - pantry items counted in grams per scoop.
 12. **Recipes and cooked batches** - recipes; batches with settled cooked weight; per-100 g portions.

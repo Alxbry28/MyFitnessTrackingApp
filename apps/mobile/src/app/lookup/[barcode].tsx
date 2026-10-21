@@ -15,7 +15,9 @@ const NOTES = {
 } as const;
 
 export default function LookupScreen() {
-  const { barcode } = useLocalSearchParams<{ barcode: string }>();
+  const { barcode, for: target } = useLocalSearchParams<{ barcode: string; for?: string }>();
+  // for=pantry: after saving, record the buy instead of logging an amount.
+  const pantry = target === "pantry";
   const theme = useTheme();
   const styles = makeStyles(theme);
   const db = useSQLiteContext();
@@ -28,7 +30,7 @@ export default function LookupScreen() {
         <Text style={styles.message}>Looking up on Open Food Facts...</Text>
         <Pressable
           onPress={() =>
-            router.replace({ pathname: "/product/[id]", params: { id: "new", barcode, then: "log" } })
+            router.replace({ pathname: "/product/[id]", params: { id: "new", barcode, then: pantry ? "pantry" : "log" } })
           }
           accessibilityRole="button"
           style={styles.button}
@@ -53,9 +55,13 @@ export default function LookupScreen() {
       </Text>
       <ProductForm
         defaultValues={draft}
-        submitLabel="Save and add amount"
+        submitLabel={pantry ? "Save and add to pantry" : "Save and add amount"}
         onSubmit={(input) => productRepo.create(db, input, found ? "open_food_facts" : "manual")}
-        onSaved={(id) => router.replace({ pathname: "/add/[productId]", params: { productId: id } })}
+        onSaved={(id) =>
+          pantry
+            ? router.replace({ pathname: "/pantry/add/[productId]", params: { productId: id, fresh: "1" } })
+            : router.replace({ pathname: "/add/[productId]", params: { productId: id } })
+        }
       />
     </View>
   );
