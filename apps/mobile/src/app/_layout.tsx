@@ -38,6 +38,8 @@ export default function RootLayout() {
               <Stack.Screen name="restore" options={{ title: "Restore backup" }} />
               <Stack.Screen name="setup" options={{ title: "Set up", headerShown: false }} />
               <Stack.Screen name="pantry/add/[productId]" options={{ title: "Add to pantry" }} />
+              <Stack.Screen name="pantry/[id]" options={{ title: "Pantry item", headerShown: false }} />
+              <Stack.Screen name="pantry/portion/[itemId]" options={{ title: "Log a portion" }} />
             </Stack>
           </SQLiteProvider>
         </Suspense>

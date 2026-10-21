@@ -222,3 +222,27 @@
 **Why it matters:** The fix replaced the 36 dp segmented control with 32 dp chips (`height: 32`) and no `hitSlop`, so each Location radio is a 32 dp tall tap target, under the 48 dp `tap` size the rest of this screen uses (stepper, buttons). The visual size follows pantry.html `.chip` and the fix spec, and the Pantry list filter chips already use the same pattern, so this is a small accessibility gap rather than a spec violation.
 **Suggested fix:** Keep the 32 dp look and add `hitSlop={{ top: 8, bottom: 8 }}` to the Location chip `Pressable` (and the list filter chips if wanted). No new dependency; no current requirement is lost.
 **Resolution:**
+
+### F-48 [P3] open - Closing the Remove/Adjust sheet during a save hides a failed write
+
+**File:** apps/mobile/src/modules/pantry/components/StockChangeSheet.tsx:160 (Cancel; also the scrim at :70 and `onRequestClose` at :68)
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** Cancel, the scrim and Back stay active while `saving` is true. If the user closes the sheet while `removeStock` or `adjustStock` is in flight and the transaction then fails, the catch at :60 sets an error on an unmounted sheet, so nothing tells the user the change was not saved. The coding standards say a database write error must never be swallowed silently. The window is short (one local transaction), so this is a small reachable gap, not a data-loss path: a failed transaction writes nothing.
+**Suggested fix:** While `saving` is true, make `onClose` a no-op for Cancel, the scrim and `onRequestClose` (or disable Cancel), so the sheet stays open until the save resolves and can show "Couldn't save. Nothing was changed." No current requirement is lost.
+**Resolution:**
+
+### F-49 [P2] unverified - The keyboard may cover the Remove/Adjust sheet's amount field and buttons
+
+**File:** apps/mobile/src/modules/pantry/components/StockChangeSheet.tsx:127 (`autoFocus` input inside the transparent `Modal` at :68)
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** This is the first bottom sheet in the app with a text input, and it autofocuses, so the keyboard opens at once. The sheet is a bottom-anchored view (`justifyContent: "flex-end"`) in a transparent `Modal` with no `KeyboardAvoidingView` or keyboard handling, and Expo SDK 57 runs Android edge to edge. The amount row sits about 170 dp above the bottom edge, under a typical 280-330 dp keyboard, so the input, the result box and the primary button may all be hidden while typing. The other `Modal` sheets (`QuickAddSheet`, `DeleteEntrySheet`) have no inputs, so there is no tested precedent. Not confirmed: there was no on-device run (see F-15 for a similar keyboard lead).
+**Suggested fix:** Check on the phone first. If the sheet is covered, wrap the sheet in React Native's built-in `KeyboardAvoidingView` (`behavior="height"` or `"padding"`) inside the Modal. No new dependency, and no current requirement is lost.
+**Resolution:**
+
+### F-50 [P3] open - Location labels and month names are copied again
+
+**File:** apps/mobile/src/app/pantry/[id].tsx:23 (`LOCATION_LABELS`) and apps/mobile/src/modules/pantry/services/pantryStock.ts:117 (`MONTHS`)
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** `LOCATION_LABELS` is an exact copy of the one in apps/mobile/src/app/pantry/add/[productId].tsx:15, and `MONTHS` is the fourth copy of the short month names (mealTime.ts:20, restoreFile.ts:39, SetupSteps.tsx:25). If a location is renamed or added, the two pantry screens can drift apart.
+**Suggested fix:** Move `LOCATION_LABELS` into `pantryStock.ts` (or `types/pantry.ts`) and import it in both pantry screens. For `movementTime`, reuse the month array exported from `mealTime.ts` instead of adding another copy. No current requirement is lost.
+**Resolution:**

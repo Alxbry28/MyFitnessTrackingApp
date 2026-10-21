@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from "react-native";
+import { router } from "expo-router";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import { gramsToText } from "@/modules/nutrition/services/entrySchema";
@@ -8,7 +9,7 @@ import type { PantryStock } from "../types/pantry";
 
 type Props = { item: PantryStock; today: string; last: boolean };
 
-// A pantry.html .row. Not pressable yet: the item detail screen arrives with 8b.
+// A pantry.html .row; tapping it opens the item (frame 2).
 export function PantryRow({ item, today, last }: Props) {
   const styles = makeStyles(useTheme());
   const badge = expiryBadge(item.expiresAt, today);
@@ -16,9 +17,10 @@ export function PantryRow({ item, today, last }: Props) {
   const grams = gramsLeftText(item.gramsLeft);
 
   return (
-    <View
-      style={[styles.row, !last && styles.divided]}
-      accessible
+    <Pressable
+      onPress={() => router.push({ pathname: "/pantry/[id]", params: { id: item.id } })}
+      style={({ pressed }) => [styles.row, !last && styles.divided, pressed && styles.pressed]}
+      accessibilityRole="button"
       accessibilityLabel={[item.name, amount, grams, badge?.text].filter(Boolean).join(", ")}
     >
       <View style={styles.info}>
@@ -40,7 +42,7 @@ export function PantryRow({ item, today, last }: Props) {
         <Text style={styles.amt}>{amount}</Text>
         <Text style={styles.amtSmall}>{grams}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -49,6 +51,7 @@ function makeStyles(theme: Theme) {
   return StyleSheet.create({
     row: { flexDirection: "row", alignItems: "center", gap: space[3], minHeight: 56, paddingVertical: space[2] },
     divided: { borderBottomWidth: 1, borderBottomColor: colors.border },
+    pressed: { backgroundColor: colors.surface2 },
     info: { flex: 1, minWidth: 0 },
     name: { color: colors.text, fontSize: fontSize.md, fontWeight: "500" },
     meta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space[1], marginTop: 2 },
