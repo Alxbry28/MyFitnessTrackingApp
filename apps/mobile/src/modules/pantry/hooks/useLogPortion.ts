@@ -2,7 +2,7 @@ import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useEffect, useState } from "react";
 
 import * as productRepo from "@/modules/nutrition/repositories/productRepo";
-import { dayKey } from "@/modules/nutrition/services/mealTime";
+import { logDay } from "@/modules/nutrition/services/mealTime";
 import { formatKcal } from "@/modules/nutrition/services/nutritionCalc";
 import type { EntryInput } from "@/modules/nutrition/types/foodLog";
 import type { Product } from "@/modules/nutrition/types/product";
@@ -24,7 +24,7 @@ function notEnough(gramsLeft: number): PortionResult {
 }
 
 // Loads the pantry item and its product, whose per-100 g values the log entry copies.
-export function useLogPortion(itemId: string) {
+export function useLogPortion(itemId: string, day?: string) {
   const db = useSQLiteContext();
   const [state, setState] = useState<State>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -55,7 +55,7 @@ export function useLogPortion(itemId: string) {
     async (item: PantryStock, product: Product, input: EntryInput): Promise<PortionResult> => {
       if (!fitsStock(input.grams, item.gramsLeft)) return notEnough(item.gramsLeft);
       try {
-        await pantryRepo.logPortion(db, { itemId: item.id, product, ...input, day: dayKey(new Date()) });
+        await pantryRepo.logPortion(db, { itemId: item.id, product, ...input, day: logDay(day) });
       } catch (e) {
         // The ledger can have changed since the screen loaded; report the stored amount.
         if (e instanceof pantryRepo.NotEnoughStockError) return notEnough(e.gramsLeft);
@@ -63,7 +63,7 @@ export function useLogPortion(itemId: string) {
       }
       return { ok: true };
     },
-    [db],
+    [db, day],
   );
 
   return { state, retry, save };

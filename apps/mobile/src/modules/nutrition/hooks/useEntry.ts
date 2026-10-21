@@ -5,6 +5,7 @@ import * as foodLogRepo from "../repositories/foodLogRepo";
 import * as productRepo from "../repositories/productRepo";
 import { loggedAtFor, type EntryDraft } from "../services/entryEdit";
 import { logDay } from "../services/mealTime";
+import { formatKcal } from "../services/nutritionCalc";
 import type { FoodLogEntry } from "../types/foodLog";
 
 type State =
@@ -60,7 +61,11 @@ export function useEntry(id: string) {
         day,
         loggedAt: loggedAtFor(day, draft.minutes),
       });
-      return result.ok ? { ok: true } : { ok: false, message: "This entry was deleted, so it couldn't be saved." };
+      if (result.ok) return { ok: true };
+      if (result.error === "not_enough") {
+        return { ok: false, message: `Only ${formatKcal(result.gramsLeft)} g left in your pantry.` };
+      }
+      return { ok: false, message: "This entry was deleted, so it couldn't be saved." };
     },
     [db, id],
   );

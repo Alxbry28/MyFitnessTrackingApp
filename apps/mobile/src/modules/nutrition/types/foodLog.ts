@@ -27,6 +27,8 @@ export type FoodLogEntry = Per100g &
     productId: string | null;
     productName: string;
     grams: number;
+    // Set when the entry was eaten from the pantry; its "eaten" movement follows edits.
+    pantryItemId: string | null;
     createdAt: string;
     updatedAt: string;
   };

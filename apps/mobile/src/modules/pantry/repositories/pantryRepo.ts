@@ -176,7 +176,7 @@ export class ItemGoneError extends Error {
 }
 
 // Read inside the transaction so a change is checked against the stored ledger, not a stale screen.
-async function gramsLeftIn(txn: SQLiteDatabase, itemId: string): Promise<number> {
+export async function gramsLeftIn(txn: SQLiteDatabase, itemId: string): Promise<number> {
   const row = await txn.getFirstAsync<{ grams_left: number | null }>(
     `SELECT (SELECT SUM(m.delta_grams) FROM stock_movements m
        WHERE m.pantry_item_id = i.id AND m.deleted_at IS NULL) AS grams_left
@@ -210,10 +210,19 @@ async function insertMovement(
   );
 }
 
-async function checkForeignKeys(txn: SQLiteDatabase): Promise<void> {
+export async function checkForeignKeys(txn: SQLiteDatabase): Promise<void> {
   // The exclusive transaction runs on its own connection, where foreign keys are off.
   const broken = await txn.getAllAsync("PRAGMA foreign_key_check");
   if (broken.length > 0) throw new Error("Pantry rows reference missing rows");
+}
+
+// The live "eaten" movement a pantry log entry created, if any.
+export async function eatenMovementFor(txn: SQLiteDatabase, entryId: string): Promise<string | null> {
+  const row = await txn.getFirstAsync<{ id: string }>(
+    "SELECT id FROM stock_movements WHERE food_log_entry_id = ? AND reason = 'eaten' AND deleted_at IS NULL",
+    entryId,
+  );
+  return row?.id ?? null;
 }
 
 export type LogPortionInput = { itemId: string; product: Product; mealType: MealType; grams: number; day: string };

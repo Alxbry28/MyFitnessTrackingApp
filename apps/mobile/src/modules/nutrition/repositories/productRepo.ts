@@ -217,3 +217,14 @@ export async function update(
   }
   return changes === 0 ? { ok: false, error: "not_found" } : { ok: true, id };
 }
+
+// Grams of each product's newest live log entry, for "last 250 g" on Add food.
+export async function lastGramsByProduct(db: SQLiteDatabase): Promise<Map<string, number>> {
+  const rows = await db.getAllAsync<{ product_id: string; grams: number }>(
+    `SELECT product_id, grams FROM food_log_entries e
+     WHERE deleted_at IS NULL AND product_id IS NOT NULL
+       AND logged_at = (SELECT MAX(logged_at) FROM food_log_entries
+                        WHERE product_id = e.product_id AND deleted_at IS NULL)`,
+  );
+  return new Map(rows.map((r) => [r.product_id, r.grams]));
+}

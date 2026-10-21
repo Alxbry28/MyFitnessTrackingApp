@@ -60,6 +60,7 @@ export function DeleteEntrySheet({ entry, dayLabel, totalAfter, onDelete, onDele
           </View>
           <Text style={styles.p}>
             Your day total drops to {formatKcal(Math.max(0, totalAfter))} kcal. The product stays in your library.
+            {entry.pantryItemId ? ` Its ${gramsToText(entry.grams)} g go back to your pantry.` : ""}
           </Text>
           {error && (
             <Text style={styles.error} accessibilityLiveRegion="polite">

@@ -5,15 +5,21 @@ import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import { AmountForm } from "@/modules/nutrition/components/AmountForm";
 import { gramsToText } from "@/modules/nutrition/services/entrySchema";
 import { defaultMeal } from "@/modules/nutrition/services/mealTime";
+import { MEAL_TYPES, type MealType } from "@/modules/nutrition/types/foodLog";
 import { useLogPortion } from "@/modules/pantry/hooks/useLogPortion";
 import { portionDefault } from "@/modules/pantry/services/pantryStock";
 
+function isMealType(value: string | undefined): value is MealType {
+  return MEAL_TYPES.some((m) => m === value);
+}
+
 // "Log a portion" from frame 2: the shared amount form, saved as a log entry plus an "eaten" movement.
 export default function LogPortionScreen() {
-  const { itemId } = useLocalSearchParams<{ itemId: string }>();
+  // meal, day and from=add come from Add food's "In my pantry"; the item screen sends none.
+  const { itemId, meal, day, from } = useLocalSearchParams<{ itemId: string; meal?: string; day?: string; from?: string }>();
   const theme = useTheme();
   const styles = makeStyles(theme);
-  const { state, retry, save } = useLogPortion(itemId);
+  const { state, retry, save } = useLogPortion(itemId, day);
 
   if (state.status === "loading") {
     return (
@@ -46,12 +52,12 @@ export default function LogPortionScreen() {
       name={product.name}
       per100={product}
       defaultValues={{
-        mealType: defaultMeal(new Date()),
+        mealType: isMealType(meal) ? meal : defaultMeal(new Date()),
         grams: gramsToText(portionDefault(item.gramsLeft, item.netWeightG)),
       }}
       submitLabel={(label) => `Add to ${label}`}
       onSubmit={(input) => save(item, product, input)}
-      onSaved={() => router.back()}
+      onSaved={() => (from === "add" ? router.dismissTo("/log") : router.back())}
     />
   );
 }

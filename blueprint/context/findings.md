@@ -246,3 +246,19 @@
 **Why it matters:** `LOCATION_LABELS` is an exact copy of the one in apps/mobile/src/app/pantry/add/[productId].tsx:15, and `MONTHS` is the fourth copy of the short month names (mealTime.ts:20, restoreFile.ts:39, SetupSteps.tsx:25). If a location is renamed or added, the two pantry screens can drift apart.
 **Suggested fix:** Move `LOCATION_LABELS` into `pantryStock.ts` (or `types/pantry.ts`) and import it in both pantry screens. For `movementTime`, reuse the month array exported from `mealTime.ts` instead of adding another copy. No current requirement is lost.
 **Resolution:**
+
+### F-51 [P3] open - Scan from Add food opened for a past day logs the scanned product to today
+
+**File:** apps/mobile/src/app/add/index.tsx:70
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** Add food carries `day` from Log (and Today) to every other next screen, but its new Scan button pushes `/scan` with only `meal`. `/scan` does not accept `day` (apps/mobile/src/app/scan.tsx:19, 44-47), so opening Add food for yesterday, then scanning a known product, saves to today with no hint. This follows the spec wording ("Scan opens /scan with the selected meal"), and QuickAddSheet already has the same gap, but Add food now makes it reachable from the Log tab past-day path too. The entry can be moved afterwards, so no data is lost.
+**Suggested fix:** Pass `day` to `/scan` from Add food (and QuickAddSheet), and forward it from scan.tsx to `/add/[productId]` (and `/lookup/[barcode]`), which already validate it through `logDay`. A spec note is enough if the owner prefers to keep scan today-only.
+**Resolution:**
+
+### F-52 [P3] open - Add food renders the whole library in a ScrollView, dropping the old FlatList virtualization
+
+**File:** apps/mobile/src/app/add/index.tsx:132 (and the `ScrollView` at :205)
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** The previous Add food used a `FlatList`. The rebuild maps every matching product (and every in-stock pantry item) into a plain `ScrollView`, and `useFoodSearch` reloads on each keystroke, so an empty or short query re-renders the full library each time. With a personal library of a few hundred products this is likely fine, but it grows with daily use. No on-device profiling was done, so the cost is unmeasured.
+**Suggested fix:** Render the sections in one `SectionList` (or a `FlatList` with section headers), which keeps the frame 1 layout and restores virtualization. Alternatively, debounce the query in `useFoodSearch`. No current requirement is lost.
+**Resolution:**

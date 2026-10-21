@@ -26,7 +26,8 @@ export default function RootLayout() {
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="product/[id]" options={{ title: "Product" }} />
-              <Stack.Screen name="add/index" options={{ title: "Add food" }} />
+              <Stack.Screen name="add/index" options={{ title: "Add food", headerShown: false }} />
+              <Stack.Screen name="add/online" options={{ title: "Open Food Facts" }} />
               <Stack.Screen name="add/[productId]" options={{ title: "Add to meal" }} />
               <Stack.Screen name="entry/[id]" options={{ title: "Edit entry", headerShown: false }} />
               <Stack.Screen name="scan" options={{ title: "Scan", presentation: "fullScreenModal" }} />

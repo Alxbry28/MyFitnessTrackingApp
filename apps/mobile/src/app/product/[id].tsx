@@ -9,7 +9,15 @@ import { newProductForm, productToForm } from "@/modules/nutrition/services/prod
 export default function ProductScreen() {
   // barcode and then=log come from the scanner: prefill, then continue to logging.
   // then=pantry comes from adding stock: continue to "How many did you buy?".
-  const { id, barcode, then } = useLocalSearchParams<{ id: string; barcode?: string; then?: string }>();
+  // name, meal and day come from Add food's "Create ... product".
+  const { id, barcode, then, name, meal, day } = useLocalSearchParams<{
+    id: string;
+    barcode?: string;
+    then?: string;
+    name?: string;
+    meal?: string;
+    day?: string;
+  }>();
   const theme = useTheme();
   const styles = makeStyles(theme);
   const { isNew, state, retry, save } = useProduct(id);
@@ -43,12 +51,15 @@ export default function ProductScreen() {
   } else {
     body = (
       <ProductForm
-        defaultValues={state.product ? productToForm(state.product) : newProductForm(barcode ?? null)}
+        defaultValues={state.product ? productToForm(state.product) : newProductForm(barcode ?? null, name ?? "")}
         submitLabel={isNew ? "Save product" : "Save changes"}
         onSubmit={save}
         onSaved={(savedId) =>
           then === "log"
-            ? router.replace({ pathname: "/add/[productId]", params: { productId: savedId } })
+            ? router.replace({
+                pathname: "/add/[productId]",
+                params: { productId: savedId, ...(meal ? { meal } : {}), ...(day ? { day } : {}) },
+              })
             : then === "pantry"
               ? router.replace({ pathname: "/pantry/add/[productId]", params: { productId: savedId, fresh: "1" } })
               : router.back()

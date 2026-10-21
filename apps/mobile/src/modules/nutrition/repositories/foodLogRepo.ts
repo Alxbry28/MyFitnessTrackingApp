@@ -1,6 +1,9 @@
 import { randomUUID } from "expo-crypto";
 import type { SQLiteDatabase } from "expo-sqlite";
 
+import * as pantryRepo from "@/modules/pantry/repositories/pantryRepo";
+import { fitsStock } from "@/modules/pantry/services/pantryStock";
+
 import { forGrams } from "../services/nutritionCalc";
 import type { EntryInput, FoodLogEntry, MealType } from "../types/foodLog";
 import type { Product } from "../types/product";
@@ -21,15 +24,19 @@ type EntryRow = {
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
+  pantry_item_id: string | null;
   created_at: string;
   updated_at: string;
 };
 
-export type ChangeResult = { ok: true } | { ok: false; error: "not_found" };
+export type ChangeResult =
+  | { ok: true }
+  | { ok: false; error: "not_found" }
+  | { ok: false; error: "not_enough"; gramsLeft: number };
 
 const COLUMNS = `id, day, logged_at, meal_type, product_id, product_name, grams, kcal_per_100g,
   protein_per_100g, carbs_per_100g, fat_per_100g, kcal, protein_g, carbs_g, fat_g,
-  created_at, updated_at`;
+  pantry_item_id, created_at, updated_at`;
 
 function toEntry(row: EntryRow): FoodLogEntry {
   return {
@@ -48,6 +55,7 @@ function toEntry(row: EntryRow): FoodLogEntry {
     proteinG: row.protein_g,
     carbsG: row.carbs_g,
     fatG: row.fat_g,
+    pantryItemId: row.pantry_item_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -129,6 +137,7 @@ export async function update(
 ): Promise<ChangeResult> {
   const entry = await findById(db, id);
   if (!entry) return { ok: false, error: "not_found" };
+  if (entry.pantryItemId) return updateFromPantry(db, entry, input);
   const n = forGrams(entry, input.grams);
   const result = await db.runAsync(
     `UPDATE food_log_entries SET meal_type = ?, grams = ?, day = ?, logged_at = ?, kcal = ?, protein_g = ?,
@@ -148,8 +157,74 @@ export async function update(
   return changed(result.changes);
 }
 
-// Soft delete keeps the row for Undo and for sync later (ADR-4).
+// A pantry entry's grams and its "eaten" movement change together, so the day and the
+// stock never disagree. Taking more than the pantry holds is refused.
+async function updateFromPantry(
+  db: SQLiteDatabase,
+  entry: FoodLogEntry,
+  input: EntryInput & { day: string; loggedAt: string },
+): Promise<ChangeResult> {
+  let result: ChangeResult = { ok: true };
+  await db.withExclusiveTransactionAsync(async (txn) => {
+    const current = await txn.getFirstAsync<{ grams: number }>(
+      "SELECT grams FROM food_log_entries WHERE id = ? AND deleted_at IS NULL",
+      entry.id,
+    );
+    if (!current) {
+      result = { ok: false, error: "not_found" };
+      return;
+    }
+    const movementId = await pantryRepo.eatenMovementFor(txn, entry.id);
+    if (movementId && entry.pantryItemId) {
+      const left = await pantryRepo.gramsLeftIn(txn, entry.pantryItemId).catch(() => null);
+      const extra = input.grams - current.grams;
+      if (left !== null && extra > 0 && !fitsStock(extra, left)) {
+        result = { ok: false, error: "not_enough", gramsLeft: left };
+        return;
+      }
+    }
+    const n = forGrams(entry, input.grams);
+    const now = new Date().toISOString();
+    await txn.runAsync(
+      `UPDATE food_log_entries SET meal_type = ?, grams = ?, day = ?, logged_at = ?, kcal = ?, protein_g = ?,
+         carbs_g = ?, fat_g = ?, updated_at = ?
+       WHERE id = ? AND deleted_at IS NULL`,
+      input.mealType,
+      input.grams,
+      input.day,
+      input.loggedAt,
+      n.kcal,
+      n.proteinG,
+      n.carbsG,
+      n.fatG,
+      now,
+      entry.id,
+    );
+    if (movementId) {
+      await txn.runAsync(
+        "UPDATE stock_movements SET delta_grams = ?, updated_at = ? WHERE id = ?",
+        -input.grams,
+        now,
+        movementId,
+      );
+    }
+    await pantryRepo.checkForeignKeys(txn);
+  });
+  return result;
+}
+
+async function pantryLink(db: SQLiteDatabase, id: string, deleted: boolean): Promise<string | null> {
+  const row = await db.getFirstAsync<{ pantry_item_id: string | null }>(
+    `SELECT pantry_item_id FROM food_log_entries WHERE id = ? AND deleted_at IS ${deleted ? "NOT NULL" : "NULL"}`,
+    id,
+  );
+  return row?.pantry_item_id ?? null;
+}
+
+// Soft delete keeps the row for Undo and for sync later (ADR-4). A pantry entry's
+// "eaten" movement goes with it, which puts the grams back into stock.
 export async function softDelete(db: SQLiteDatabase, id: string): Promise<ChangeResult> {
+  if (await pantryLink(db, id, false)) return setDeletedWithPantry(db, id, true);
   const now = new Date().toISOString();
   const result = await db.runAsync(
     "UPDATE food_log_entries SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
@@ -161,6 +236,7 @@ export async function softDelete(db: SQLiteDatabase, id: string): Promise<Change
 }
 
 export async function restore(db: SQLiteDatabase, id: string): Promise<ChangeResult> {
+  if (await pantryLink(db, id, true)) return setDeletedWithPantry(db, id, false);
   const result = await db.runAsync(
     `UPDATE food_log_entries SET deleted_at = NULL, updated_at = ?
      WHERE id = ? AND deleted_at IS NOT NULL`,
@@ -168,4 +244,30 @@ export async function restore(db: SQLiteDatabase, id: string): Promise<ChangeRes
     id,
   );
   return changed(result.changes);
+}
+
+// Undo restores the movement even if stock went lower since: the food really was eaten.
+async function setDeletedWithPantry(db: SQLiteDatabase, id: string, deleted: boolean): Promise<ChangeResult> {
+  let changes = 0;
+  await db.withExclusiveTransactionAsync(async (txn) => {
+    const now = new Date().toISOString();
+    const entry = await txn.runAsync(
+      deleted
+        ? "UPDATE food_log_entries SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL"
+        : "UPDATE food_log_entries SET deleted_at = NULL, updated_at = ? WHERE id = ? AND deleted_at IS NOT NULL",
+      ...(deleted ? [now, now, id] : [now, id]),
+    );
+    changes = entry.changes;
+    if (changes === 0) return;
+    await txn.runAsync(
+      deleted
+        ? `UPDATE stock_movements SET deleted_at = ?, updated_at = ?
+           WHERE food_log_entry_id = ? AND reason = 'eaten' AND deleted_at IS NULL`
+        : `UPDATE stock_movements SET deleted_at = NULL, updated_at = ?
+           WHERE food_log_entry_id = ? AND reason = 'eaten' AND deleted_at IS NOT NULL`,
+      ...(deleted ? [now, now, id] : [now, id]),
+    );
+    await pantryRepo.checkForeignKeys(txn);
+  });
+  return changed(changes);
 }
