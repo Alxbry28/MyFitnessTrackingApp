@@ -1,15 +1,15 @@
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import { gramsToText } from "@/modules/nutrition/services/entrySchema";
 import { dayFromKey, dayKey, formatDayShort } from "@/modules/nutrition/services/mealTime";
+import type { Product } from "@/modules/nutrition/types/product";
 import { useAddStock } from "@/modules/pantry/hooks/useAddStock";
 import { gramsLeftText, unitsText } from "@/modules/pantry/services/pantryStock";
-import type { Product } from "@/modules/nutrition/types/product";
 import { LOCATIONS, type PantryLocation, type PantryStock } from "@/modules/pantry/types/pantry";
 
 const LOCATION_LABELS: Record<PantryLocation, string> = { cupboard: "Cupboard", fridge: "Fridge", freezer: "Freezer" };
@@ -19,7 +19,7 @@ function backToPantry() {
   router.dismissTo("/pantry");
 }
 
-// Built to prototypes/pantry.html frame 3 ("How many did you buy?").
+// Built to prototypes/pantry.html frame 3 ("How many did you buy?"), as a screen after the scanner.
 export default function AddStockScreen() {
   const { productId, fresh } = useLocalSearchParams<{ productId: string; fresh?: string }>();
   const theme = useTheme();
@@ -61,14 +61,18 @@ function AddStockForm({ product, stock, fresh, save, styles, theme }: FormProps)
   const [units, setUnits] = useState(1);
   const [netText, setNetText] = useState(product.netWeightG === null ? "" : gramsToText(product.netWeightG));
   const [location, setLocation] = useState<PantryLocation>(stock?.location ?? "cupboard");
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  // Starts from the stored expiry so a restock shows it and Clear can remove it.
+  const [expiresAt, setExpiresAt] = useState<string | null>(stock?.expiresAt ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Blocks a second tap that lands before the disabled button re-renders.
+  const savingRef = useRef(false);
 
   const net = Number(netText.trim().replace(",", "."));
   const netValid = netText.trim() !== "" && Number.isFinite(net) && net >= 1 && net <= 100000;
   const gramsAfter = (stock?.gramsLeft ?? 0) + (netValid ? units * net : 0);
   const disabled = !netValid || saving;
+  const afterUnits = unitsText(gramsAfter, netValid ? net : null);
 
   const pickExpiry = () =>
     DateTimePickerAndroid.open({
@@ -78,7 +82,8 @@ function AddStockForm({ product, stock, fresh, save, styles, theme }: FormProps)
     });
 
   const add = async () => {
-    if (disabled) return;
+    if (disabled || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setError(null);
     try {
@@ -86,25 +91,28 @@ function AddStockForm({ product, stock, fresh, save, styles, theme }: FormProps)
       backToPantry();
     } catch {
       setError("Couldn't add to your pantry. Nothing was changed.");
+      savingRef.current = false;
       setSaving(false);
     }
   };
+
+  const sub = [product.netWeightG !== null ? `${gramsToText(product.netWeightG)} g each` : null, "in your library"]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.found}>{fresh ? "✓ Saved to your library" : "✓ Found in your library"}</Text>
         <View>
-          <Text style={styles.name}>{product.name}</Text>
-          <Text style={styles.meta}>
-            {[product.netWeightG !== null ? `${gramsToText(product.netWeightG)} g each` : null, "in your library"]
-              .filter(Boolean)
-              .join(" · ")}
+          <Text style={styles.h2} accessibilityRole="header">
+            {product.name}
           </Text>
+          <Text style={styles.sub}>{sub}</Text>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.label}>Units bought</Text>
+        <View style={[styles.field, styles.fieldBare]}>
+          <Text style={styles.lbl}>Units bought</Text>
           <View style={styles.stepper}>
             <Pressable
               onPress={() => setUnits((u) => Math.max(1, u - 1))}
@@ -128,8 +136,12 @@ function AddStockForm({ product, stock, fresh, save, styles, theme }: FormProps)
               <Text style={[styles.stepGlyph, units >= MAX_UNITS && styles.faint]}>+</Text>
             </Pressable>
           </View>
-          <View style={styles.field}>
-            <Text style={styles.fieldLbl}>Net weight per unit</Text>
+        </View>
+
+        {/* Not in frame 3: products without a net weight need it before stock can be counted. */}
+        <View>
+          <View style={[styles.field, styles.fieldLast]}>
+            <Text style={styles.lbl}>Net weight per unit</Text>
             <View style={styles.inputWrap}>
               <TextInput
                 value={netText}
@@ -150,49 +162,51 @@ function AddStockForm({ product, stock, fresh, save, styles, theme }: FormProps)
           )}
         </View>
 
-        <View style={styles.result} accessible accessibilityLabel={`In stock after this: ${unitsText(gramsAfter, netValid ? net : null)}, ${gramsLeftText(gramsAfter)}`}>
+        <View style={styles.result} accessible accessibilityLabel={`In stock after this: ${afterUnits}, ${gramsLeftText(gramsAfter)}`}>
           <Text style={styles.resultLbl}>In stock after this</Text>
-          <View>
-            <Text style={styles.resultValue}>{unitsText(gramsAfter, netValid ? net : null)}</Text>
-            <Text style={styles.resultSmall}>{gramsLeftText(gramsAfter)}</Text>
-          </View>
+          <Text style={styles.resultText}>
+            <Text style={styles.resultBold}>{afterUnits}</Text> · {gramsLeftText(gramsAfter)}
+          </Text>
         </View>
 
         <View>
-          <Text style={styles.label}>Location</Text>
-          <View style={styles.seg} accessibilityRole="radiogroup">
-            {LOCATIONS.map((l) => {
-              const on = l === location;
-              return (
-                <Pressable
-                  key={l}
-                  onPress={() => setLocation(l)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: on }}
-                  style={[styles.segItem, on && styles.segOn]}
-                >
-                  <Text style={[styles.segLabel, on && styles.segLabelOn]}>{LOCATION_LABELS[l]}</Text>
-                </Pressable>
-              );
-            })}
+          <View style={styles.field}>
+            <Text style={styles.lbl}>Location</Text>
+            <View style={styles.chips} accessibilityRole="radiogroup">
+              {LOCATIONS.map((l) => {
+                const on = l === location;
+                return (
+                  <Pressable
+                    key={l}
+                    onPress={() => setLocation(l)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: on }}
+                    style={[styles.chip, on && styles.chipOn]}
+                  >
+                    <Text style={[styles.chipLabel, on && styles.chipLabelOn]}>{LOCATION_LABELS[l]}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
-        </View>
-
-        <View style={[styles.field, styles.fieldLast]}>
-          <Text style={styles.fieldLbl}>Expiry date</Text>
-          <View style={styles.expiry}>
-            <Pressable
-              onPress={pickExpiry}
-              accessibilityRole="button"
-              accessibilityLabel={expiresAt ? `Expiry date ${formatDayShort(expiresAt)}. Change` : "Expiry date, optional. Pick"}
-            >
-              <Text style={[styles.input, !expiresAt && styles.inputEmpty]}>{expiresAt ? formatDayShort(expiresAt) : "Optional"}</Text>
-            </Pressable>
-            {expiresAt && (
-              <Pressable onPress={() => setExpiresAt(null)} accessibilityRole="button" accessibilityLabel="Clear expiry date" hitSlop={12}>
-                <Text style={styles.clear}>Clear</Text>
+          <View style={[styles.field, styles.fieldLast]}>
+            <Text style={styles.lbl}>Expiry date</Text>
+            <View style={styles.inputWrap}>
+              {expiresAt && (
+                <Pressable onPress={() => setExpiresAt(null)} accessibilityRole="button" accessibilityLabel="Clear expiry date" hitSlop={12}>
+                  <Text style={styles.clear}>Clear</Text>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={pickExpiry}
+                accessibilityRole="button"
+                accessibilityLabel={expiresAt ? `Expiry date ${formatDayShort(expiresAt)}. Change` : "Expiry date, optional. Pick"}
+              >
+                <Text style={[styles.input, !expiresAt && styles.inputEmpty]}>
+                  {expiresAt ? formatDayShort(expiresAt) : "Optional"}
+                </Text>
               </Pressable>
-            )}
+            </View>
           </View>
         </View>
 
@@ -203,7 +217,7 @@ function AddStockForm({ product, stock, fresh, save, styles, theme }: FormProps)
           </Text>
         )}
       </ScrollView>
-      <View style={[styles.btnRow, { paddingBottom: theme.space[4] + insets.bottom }]}>
+      <View style={[styles.btnRow, { paddingBottom: theme.space[5] + insets.bottom }]}>
         <Pressable onPress={backToPantry} accessibilityRole="button" style={[styles.btn, styles.ghost]}>
           <Text style={styles.ghostLabel}>Library only</Text>
         </Pressable>
@@ -226,40 +240,34 @@ type Styles = ReturnType<typeof makeStyles>;
 function makeStyles(theme: Theme) {
   const { colors, space, fontSize, radius, tap } = theme;
   return StyleSheet.create({
-    screen: { flex: 1, backgroundColor: colors.bg },
+    // The frame is a sheet on surface; as a screen it keeps that surface.
+    screen: { flex: 1, backgroundColor: colors.surface },
     center: { flex: 1, alignItems: "center", justifyContent: "center", gap: space[4], padding: space[5], backgroundColor: colors.bg },
     message: { color: colors.muted, fontSize: fontSize.md, textAlign: "center" },
-    content: { padding: space[4], gap: space[3] },
+    content: { paddingTop: space[2], paddingHorizontal: space[4], paddingBottom: space[4], gap: space[3] },
     found: { color: colors.ok, fontSize: fontSize.sm, fontWeight: "600" },
-    name: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700" },
-    meta: { color: colors.muted, fontSize: fontSize.sm, marginTop: 2 },
-    card: {
-      gap: space[2],
-      paddingVertical: space[3],
-      paddingHorizontal: space[4],
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
-    },
-    label: { color: colors.muted, fontSize: fontSize.xs, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: space[2] },
-    stepper: { flexDirection: "row", alignItems: "center", gap: space[4] },
-    stepBtn: { width: tap, height: tap, borderRadius: tap / 2, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2 },
-    stepGlyph: { color: colors.text, fontSize: fontSize.lg, fontWeight: "600" },
-    faint: { color: colors.faint },
-    stepValue: { minWidth: 40, textAlign: "center", color: colors.text, fontSize: fontSize.num, fontWeight: "700", fontVariant: ["tabular-nums"] },
+    h2: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700" },
+    sub: { color: colors.muted, fontSize: fontSize.sm },
+    // pantry.html .field: label left, control right, 48 dp, 1 dp bottom border (none on the last).
     field: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
       gap: space[3],
       minHeight: 48,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
     },
-    fieldLast: { borderTopWidth: 0, borderBottomWidth: 0 },
-    fieldLbl: { color: colors.muted, fontSize: fontSize.sm },
-    inputWrap: { flexDirection: "row", alignItems: "center", gap: space[1] },
+    fieldLast: { borderBottomWidth: 0 },
+    // Frame 3's stepper row: style="border: 0; min-height: 0".
+    fieldBare: { borderBottomWidth: 0, minHeight: 0 },
+    lbl: { color: colors.muted, fontSize: fontSize.sm },
+    stepper: { flexDirection: "row", alignItems: "center", gap: space[4] },
+    stepBtn: { width: tap, height: tap, borderRadius: tap / 2, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2 },
+    stepGlyph: { color: colors.text, fontSize: fontSize.lg, fontWeight: "600" },
+    faint: { color: colors.faint },
+    stepValue: { minWidth: 40, textAlign: "center", color: colors.text, fontSize: fontSize.num, fontWeight: "700", fontVariant: ["tabular-nums"] },
+    inputWrap: { flexDirection: "row", alignItems: "center", gap: space[2] },
     input: {
       minWidth: 88,
       paddingVertical: space[2],
@@ -273,28 +281,28 @@ function makeStyles(theme: Theme) {
     },
     inputEmpty: { color: colors.faint, fontWeight: "400" },
     unit: { color: colors.muted, fontSize: fontSize.sm },
-    expiry: { flexDirection: "row", alignItems: "center", gap: space[3] },
     clear: { color: colors.accentText, fontSize: fontSize.sm, fontWeight: "600" },
     result: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
+      gap: space[3],
       paddingVertical: space[3],
       paddingHorizontal: space[4],
       borderRadius: radius.md,
       backgroundColor: colors.surface2,
     },
     resultLbl: { color: colors.text, fontSize: fontSize.sm },
-    resultValue: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700", textAlign: "right" },
-    resultSmall: { color: colors.muted, fontSize: fontSize.xs, textAlign: "right" },
-    seg: { flexDirection: "row", padding: 3, borderRadius: radius.md, backgroundColor: colors.surface2 },
-    segItem: { flex: 1, height: 36, alignItems: "center", justifyContent: "center", borderRadius: 9 },
-    segOn: { backgroundColor: colors.surface },
-    segLabel: { color: colors.muted, fontSize: fontSize.sm },
-    segLabelOn: { color: colors.text, fontWeight: "600" },
+    resultText: { color: colors.text, fontSize: fontSize.sm, flexShrink: 1, textAlign: "right" },
+    resultBold: { fontSize: fontSize.lg, fontWeight: "700" },
+    chips: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: space[2] },
+    chip: { height: 32, justifyContent: "center", paddingHorizontal: space[3], borderRadius: radius.pill, backgroundColor: colors.surface2 },
+    chipOn: { backgroundColor: colors.accentSoft },
+    chipLabel: { color: colors.muted, fontSize: fontSize.sm },
+    chipLabelOn: { color: colors.accentText, fontWeight: "600" },
     note: { color: colors.muted, fontSize: fontSize.xs, lineHeight: 16 },
     error: { color: colors.over, fontSize: fontSize.sm },
-    btnRow: { flexDirection: "row", gap: space[2], paddingTop: space[3], paddingHorizontal: space[4], backgroundColor: colors.bg },
+    btnRow: { flexDirection: "row", gap: space[2], paddingTop: space[3], paddingHorizontal: space[4], backgroundColor: colors.surface },
     btn: { flex: 1, height: tap, alignItems: "center", justifyContent: "center", borderRadius: radius.md },
     ghost: { borderWidth: 1, borderColor: colors.border },
     ghostBtn: { minHeight: tap, justifyContent: "center", paddingHorizontal: space[5], borderRadius: radius.md, backgroundColor: colors.surface2 },

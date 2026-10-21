@@ -57,7 +57,8 @@ export type AddStockInput = {
   expiresAt: string | null;
 };
 
-// One transaction: the product's single packaged item is created or updated, the net weight
+// One transaction: the product's single packaged item is created or updated (the form shows the
+// stored expiry, so its value, null included, replaces it), the net weight
 // is saved back to the product, and a "bought" movement adds the stock. No food log entry is
 // written, so buying never counts toward the day (ADR-8).
 export async function addStock(db: SQLiteDatabase, input: AddStockInput): Promise<void> {
@@ -71,7 +72,7 @@ export async function addStock(db: SQLiteDatabase, input: AddStockInput): Promis
     if (existing) {
       itemId = existing.id;
       await txn.runAsync(
-        `UPDATE pantry_items SET location = ?, expires_at = COALESCE(?, expires_at), status = 'sealed',
+        `UPDATE pantry_items SET location = ?, expires_at = ?, status = 'sealed',
            updated_at = ? WHERE id = ?`,
         input.location,
         input.expiresAt,

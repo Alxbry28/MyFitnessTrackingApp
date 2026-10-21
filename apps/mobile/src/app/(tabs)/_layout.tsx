@@ -1,17 +1,22 @@
 import { SymbolView, type AndroidSymbol } from "expo-symbols";
 import { router, Tabs } from "expo-router";
 import { Pressable, Text, type ColorValue } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "@/lib/theme/useTheme";
 
+// pantry.html .tab svg is 22 dp; the navigator would otherwise pass 25.
+const ICON_SIZE = 22;
+
 function tabIcon(name: AndroidSymbol) {
-  return function TabIcon({ color, size }: { color: ColorValue; size: number }) {
-    return <SymbolView name={{ android: name, web: name }} tintColor={color} size={size} />;
+  return function TabIcon({ color }: { color: ColorValue }) {
+    return <SymbolView name={{ android: name, web: name }} tintColor={color} size={ICON_SIZE} />;
   };
 }
 
 export default function TabLayout() {
   const { colors, fontSize, space, tap } = useTheme();
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
@@ -21,9 +26,18 @@ export default function TabLayout() {
         sceneStyle: { backgroundColor: colors.bg },
         tabBarActiveTintColor: colors.accentText,
         tabBarInactiveTintColor: colors.muted,
-        // pantry.html .tabbar: 64 dp, xs labels; the active one is accentText 600.
-        tabBarStyle: { height: 64, backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1 },
-        tabBarLabelStyle: { fontSize: fontSize.xs, fontWeight: "600" },
+        // pantry.html .tabbar is 64 dp of tabs. The bar pads itself by the bottom inset, so the
+        // height includes it; otherwise three-button navigation squeezes the tabs.
+        tabBarStyle: {
+          height: 64 + insets.bottom,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          borderTopWidth: 1,
+        },
+        // Only the active tab is 600 (pantry.html .tab.on).
+        tabBarLabel: ({ focused, color, children }) => (
+          <Text style={{ color, fontSize: fontSize.xs, fontWeight: focused ? "600" : "400" }}>{children}</Text>
+        ),
       }}
     >
       <Tabs.Screen name="index" options={{ title: "Today", headerShown: false, tabBarIcon: tabIcon("schedule") }} />

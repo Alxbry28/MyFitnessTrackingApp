@@ -268,7 +268,15 @@ code against the prototype CSS. There is no on-device run.
 
 ## Independent review
 
-**Status:** passed
+> **Correction (2026-10-21).** This feature first landed with a receipt from
+> reviewer adapter `antigravity` and an unknown model, where `claude` /
+> `claude-opus-5-5` was requested. That receipt failed the review contract and
+> is withdrawn. The owner kept `main` and had checkpoint `6a428fb` reviewed
+> again; that receipt follows. Its findings F-40 to F-46 were repaired by the
+> fix in `blueprint/history/fixes/` ("Pantry tab bar and review repairs"),
+> which holds the passing review.
+
+**Status:** changes-requested
 **Target commit:** 6a428fbd00d99dfbfb6a7fa8398d4d1e0b505b8e
 **Base commit:** e9afb88fe418b7b2c98ee4b2c94f648db37527c3
 **Base ref:** main
@@ -278,42 +286,57 @@ code against the prototype CSS. There is no on-device run.
 **Requested reviewer:** claude
 **Requested model:** claude-opus-5-5
 **Requested execution:** automatic
-**Requested at:** 2026-10-21T10:30:00+08:00
+**Requested at:** 2026-10-21T13:50:00+08:00
 **Workflow:** continuous
 **Check required:** no
-**Reviewer adapter:** antigravity
-**Reviewer model:** unknown (runtime did not expose exact model)
+**Reviewer adapter:** claude
+**Reviewer model:** claude-opus-5-5
 **Reviewer context:** fresh subagent
 **Actual execution:** automatic
-**Reviewed at:** 2026-10-21T13:12:00+08:00
+**Reviewed at:** 2026-10-21T13:55:00+08:00
 **Scope:** current
 **Lenses:** quality, security, performance, tests
-**Verdict:** passed
+**Verdict:** changes-requested
 **Check result:** not-required
+
+### Handoff
+
+Review the active spec and the complete `e9afb88fe418b7b2c98ee4b2c94f648db37527c3..6a428fbd00d99dfbfb6a7fa8398d4d1e0b505b8e` delta in a fresh
+session or isolated subagent without the builder conversation. Run all Audit lenses from scratch.
+Run Check when required above. Do not edit product code, accept findings, or
+reuse the existing findings as the review scope.
 
 ### Commands
 
-- `npx tsc --noEmit`: pass
-- `npx expo lint`: pass
+- `git rev-parse HEAD`, `git merge-base main HEAD`, `sha256sum blueprint/context/current-feature.md`, `git status --porcelain --untracked-files=all`: pass (HEAD = target, merge base = base, spec hash matches, only `blueprint/context/review.md` differs)
+- `npx tsc --noEmit` (apps/mobile): pass
+- `npx expo lint` (apps/mobile): pass
+- `npx expo-doctor` (apps/mobile): pass (21/21 checks)
 
 ### Evidence
 
-- Migration `007_pantry.ts`: tables, indexes, and ALTER match the spec's SQL contract exactly, including the partial unique index on `product_id` for packaged items and the `foreign_key_check` PRAGMA guard.
-- `pantryRepo.ts`: `STOCK_SELECT` correlated subquery sums `delta_grams` from live movements (ADR-7). All SQL uses positional `?` parameters. `addStock` runs in `withExclusiveTransactionAsync`, upserts the packaged item, conditionally updates `net_weight_g`, inserts a `bought` movement, and checks foreign keys before commit.
-- `pantryStock.ts`: pure functions (no React/SQLite); `unitsText`, `gramsLeftText`, `expiryBadge`, `groupOf`, `locationsText` all match spec display rules.
-- `pantry.tsx` (frame 1): app bar, search, four filter chips, groups in Cooked→Groceries→Supplements order, `PantryRow` per item, all four empty states, floating "Add stock" FAB. `paddingBottom` used on scroll content to avoid the F-02 margin issue.
-- `pantry/add/[productId].tsx` (frame 3): all spec elements present — "✓ Found / Saved" line, stepper, net weight with inline validation, preview, location control, expiry with Clear, ADR-8 note, two-button row.
-- `scan.tsx`: pantry mode dispatches through all branches (known product, unknown barcode, search products, enter manually). Non-pantry paths unchanged.
-- `lookup/[barcode].tsx`, `add/index.tsx`, `product/[id].tsx`: `for=pantry` / `then=pantry` threaded correctly; redirects to `/pantry/add/[productId]`.
-- `(tabs)/_layout.tsx`: five tabs in spec order; Products and Settings use `href: null`.
-- `more.tsx`: Products and Settings as list-card rows with `›` chevron.
-- `backupRepo.ts`: `pantry_items` and `stock_movements` in correct FK insertion order.
+- Reviewed all 21 files in `e9afb88..6a428fb`, including the spec, migration 7, `pantryRepo`, `pantryStock`, hooks, `PantryRow`, the Pantry, More and add-stock screens, tab layout, root stack, and the pantry-mode changes in scan, lookup, add and product.
+- Migration 7 matches the spec's SQL: additive tables, CHECK lists, partial unique index on packaged items, nullable `food_log_entries.pantry_item_id` referencing `pantry_items`.
+- Stock is read only as `SUM(delta_grams)` of live movements (`pantryRepo.ts` STOCK_SELECT); nothing is stored on the item. `addStock` runs in one exclusive transaction (find or insert the packaged item, save the net weight back when changed, insert one `bought` movement, `PRAGMA foreign_key_check` before commit) and writes no food log entry.
+- `BACKUP_TABLES` orders products, pantry_items, food_log_entries, stock_movements; `replaceAll` deletes in reverse and inserts in order. `migrateRows` skips empty tables before they exist and runs migration 7 on older backups in the scratch database, so v1-v6 backups restore with empty pantry tables.
+- Pantry mode reaches `/pantry/add/[productId]` on every path: known barcode, unknown barcode via lookup (including its "Enter manually" while loading), Search products via `/add?for=pantry`, Enter manually via `/product/new?then=pantry`, and the camera-off fallbacks. Without `for`/`then=pantry` each branch keeps its previous logging target.
+- Products and Settings stay under `(tabs)` with `href: null`; `router.navigate("/settings")` (Today), `router.replace("/settings")` (setup) and the More rows still resolve.
+- Tab bar height behaviour checked against expo-router/build/react-navigation/bottom-tabs/views/BottomTabBar.js:100-106 and :251-252; icon size against TabBarIcon.js:15-23.
+- Layout, sizes, type, tokens and copy compared against `prototypes/pantry.html` CSS (lines 24-94), frame 1 (106-138) and frame 3 (176-201).
 
 ### Findings
 
-- None
+- F-40 [P1] open: fixed 64 dp tab bar height clips the tabs above the Android navigation bar (blocker)
+- F-41 [P1] open: tab icons 25 dp and every tab label 600, against the spec's 22 dp icon and active-only 600 rule (blocker)
+- F-42 [P3] open: pantry list cards keep 12 dp vertical padding that frame 1 sets to 0
+- F-43 [P3] open: add stock uses uppercase section labels where frame 3 uses field labels
+- F-44 [P3] open: a restock keeps the old expiry, so fresh stock can show "expired"
+- F-45 [P3] open: "expires tomorrow" badge copy is not in the spec
+- F-46 [P3] unverified: a fast double tap on "Add N to pantry" may record two buys
 
 ### Remaining risk
 
-- No test runner configured; pantry transaction logic not covered by automated unit tests.
-- No on-device smoke test; UI layout and date picker edge cases unverified at device level.
+- No unit test runner is configured, so `pantryStock.ts` and the buy transaction have no automated tests.
+- No on-device or emulator run: tab bar clipping (F-40), the prototype comparisons and the add-stock flow were reviewed from code and library source only.
+- Check was not required and was not run.
+- Migration 7 and the restore of older backups were reviewed by reading code; no migration or restore was executed.

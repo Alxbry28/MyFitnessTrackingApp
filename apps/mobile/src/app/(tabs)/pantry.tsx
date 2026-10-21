@@ -161,8 +161,8 @@ function makeStyles(theme: Theme) {
     groupHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginTop: space[1] },
     sectionLabel: { color: colors.muted, fontSize: fontSize.xs, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.7 },
     groupWhere: { color: colors.faint, fontSize: fontSize.xs },
+    // List cards drop the vertical padding (pantry.html frame 1); rows bring their own.
     card: {
-      paddingVertical: space[3],
       paddingHorizontal: space[4],
       borderRadius: radius.md,
       borderWidth: 1,

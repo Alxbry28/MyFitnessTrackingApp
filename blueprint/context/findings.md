@@ -214,3 +214,11 @@
 **Why it matters:** The only entry to setup after first run is a nested `Text` with `onPress` inside an `xs` helper line, so its touch area is the word's glyph box (about 16 dp tall) with no hit slop. The app's minimum touch target is `tap` = 48 dp (tokens.ts:102), and F-24 records the same issue for another link.
 **Suggested fix:** Keep the inline look from settings.html but make Recalculate a `Pressable` with `hitSlop` (or a 48 dp-tall row) holding the accentText label. No current requirement is lost.
 **Resolution:**
+
+### F-47 [P3] open - Add stock Location chips give only a 32 dp touch height
+
+**File:** apps/mobile/src/app/pantry/add/[productId].tsx:179 (style `chip` in makeStyles)
+**Found:** 2026-10-21 by /audit (scope: current; lens: quality, security, performance, tests; independent review)
+**Why it matters:** The fix replaced the 36 dp segmented control with 32 dp chips (`height: 32`) and no `hitSlop`, so each Location radio is a 32 dp tall tap target, under the 48 dp `tap` size the rest of this screen uses (stepper, buttons). The visual size follows pantry.html `.chip` and the fix spec, and the Pantry list filter chips already use the same pattern, so this is a small accessibility gap rather than a spec violation.
+**Suggested fix:** Keep the 32 dp look and add `hitSlop={{ top: 8, bottom: 8 }}` to the Location chip `Pressable` (and the list filter chips if wanted). No new dependency; no current requirement is lost.
+**Resolution:**
