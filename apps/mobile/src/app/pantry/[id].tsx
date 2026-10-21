@@ -12,16 +12,19 @@ import { usePantryItem } from "@/modules/pantry/hooks/usePantryItem";
 import {
   changeText,
   changeTone,
+  daysText,
   expiryBadge,
+  formatAmount,
   inStock,
   monthDay,
   movementName,
   movementTime,
   netToDrained,
   openedGrams,
+  supplementView,
   unitSplit,
 } from "@/modules/pantry/services/pantryStock";
-import type { PantryLocation, PantryStock, StockMovement } from "@/modules/pantry/types/pantry";
+import type { PantryLocation, PantryStock, StockMovement, SupplementUnit } from "@/modules/pantry/types/pantry";
 
 const LOCATION_LABELS: Record<PantryLocation, string> = { cupboard: "Cupboard", fridge: "Fridge", freezer: "Freezer" };
 const MAX_SHAPES = 12;
@@ -79,10 +82,14 @@ export default function PantryItemScreen() {
         </Text>
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: theme.space[4] + insets.bottom }]}>
-        <Hero item={item} styles={styles} />
+        {item.kind === "supplement" ? <SupplementHero item={item} styles={styles} /> : <Hero item={item} styles={styles} />}
 
         <View style={[styles.card, styles.fieldsCard]}>
-          <Field label="Net weight per unit" value={item.netWeightG === null ? "Not set" : `${gramsToText(item.netWeightG)} g`} styles={styles} />
+          {item.kind === "supplement" ? (
+            <SupplementFields item={item} styles={styles} />
+          ) : (
+            <Field label="Net weight per unit" value={item.netWeightG === null ? "Not set" : `${gramsToText(item.netWeightG)} g`} styles={styles} />
+          )}
           {item.drained && <Field label="Eaten drained" value="Yes · drained values" styles={styles} />}
           {item.drained && item.usualDrainedG !== null && (
             <Field
@@ -128,7 +135,7 @@ export default function PantryItemScreen() {
             <Text style={styles.empty}>No changes yet.</Text>
           ) : (
             movements.map((m, index) => (
-              <MovementRow key={m.id} movement={m} last={index === movements.length - 1} styles={styles} />
+              <MovementRow key={m.id} movement={m} unit={item.unit} last={index === movements.length - 1} styles={styles} />
             ))
           )}
         </View>
@@ -137,6 +144,7 @@ export default function PantryItemScreen() {
         <StockChangeSheet
           name={item.name}
           gramsLeft={Math.max(0, item.gramsLeft)}
+          unit={item.unit}
           initialMode={hasStock ? sheet : "adjust"}
           onRemove={remove}
           onAdjust={adjust}
@@ -185,6 +193,53 @@ function Hero({ item, styles }: { item: PantryStock; styles: Styles }) {
   );
 }
 
+// Supplements are counted with a days-left estimate (story K3), so no unit shapes.
+function SupplementHero({ item, styles }: { item: PantryStock; styles: Styles }) {
+  const unit = item.unit ?? "g";
+  const view = supplementView(item, new Date());
+  const badge = expiryBadge(item.expiresAt, dayKey(new Date()));
+  const empty = !inStock(item);
+  const unitSuffix = unit === "tabs" ? "tabs" : unit === "caps" ? "caps" : "g";
+  const estimate =
+    view.days !== null && view.dailyUse !== null
+      ? `About ${view.days} ${view.days === 1 ? "day" : "days"} left at ${formatKcal(view.dailyUse)} ${unitSuffix} a day`
+      : "Log it to see how long it lasts.";
+  const note = empty ? "Used up. Restock from + Add stock." : [estimate, badge?.text].filter(Boolean).join(" · ");
+  const amount = empty ? `0 ${unitSuffix}` : view.amount;
+  return (
+    <View style={styles.card}>
+      <View style={styles.hero} accessible accessibilityLabel={`${amount} left`}>
+        <HeroPart value={amount} word="left" styles={styles} />
+        {view.low && view.days !== null && (
+          <View style={[styles.badge, styles.badgeOver]}>
+            <Text style={[styles.badgeText, styles.badgeTextOver]}>{`low · ${daysText(view.days)}`}</Text>
+          </View>
+        )}
+      </View>
+      <Text style={[styles.note, styles.heroNote]}>{note}</Text>
+    </View>
+  );
+}
+
+function SupplementFields({ item, styles }: { item: PantryStock; styles: Styles }) {
+  const unit = item.unit ?? "g";
+  const { dailyUse } = supplementView(item, new Date());
+  const unitSuffix = unit === "tabs" ? "tabs" : unit === "caps" ? "caps" : "g";
+  const containerLabel = unit === "g" ? "Container size" : "Bottle size";
+  const servingLabel = unit === "g" ? "Scoop" : "Serving";
+  return (
+    <>
+      <Field label={containerLabel} value={item.netWeightG === null ? "Not set" : formatAmount(item.netWeightG, unit)} styles={styles} />
+      <Field label={servingLabel} value={item.servingGrams === null ? "Not set" : formatAmount(item.servingGrams, unit)} styles={styles} />
+      <Field
+        label="Daily use"
+        value={dailyUse === null ? "Not enough history" : `${formatKcal(dailyUse)} ${unitSuffix} a day`}
+        styles={styles}
+      />
+    </>
+  );
+}
+
 // "Opened Oct 20 · about 60 g drained left" for the opened unit, else the whole stock.
 function amountNote(item: PantryStock): string[] {
   const usual = item.drained ? item.usualDrainedG : null;
@@ -226,10 +281,20 @@ function Field({ label, value, badge, last, styles }: FieldProps) {
   );
 }
 
-function MovementRow({ movement, last, styles }: { movement: StockMovement; last: boolean; styles: Styles }) {
+function MovementRow({
+  movement,
+  unit,
+  last,
+  styles,
+}: {
+  movement: StockMovement;
+  unit?: SupplementUnit;
+  last: boolean;
+  styles: Styles;
+}) {
   const name = movementName(movement);
   const time = movementTime(movement.occurredAt);
-  const change = changeText(movement);
+  const change = changeText(movement, unit);
   const tone = changeTone(movement);
   return (
     <View style={[styles.row, !last && styles.divided]} accessible accessibilityLabel={`${name}, ${time}, ${change}`}>
@@ -295,6 +360,8 @@ function makeStyles(theme: Theme) {
     value: { color: colors.text, fontSize: fontSize.sm, flexShrink: 1, textAlign: "right" },
     badge: { paddingVertical: 1, paddingHorizontal: 6, borderRadius: radius.pill, backgroundColor: colors.estimateSoft },
     badgeText: { color: colors.estimate, fontSize: fontSize.xs, fontWeight: "600" },
+    badgeOver: { backgroundColor: colors.overSoft },
+    badgeTextOver: { color: colors.over },
     // .btn-row.three: 1.4fr 1fr 1fr.
     btnRow: { flexDirection: "row", gap: space[2] },
     btn: { flex: 1, height: tap, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: colors.surface2 },

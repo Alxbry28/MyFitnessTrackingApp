@@ -2,7 +2,7 @@ import { gramsToText } from "@/modules/nutrition/services/entrySchema";
 import { dayFromKey, MEAL_LABELS } from "@/modules/nutrition/services/mealTime";
 import { formatKcal } from "@/modules/nutrition/services/nutritionCalc";
 
-import type { PantryKind, PantryLocation, PantryStock, StockMovement, StockReason } from "../types/pantry";
+import type { PantryKind, PantryLocation, PantryStock, StockMovement, StockReason, SupplementUnit } from "../types/pantry";
 
 // Kept free of React and SQLite so it can get unit tests once a runner exists.
 
@@ -55,6 +55,67 @@ export function unitsText(gramsLeft: number, netWeightG: number | null): string 
   const part = gramsLeft - whole * netWeightG;
   if (part > EMPTY_GRAMS) return whole > 0 ? `${whole} + 1 open` : "1 open";
   return String(whole);
+}
+
+// Supplements are counted in grams: "1.24 kg" from 1,000 g up, whole grams below.
+export function weightText(grams: number): string {
+  if (grams >= 1000) return `${Math.round(grams / 10) / 100} kg`;
+  return `${formatKcal(grams)} g`;
+}
+
+// Format amount based on supplement unit: grams, tabs or caps.
+export function formatAmount(amount: number, unit: SupplementUnit = "g"): string {
+  if (unit === "tabs") return `${Math.round(amount)} ${Math.round(amount) === 1 ? "tab" : "tabs"}`;
+  if (unit === "caps") return `${Math.round(amount)} ${Math.round(amount) === 1 ? "cap" : "caps"}`;
+  return weightText(amount);
+}
+
+const USE_WINDOW_DAYS = 14;
+const LOW_STOCK_DAYS = 7;
+const DAY_MS = 86_400_000;
+
+// Average grams a day over the last 14 days, or over the days the item has existed when it's
+// newer (story K3). Null until something was eaten in that window.
+export function dailyUseG(eatenRecentG: number, firstMovementAt: string | null, now: Date): number | null {
+  if (eatenRecentG <= 0 || firstMovementAt === null) return null;
+  const age = Math.ceil((now.getTime() - new Date(firstMovementAt).getTime()) / DAY_MS);
+  return eatenRecentG / Math.min(USE_WINDOW_DAYS, Math.max(1, age));
+}
+
+export function daysLeft(gramsLeft: number, dailyUse: number | null): number | null {
+  return dailyUse === null || dailyUse <= 0 ? null : Math.floor(Math.max(0, gramsLeft) / dailyUse);
+}
+
+// Story K4's warning level.
+export function lowStock(days: number | null): boolean {
+  return days !== null && days < LOW_STOCK_DAYS;
+}
+
+export function daysText(days: number): string {
+  return `~${days} ${days === 1 ? "day" : "days"}`;
+}
+
+export type SupplementView = {
+  dailyUse: number | null;
+  days: number | null;
+  low: boolean;
+  amount: string;
+  meta: string;
+};
+
+// What the list and item screen show for a supplement (pantry.html frame 1 Supplements rows).
+export function supplementView(item: PantryStock, now: Date): SupplementView {
+  const unit = item.unit ?? "g";
+  const dailyUse = dailyUseG(item.eatenRecentG, item.firstMovementAt, now);
+  const days = daysLeft(item.gramsLeft, dailyUse);
+  const unitSuffix = unit === "tabs" ? "tabs" : unit === "caps" ? "caps" : "g";
+  const use =
+    dailyUse !== null
+      ? `${formatKcal(dailyUse)} ${unitSuffix}/day`
+      : item.servingGrams !== null && `${gramsToText(item.servingGrams)} ${unit === "g" ? "g/scoop" : `${unitSuffix}/serving`}`;
+  const containerWord = unit === "g" ? "container" : "bottle";
+  const meta = [item.netWeightG !== null && `${formatAmount(item.netWeightG, unit)} ${containerWord}`, use].filter(Boolean).join(" · ");
+  return { dailyUse, days, low: lowStock(days), amount: formatAmount(item.gramsLeft, unit), meta };
 }
 
 export function gramsLeftText(gramsLeft: number): string {
@@ -159,11 +220,20 @@ function signed(value: number): string {
   return value < 0 ? `−${gramsToText(-value)}` : `+${gramsToText(value)}`;
 }
 
-export function changeText(m: StockMovement): string {
+export function changeText(m: StockMovement, unit: SupplementUnit = "g"): string {
   if (m.deltaUnits !== null) {
-    return `${signed(m.deltaUnits)} ${Math.abs(m.deltaUnits) === 1 ? "unit" : "units"}`;
+    const word =
+      unit === "tabs" || unit === "caps"
+        ? Math.abs(m.deltaUnits) === 1
+          ? "bottle"
+          : "bottles"
+        : Math.abs(m.deltaUnits) === 1
+          ? "unit"
+          : "units";
+    return `${signed(m.deltaUnits)} ${word}`;
   }
-  return `${signed(m.deltaGrams)} g`;
+  const suffix = unit === "tabs" ? " tabs" : unit === "caps" ? " caps" : " g";
+  return `${signed(m.deltaGrams)}${suffix}`;
 }
 
 export type ChangeTone = "ok" | "text" | "over";
@@ -174,8 +244,9 @@ export function changeTone(m: StockMovement): ChangeTone {
 }
 
 // "465 → 265 g" in the sheet's result box.
-export function transitionText(from: number, to: number): string {
-  return `${formatKcal(from)} → ${formatKcal(to)} g`;
+export function transitionText(from: number, to: number, unit: SupplementUnit = "g"): string {
+  const suffix = unit === "tabs" ? " tabs" : unit === "caps" ? " caps" : " g";
+  return `${formatKcal(from)} → ${formatKcal(to)}${suffix}`;
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -223,6 +294,12 @@ export function checkAdjust(text: string): AmountCheck {
 // Eating more than the ledger holds would hide a drift that Adjust should fix.
 export function fitsStock(grams: number, gramsLeft: number): boolean {
   return grams <= gramsLeft + EMPTY_GRAMS;
+}
+
+// A supplement defaults to one scoop (its serving grams) while that much is left.
+export function scoopDefault(gramsLeft: number, scoopG: number | null): number {
+  if (scoopG !== null && scoopG > 0 && fitsStock(scoopG, gramsLeft)) return scoopG;
+  return Math.round(Math.max(0, gramsLeft) * 100) / 100;
 }
 
 // The opened unit is eaten before a sealed one (story L5).

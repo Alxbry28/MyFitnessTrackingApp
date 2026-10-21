@@ -20,8 +20,14 @@ type State =
 
 export type PortionResult = { ok: true } | { ok: false; message: string };
 
-// Said in drained grams for a drained product, since that's what the amount field holds.
-function notEnough(gramsLeft: number, product: Product): PortionResult {
+// Said in drained grams for a drained product, or tabs/caps for count supplements.
+function notEnough(gramsLeft: number, product: Product, unit?: string): PortionResult {
+  if (unit === "tabs" || unit === "caps") {
+    return {
+      ok: false,
+      message: `Only ${Math.round(gramsLeft)} ${unit} left. Use Adjust if there's more.`,
+    };
+  }
   const drained = isDrained(product) && product.usualDrainedG !== null;
   const shown = drained ? netToDrained(gramsLeft, product.netWeightG, product.usualDrainedG) : gramsLeft;
   return {
@@ -62,12 +68,12 @@ export function useLogPortion(itemId: string, day?: string) {
     async (item: PantryStock, product: Product, input: EntryInput, wholeUnit: boolean): Promise<PortionResult> => {
       const usual = isDrained(product) ? product.usualDrainedG : null;
       const stockGrams = stockGramsFor(input.grams, wholeUnit && usual !== null, product.netWeightG, usual);
-      if (!fitsStock(stockGrams, item.gramsLeft)) return notEnough(item.gramsLeft, product);
+      if (!fitsStock(stockGrams, item.gramsLeft)) return notEnough(item.gramsLeft, product, item.unit);
       try {
         await pantryRepo.logPortion(db, { itemId: item.id, product, ...input, day: logDay(day), wholeUnit });
       } catch (e) {
         // The ledger can have changed since the screen loaded; report the stored amount.
-        if (e instanceof pantryRepo.NotEnoughStockError) return notEnough(e.gramsLeft, product);
+        if (e instanceof pantryRepo.NotEnoughStockError) return notEnough(e.gramsLeft, product, item.unit);
         throw e;
       }
       return { ok: true };

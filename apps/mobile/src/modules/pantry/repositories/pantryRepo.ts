@@ -11,10 +11,12 @@ import { ADJUST_MIN_CHANGE, fitsStock, openedAfter, stockGramsFor } from "../ser
 import type {
   PantryKind,
   PantryLocation,
+  ProductStockKind,
   PantryStock,
   RemoveReason,
   StockMovement,
   StockReason,
+  SupplementUnit,
 } from "../types/pantry";
 
 type StockRow = {
@@ -25,19 +27,28 @@ type StockRow = {
   net_weight_g: number | null;
   drained: number;
   usual_drained_g: number | null;
+  serving_grams: number | null;
   location: PantryLocation;
   expires_at: string | null;
   opened_at: string | null;
+  unit: string | null;
   grams_left: number | null;
+  eaten_recent_g: number | null;
+  first_movement_at: string | null;
 };
 
 // Grams left are the sum of the item's live movements (ADR-7); nothing is cached on the item.
 const STOCK_SELECT = `
   SELECT i.id, i.kind, i.product_id, p.name, p.net_weight_g,
     (p.eaten_drained = 1 AND p.drained_kcal_per_100g IS NOT NULL) AS drained, p.usual_drained_g,
-    i.location, i.expires_at, i.opened_at,
+    p.serving_grams, i.location, i.expires_at, i.opened_at, i.unit,
     (SELECT SUM(m.delta_grams) FROM stock_movements m
-     WHERE m.pantry_item_id = i.id AND m.deleted_at IS NULL) AS grams_left
+     WHERE m.pantry_item_id = i.id AND m.deleted_at IS NULL) AS grams_left,
+    (SELECT -SUM(m.delta_grams) FROM stock_movements m
+     WHERE m.pantry_item_id = i.id AND m.deleted_at IS NULL AND m.reason = 'eaten'
+       AND m.occurred_at >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-14 days')) AS eaten_recent_g,
+    (SELECT MIN(m.occurred_at) FROM stock_movements m
+     WHERE m.pantry_item_id = i.id AND m.deleted_at IS NULL) AS first_movement_at
   FROM pantry_items i LEFT JOIN products p ON p.id = i.product_id
   WHERE i.deleted_at IS NULL`;
 
@@ -50,10 +61,14 @@ function toStock(row: StockRow): PantryStock {
     netWeightG: row.net_weight_g,
     drained: row.drained === 1,
     usualDrainedG: row.usual_drained_g,
+    servingGrams: row.serving_grams,
     location: row.location,
     expiresAt: row.expires_at,
     openedAt: row.opened_at,
+    unit: (row.unit as SupplementUnit) ?? "g",
     gramsLeft: row.grams_left ?? 0,
+    eatenRecentG: row.eaten_recent_g ?? 0,
+    firstMovementAt: row.first_movement_at,
   };
 }
 
@@ -62,10 +77,10 @@ export async function listStock(db: SQLiteDatabase): Promise<PantryStock[]> {
   return rows.map(toStock);
 }
 
-// The product's packaged item, or null when it has never been in the pantry.
+// The product's grocery or supplement item, or null when it has never been in the pantry.
 export async function stockForProduct(db: SQLiteDatabase, productId: string): Promise<PantryStock | null> {
   const row = await db.getFirstAsync<StockRow>(
-    `${STOCK_SELECT} AND i.kind = 'packaged' AND i.product_id = ?`,
+    `${STOCK_SELECT} AND i.kind IN ('packaged','supplement') AND i.product_id = ?`,
     productId,
   );
   return row ? toStock(row) : null;
@@ -73,13 +88,15 @@ export async function stockForProduct(db: SQLiteDatabase, productId: string): Pr
 
 export type AddStockInput = {
   productId: string;
+  kind: ProductStockKind;
   units: number;
   netWeightG: number;
   location: PantryLocation;
   expiresAt: string | null;
+  unit?: SupplementUnit;
 };
 
-// One transaction: the product's single packaged item is created or updated (the form shows the
+// One transaction: the product's single item is created or updated (the form shows the
 // stored expiry, so its value, null included, replaces it), the net weight
 // is saved back to the product, and a "bought" movement adds the stock. No food log entry is
 // written, so buying never counts toward the day (ADR-8).
@@ -87,7 +104,8 @@ export async function addStock(db: SQLiteDatabase, input: AddStockInput): Promis
   await db.withExclusiveTransactionAsync(async (txn) => {
     const now = new Date().toISOString();
     const existing = await txn.getFirstAsync<{ id: string }>(
-      "SELECT id FROM pantry_items WHERE kind = 'packaged' AND product_id = ? AND deleted_at IS NULL",
+      `SELECT id FROM pantry_items
+       WHERE kind IN ('packaged','supplement') AND product_id = ? AND deleted_at IS NULL`,
       input.productId,
     );
     let itemId: string;
@@ -96,21 +114,25 @@ export async function addStock(db: SQLiteDatabase, input: AddStockInput): Promis
       itemId = existing.id;
       gramsBefore = await gramsLeftIn(txn, itemId);
       await txn.runAsync(
-        `UPDATE pantry_items SET location = ?, expires_at = ?, updated_at = ? WHERE id = ?`,
+        `UPDATE pantry_items SET kind = ?, location = ?, expires_at = ?, unit = ?, updated_at = ? WHERE id = ?`,
+        input.kind,
         input.location,
         input.expiresAt,
+        input.unit ?? "g",
         now,
         itemId,
       );
     } else {
       itemId = randomUUID();
       await txn.runAsync(
-        `INSERT INTO pantry_items (id, kind, product_id, status, location, expires_at, created_at, updated_at)
-         VALUES (?, 'packaged', ?, 'sealed', ?, ?, ?, ?)`,
+        `INSERT INTO pantry_items (id, kind, product_id, status, location, expires_at, unit, created_at, updated_at)
+         VALUES (?, ?, ?, 'sealed', ?, ?, ?, ?, ?)`,
         itemId,
+        input.kind,
         input.productId,
         input.location,
         input.expiresAt,
+        input.unit ?? "g",
         now,
         now,
       );

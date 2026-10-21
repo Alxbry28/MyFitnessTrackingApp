@@ -6,7 +6,7 @@ import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import { gramsToText } from "@/modules/nutrition/services/entrySchema";
 
 import { ADJUST_MIN_CHANGE, checkAdjust, checkRemove, transitionText } from "../services/pantryStock";
-import { REMOVE_REASONS, type RemoveReason } from "../types/pantry";
+import { REMOVE_REASONS, type RemoveReason, type SupplementUnit } from "../types/pantry";
 
 export type SheetMode = "remove" | "adjust";
 
@@ -15,6 +15,7 @@ const REASON_LABELS: Record<RemoveReason, string> = { shared: "Shared", discarde
 type Props = {
   name: string;
   gramsLeft: number;
+  unit?: SupplementUnit;
   initialMode: SheetMode;
   onRemove: (reason: RemoveReason, grams: number) => Promise<void>;
   onAdjust: (actualGrams: number) => Promise<void>;
@@ -22,7 +23,7 @@ type Props = {
 };
 
 // Built to prototypes/pantry.html frame 4: take stock out without eating it, or set it to the real amount.
-export function StockChangeSheet({ name, gramsLeft, initialMode, onRemove, onAdjust, onClose }: Props) {
+export function StockChangeSheet({ name, gramsLeft, unit = "g", initialMode, onRemove, onAdjust, onClose }: Props) {
   const theme = useTheme();
   const styles = makeStyles(theme);
   const insets = useSafeAreaInsets();
@@ -34,13 +35,20 @@ export function StockChangeSheet({ name, gramsLeft, initialMode, onRemove, onAdj
   // Blocks a second tap that lands before the disabled button re-renders.
   const savingRef = useRef(false);
 
+  const unitLabel = unit === "tabs" ? "tabs" : unit === "caps" ? "caps" : "g";
   const isRemove = mode === "remove";
   const check = isRemove ? checkRemove(text, gramsLeft) : checkAdjust(text);
   const after = check.ok ? (isRemove ? gramsLeft - check.grams : check.grams) : gramsLeft;
   const noChange = !isRemove && check.ok && Math.abs(check.grams - gramsLeft) < ADJUST_MIN_CHANGE;
   const disabled = !check.ok || noChange || saving;
   const amount = check.ok ? gramsToText(check.grams) : "";
-  const action = isRemove ? (check.ok ? `Remove ${amount} g` : "Remove") : check.ok ? `Set to ${amount} g` : "Set amount";
+  const action = isRemove
+    ? check.ok
+      ? `Remove ${amount} ${unitLabel}`
+      : "Remove"
+    : check.ok
+      ? `Set to ${amount} ${unitLabel}`
+      : "Set amount";
 
   const switchMode = (next: SheetMode) => {
     setMode(next);
@@ -122,13 +130,13 @@ export function StockChangeSheet({ name, gramsLeft, initialMode, onRemove, onAdj
                   value={text}
                   onChangeText={setText}
                   keyboardType="decimal-pad"
-                  placeholder="g"
+                  placeholder={unitLabel}
                   placeholderTextColor={theme.colors.faint}
                   autoFocus
-                  accessibilityLabel={isRemove ? "Amount to remove in grams" : "Actual amount in grams"}
+                  accessibilityLabel={isRemove ? `Amount to remove in ${unitLabel}` : `Actual amount in ${unitLabel}`}
                   style={styles.input}
                 />
-                <Text style={styles.unit}>g</Text>
+                <Text style={styles.unit}>{unitLabel}</Text>
               </View>
             </View>
             {!check.ok && check.error && (
@@ -138,11 +146,11 @@ export function StockChangeSheet({ name, gramsLeft, initialMode, onRemove, onAdj
             )}
           </View>
 
-          <View style={styles.result} accessible accessibilityLabel={`${name}: ${transitionText(gramsLeft, after)}`}>
+          <View style={styles.result} accessible accessibilityLabel={`${name}: ${transitionText(gramsLeft, after, unit)}`}>
             <Text style={styles.resultName} numberOfLines={1}>
               {name}
             </Text>
-            <Text style={styles.resultValue}>{transitionText(gramsLeft, after)}</Text>
+            <Text style={styles.resultValue}>{transitionText(gramsLeft, after, unit)}</Text>
           </View>
 
           <Text style={styles.note}>

@@ -2,9 +2,14 @@ import type { MealType } from "@/modules/nutrition/types/foodLog";
 
 export const PANTRY_KINDS = ["packaged", "supplement", "batch"] as const;
 export type PantryKind = (typeof PANTRY_KINDS)[number];
+// The kinds a library product can be stocked as; batches come from cooking.
+export type ProductStockKind = Exclude<PantryKind, "batch">;
 
 export const LOCATIONS = ["cupboard", "fridge", "freezer"] as const;
 export type PantryLocation = (typeof LOCATIONS)[number];
+
+export const SUPPLEMENT_UNITS = ["g", "tabs", "caps"] as const;
+export type SupplementUnit = (typeof SUPPLEMENT_UNITS)[number];
 
 // One row of the Pantry list: an item with its ledger sums (stock is never stored, ADR-7).
 export type PantryStock = {
@@ -16,10 +21,16 @@ export type PantryStock = {
   // Eaten drained with drained values; usualDrainedG then turns net grams into drained ones.
   drained: boolean;
   usualDrainedG: number | null;
+  // The product's serving grams: a supplement's scoop or tab dose.
+  servingGrams: number | null;
   location: PantryLocation;
   expiresAt: string | null;
   openedAt: string | null;
+  unit: SupplementUnit;
   gramsLeft: number;
+  // Grams eaten in the last 14 days and the first movement, for a supplement's days left.
+  eatenRecentG: number;
+  firstMovementAt: string | null;
 };
 
 export const STOCK_REASONS = [

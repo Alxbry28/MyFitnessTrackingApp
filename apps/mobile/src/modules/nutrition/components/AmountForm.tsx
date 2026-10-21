@@ -21,6 +21,7 @@ type Props = {
   onSaved: () => void;
   // Extra choices shown under the name, such as the pantry's whole or part unit.
   header?: ReactNode;
+  amountLabel?: string;
 };
 
 function previewGrams(text: string): number | null {
@@ -29,7 +30,7 @@ function previewGrams(text: string): number | null {
 }
 
 // Shared by the add and edit screens: meal choice, grams and a live preview.
-export function AmountForm({ name, per100, defaultValues, submitLabel, onSubmit, onSaved, header }: Props) {
+export function AmountForm({ name, per100, defaultValues, submitLabel, onSubmit, onSaved, header, amountLabel }: Props) {
   const theme = useTheme();
   const styles = makeStyles(theme);
   const [formError, setFormError] = useState<string | null>(null);
@@ -94,7 +95,7 @@ export function AmountForm({ name, per100, defaultValues, submitLabel, onSubmit,
         name="grams"
         render={({ field, fieldState }) => (
           <View style={styles.field}>
-            <Text style={styles.label}>Amount (g)</Text>
+            <Text style={styles.label}>{amountLabel ?? "Amount (g)"}</Text>
             <TextInput
               ref={field.ref}
               value={field.value}
@@ -102,7 +103,7 @@ export function AmountForm({ name, per100, defaultValues, submitLabel, onSubmit,
               onBlur={field.onBlur}
               keyboardType="decimal-pad"
               selectTextOnFocus
-              accessibilityLabel="Amount in grams"
+              accessibilityLabel={amountLabel ?? "Amount in grams"}
               style={[styles.input, fieldState.error && styles.inputError]}
             />
             {fieldState.error?.message && <Text style={styles.error}>{fieldState.error.message}</Text>}

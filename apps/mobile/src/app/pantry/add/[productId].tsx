@@ -10,11 +10,26 @@ import { isDrained } from "@/modules/nutrition/services/drained";
 import { dayFromKey, dayKey, formatDayShort } from "@/modules/nutrition/services/mealTime";
 import type { Product } from "@/modules/nutrition/types/product";
 import { useAddStock } from "@/modules/pantry/hooks/useAddStock";
-import { gramsLeftText, unitsText } from "@/modules/pantry/services/pantryStock";
-import { LOCATIONS, type PantryLocation, type PantryStock } from "@/modules/pantry/types/pantry";
+import { formatAmount, gramsLeftText, unitsText } from "@/modules/pantry/services/pantryStock";
+import {
+  LOCATIONS,
+  type PantryLocation,
+  type PantryStock,
+  type ProductStockKind,
+  type SupplementUnit,
+} from "@/modules/pantry/types/pantry";
 
 const LOCATION_LABELS: Record<PantryLocation, string> = { cupboard: "Cupboard", fridge: "Fridge", freezer: "Freezer" };
 const MAX_UNITS = 99;
+const KINDS: { value: ProductStockKind; label: string }[] = [
+  { value: "packaged", label: "Grocery" },
+  { value: "supplement", label: "Supplement" },
+];
+const UNITS: { value: SupplementUnit; label: string }[] = [
+  { value: "g", label: "Grams" },
+  { value: "tabs", label: "Tabs" },
+  { value: "caps", label: "Caps" },
+];
 
 function backToPantry() {
   router.dismissTo("/pantry");
@@ -59,6 +74,9 @@ type FormProps = {
 
 function AddStockForm({ product, stock, fresh, save, styles, theme }: FormProps) {
   const insets = useSafeAreaInsets();
+  const [kind, setKind] = useState<ProductStockKind>(stock?.kind === "supplement" ? "supplement" : "packaged");
+  const supplement = kind === "supplement";
+  const [unit, setUnit] = useState<SupplementUnit>(stock?.unit ?? "g");
   const [units, setUnits] = useState(1);
   const [netText, setNetText] = useState(product.netWeightG === null ? "" : gramsToText(product.netWeightG));
   const [location, setLocation] = useState<PantryLocation>(stock?.location ?? "cupboard");
@@ -73,7 +91,20 @@ function AddStockForm({ product, stock, fresh, save, styles, theme }: FormProps)
   const netValid = netText.trim() !== "" && Number.isFinite(net) && net >= 1 && net <= 100000;
   const gramsAfter = (stock?.gramsLeft ?? 0) + (netValid ? units * net : 0);
   const disabled = !netValid || saving;
-  const afterUnits = unitsText(gramsAfter, netValid ? net : null);
+  // Supplements are formatted with their unit (grams, tabs, caps), groceries in units.
+  const afterBold = supplement ? formatAmount(gramsAfter, unit) : unitsText(gramsAfter, netValid ? net : null);
+  const afterRest = supplement ? null : gramsLeftText(gramsAfter);
+  const afterText = [afterBold, afterRest].filter(Boolean).join(", ");
+  const unitWord = !supplement ? "units" : unit === "g" ? "containers" : "bottles";
+  const boughtLabel = !supplement ? "Units bought" : unit === "g" ? "Containers bought" : "Bottles bought";
+  const sizeLabel = !supplement
+    ? "Net weight per unit"
+    : unit === "g"
+      ? "Container size"
+      : unit === "tabs"
+        ? "Tabs per bottle"
+        : "Capsules per bottle";
+  const unitSuffix = !supplement || unit === "g" ? "g" : unit === "tabs" ? "tabs" : "caps";
 
   const pickExpiry = () =>
     DateTimePickerAndroid.open({
@@ -88,7 +119,7 @@ function AddStockForm({ product, stock, fresh, save, styles, theme }: FormProps)
     setSaving(true);
     setError(null);
     try {
-      await save({ productId: product.id, units, netWeightG: net, location, expiresAt });
+      await save({ productId: product.id, kind, units, netWeightG: net, location, expiresAt, unit: supplement ? unit : "g" });
       backToPantry();
     } catch {
       setError("Couldn't add to your pantry. Nothing was changed.");
@@ -117,7 +148,51 @@ function AddStockForm({ product, stock, fresh, save, styles, theme }: FormProps)
         </View>
 
         <View style={[styles.field, styles.fieldBare]}>
-          <Text style={styles.lbl}>Units bought</Text>
+          <Text style={styles.lbl}>Kind</Text>
+          <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel="Kind">
+            {KINDS.map((k) => {
+              const on = k.value === kind;
+              return (
+                <Pressable
+                  key={k.value}
+                  onPress={() => setKind(k.value)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: on }}
+                  hitSlop={8}
+                  style={[styles.chip, on && styles.chipOn]}
+                >
+                  <Text style={[styles.chipLabel, on && styles.chipLabelOn]}>{k.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {supplement && (
+          <View style={[styles.field, styles.fieldBare]}>
+            <Text style={styles.lbl}>Unit</Text>
+            <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel="Unit">
+              {UNITS.map((u) => {
+                const on = u.value === unit;
+                return (
+                  <Pressable
+                    key={u.value}
+                    onPress={() => setUnit(u.value)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: on }}
+                    hitSlop={8}
+                    style={[styles.chip, on && styles.chipOn]}
+                  >
+                    <Text style={[styles.chipLabel, on && styles.chipLabelOn]}>{u.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        <View style={[styles.field, styles.fieldBare]}>
+          <Text style={styles.lbl}>{boughtLabel}</Text>
           <View style={styles.stepper}>
             <Pressable
               onPress={() => setUnits((u) => Math.max(1, u - 1))}
@@ -128,7 +203,7 @@ function AddStockForm({ product, stock, fresh, save, styles, theme }: FormProps)
             >
               <Text style={[styles.stepGlyph, units <= 1 && styles.faint]}>−</Text>
             </Pressable>
-            <Text style={styles.stepValue} accessibilityLabel={`${units} units`}>
+            <Text style={styles.stepValue} accessibilityLabel={`${units} ${unitWord}`}>
               {units}
             </Text>
             <Pressable
@@ -146,31 +221,38 @@ function AddStockForm({ product, stock, fresh, save, styles, theme }: FormProps)
         {/* Not in frame 3: products without a net weight need it before stock can be counted. */}
         <View>
           <View style={[styles.field, styles.fieldLast]}>
-            <Text style={styles.lbl}>Net weight per unit</Text>
+            <Text style={styles.lbl}>{sizeLabel}</Text>
             <View style={styles.inputWrap}>
               <TextInput
                 value={netText}
                 onChangeText={setNetText}
                 keyboardType="decimal-pad"
-                placeholder="g"
+                placeholder={unitSuffix}
                 placeholderTextColor={theme.colors.faint}
-                accessibilityLabel="Net weight per unit in grams"
+                accessibilityLabel={sizeLabel}
                 style={[styles.input, !netValid && styles.inputEmpty]}
               />
-              <Text style={styles.unit}>g</Text>
+              <Text style={styles.unit}>{unitSuffix}</Text>
             </View>
           </View>
           {!netValid && (
             <Text style={styles.error} accessibilityLiveRegion="polite">
-              {netText.trim() === "" ? "Enter the weight on the pack" : "Enter a weight from 1 to 100,000 g"}
+              {netText.trim() === ""
+                ? unit === "tabs"
+                  ? "Enter the tabs per bottle"
+                  : unit === "caps"
+                    ? "Enter the capsules per bottle"
+                    : "Enter the weight on the pack"
+                : "Enter a number from 1 to 100,000"}
             </Text>
           )}
         </View>
 
-        <View style={styles.result} accessible accessibilityLabel={`In stock after this: ${afterUnits}, ${gramsLeftText(gramsAfter)}`}>
+        <View style={styles.result} accessible accessibilityLabel={`In stock after this: ${afterText}`}>
           <Text style={styles.resultLbl}>In stock after this</Text>
           <Text style={styles.resultText}>
-            <Text style={styles.resultBold}>{afterUnits}</Text> · {gramsLeftText(gramsAfter)}
+            <Text style={styles.resultBold}>{afterBold}</Text>
+            {afterRest && ` · ${afterRest}`}
           </Text>
         </View>
 
