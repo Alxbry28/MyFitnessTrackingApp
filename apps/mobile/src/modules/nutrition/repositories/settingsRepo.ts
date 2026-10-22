@@ -117,13 +117,29 @@ export type AiConfig = {
   baseUrl: string;
 };
 
-export async function getAiApiKey(db: SQLiteDatabase): Promise<string | null> {
-  const val = await getValue(db, AI_API_KEY_SETTING);
-  return typeof val === "string" && val.trim() ? val.trim() : null;
+export async function getAiApiKey(db: SQLiteDatabase, provider?: AiProvider): Promise<string | null> {
+  const activeProvider = await getAiProvider(db);
+  const resolvedProvider = provider ?? activeProvider;
+  const providerKey = `ai_api_key_${resolvedProvider}`;
+  const providerVal = await getValue(db, providerKey);
+  if (typeof providerVal === "string" && providerVal.trim()) {
+    return providerVal.trim();
+  }
+  // Fallback to legacy global setting only if checking the active provider or legacy default "gemini"
+  if (resolvedProvider === activeProvider || resolvedProvider === "gemini") {
+    const val = await getValue(db, AI_API_KEY_SETTING);
+    if (typeof val === "string" && val.trim()) {
+      return val.trim();
+    }
+  }
+  return null;
 }
 
-export async function setAiApiKey(db: SQLiteDatabase, key: string | null): Promise<void> {
-  await setValue(db, AI_API_KEY_SETTING, key ? key.trim() : null);
+export async function setAiApiKey(db: SQLiteDatabase, key: string | null, provider?: AiProvider): Promise<void> {
+  const clean = key ? key.trim() : null;
+  const targetProvider = provider ?? (await getAiProvider(db));
+  await setValue(db, AI_API_KEY_SETTING, clean);
+  await setValue(db, `ai_api_key_${targetProvider}`, clean);
 }
 
 export async function getAiProvider(db: SQLiteDatabase): Promise<AiProvider> {
@@ -137,14 +153,20 @@ export async function setAiProvider(db: SQLiteDatabase, provider: AiProvider): P
 }
 
 export async function getAiModel(db: SQLiteDatabase, provider?: AiProvider): Promise<string> {
-  const resolvedProvider = provider ?? (await getAiProvider(db));
+  const activeProvider = await getAiProvider(db);
+  const resolvedProvider = provider ?? activeProvider;
   const providerKey = `ai_model_${resolvedProvider}`;
   const providerVal = await getValue(db, providerKey);
   if (typeof providerVal === "string" && providerVal.trim()) {
     return providerVal.trim();
   }
-  const val = await getValue(db, AI_MODEL);
-  return typeof val === "string" && val.trim() ? val.trim() : DEFAULT_AI_MODELS[resolvedProvider];
+  if (resolvedProvider === activeProvider) {
+    const val = await getValue(db, AI_MODEL);
+    if (typeof val === "string" && val.trim()) {
+      return val.trim();
+    }
+  }
+  return DEFAULT_AI_MODELS[resolvedProvider];
 }
 
 export async function setAiModel(db: SQLiteDatabase, model: string | null, provider?: AiProvider): Promise<void> {
@@ -166,7 +188,7 @@ export async function setAiBaseUrl(db: SQLiteDatabase, baseUrl: string | null): 
 export async function getAiConfig(db: SQLiteDatabase): Promise<AiConfig> {
   const provider = await getAiProvider(db);
   const [apiKey, model, baseUrl] = await Promise.all([
-    getAiApiKey(db),
+    getAiApiKey(db, provider),
     getAiModel(db, provider),
     getAiBaseUrl(db),
   ]);
