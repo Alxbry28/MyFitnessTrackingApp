@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workouts - prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../workouts-theme.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--desk); color: var(--text); font-family: var(--font-sans); font-variant-numeric: tabular-nums; min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: var(--space-5); padding: var(--space-6) var(--space-4); }
+  .toolbar { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-sm); color: var(--muted); flex-wrap: wrap; justify-content: center; }
+  .toolbar a { color: var(--accent-text); text-decoration: none; }
+  .toolbar a:hover { text-decoration: underline; }
+  .nav b { color: var(--text); font-weight: 600; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .toggle { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: var(--space-2) var(--space-4); }
+  .frames { display: flex; gap: var(--space-6); flex-wrap: wrap; justify-content: center; }
+  .frame-label { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2); text-align: center; max-width: 360px; }
+  .phone { width: 360px; height: 760px; background: var(--bg); border: 1px solid var(--border); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+  :where(.phone a) { color: inherit; text-decoration: none; }
+  .status { height: 28px; flex: none; padding: 0 var(--space-5); display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--muted); }
+  .appbar { padding: var(--space-2) var(--space-4) var(--space-3); display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+  .appbar h1 { font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.02em; }
+  .appbar h1.sm { font-size: var(--text-lg); }
+  .sub { font-size: var(--text-sm); color: var(--muted); }
+  .back { font-size: var(--text-sm); color: var(--accent-text); padding: var(--space-1) var(--space-4) 0; display: flex; align-items: center; justify-content: space-between; }
+  .content { flex: 1; overflow-y: auto; scrollbar-width: none; padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+  .content::-webkit-scrollbar { display: none; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3) var(--space-4); }
+  .section-label { font-size: var(--text-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+  .chips { display: flex; gap: var(--space-2); flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { height: 32px; padding: 0 var(--space-3); border-radius: 999px; background: var(--surface-2); font-size: var(--text-sm); color: var(--muted); display: inline-flex; align-items: center; white-space: nowrap; flex: none; }
+  .chip.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+  .badge { font-size: var(--text-xs); font-weight: 600; padding: 2px 7px; border-radius: 999px; white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; }
+  .badge.pr { color: var(--pr); background: var(--pr-soft); }
+  .badge.timer { color: var(--timer); background: var(--timer-soft); }
+  .badge.ok { color: var(--ok); background: var(--ok-soft); }
+  .badge.est { color: var(--estimate); background: var(--estimate-soft); }
+  .badge.acc { color: var(--accent-text); background: var(--accent-soft); }
+  .badge.rpe { color: var(--rpe); background: var(--rpe-soft); }
+  .btn { height: var(--tap); border-radius: var(--radius); background: var(--surface-2); font-weight: 600; font-size: var(--text-sm); display: flex; align-items: center; justify-content: center; gap: var(--space-2); width: 100%; }
+  .btn.sm { height: 36px; font-size: var(--text-sm); border-radius: var(--radius-sm); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.ok { background: var(--ok); color: var(--accent-ink); }
+  .btn.ghost { background: none; border: 1px solid var(--border); }
+  .btn.danger { background: var(--over-soft); color: var(--over); }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .tabbar { height: 64px; flex: none; display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
+  .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); font-size: var(--text-xs); color: var(--muted); }
+  .tab.on { color: var(--accent-text); font-weight: 600; }
+  .tab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* workout-specific styles */
+  .active-banner { border: 1px solid var(--timer); background: linear-gradient(180deg, var(--timer-soft), var(--surface)); display: flex; flex-direction: column; gap: var(--space-3); }
+  .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--timer); display: inline-block; box-shadow: 0 0 0 3px var(--timer-soft); }
+  .session-card { display: flex; flex-direction: column; gap: var(--space-2); }
+  .session-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-2); }
+  .session-title { font-size: var(--text-md); font-weight: 600; }
+  .session-date { font-size: var(--text-xs); color: var(--muted); margin-top: 2px; }
+  .metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--border); font-size: var(--text-xs); color: var(--muted); }
+  .metrics-row b { display: block; font-size: var(--text-sm); color: var(--text); font-weight: 600; margin-top: 1px; }
+  .ex-preview { font-size: var(--text-xs); color: var(--muted); display: flex; flex-direction: column; gap: 3px; padding-top: var(--space-1); }
+  .ex-preview div { display: flex; justify-content: space-between; }
+  .ex-preview span:first-child { color: var(--text); }
+
+  /* Anatomical Exercise Art Thumbnail (@bryllim/workout-guide style) */
+  .art-thumb { width: 48px; height: 48px; border-radius: var(--radius-sm); background: var(--art-bg); border: 1px solid var(--border); flex: none; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .art-thumb.sm { width: 38px; height: 38px; }
+  .art-thumb svg { width: 86%; height: 86%; }
+
+  /* Active Logger Header & Rest Timer */
+  .logger-top { padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; gap: var(--space-2); }
+  .logger-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+  .timer-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--timer-soft); color: var(--timer); font-size: var(--text-xs); font-weight: 700; }
+  .rest-strip { display: flex; align-items: center; justify-content: space-between; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px var(--space-3); font-size: var(--text-xs); }
+  .rest-strip .time { color: var(--timer); font-weight: 700; font-size: var(--text-sm); }
+  .rest-actions { display: flex; gap: var(--space-1); }
+  .rest-actions span { padding: 3px 8px; border-radius: 6px; background: var(--surface); border: 1px solid var(--border); font-weight: 600; color: var(--muted); }
+
+  /* Set Table */
+  .ex-card { padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); }
+  .ex-header { display: flex; align-items: center; gap: var(--space-3); }
+  .ex-header .info { flex: 1; min-width: 0; }
+  .ex-header .name { font-size: var(--text-md); font-weight: 600; color: var(--accent-text); }
+  .ex-header .prev-hint { font-size: var(--text-xs); color: var(--muted); margin-top: 2px; }
+  .set-table { display: flex; flex-direction: column; gap: 4px; margin-top: var(--space-1); }
+  .set-row { display: grid; grid-template-columns: 28px 1fr 56px 48px 34px; align-items: center; gap: 6px; padding: 4px 6px; border-radius: var(--radius-sm); font-size: var(--text-xs); }
+  .set-row.head { color: var(--faint); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; padding-bottom: 2px; }
+  .set-row.done { background: var(--ok-soft); }
+  .set-row.active { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--accent); }
+  .set-num { width: 22px; height: 22px; border-radius: 6px; background: var(--surface-2); color: var(--muted); font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .set-num.w { background: var(--warmup-soft); color: var(--warmup); }
+  .set-row.done .set-num { background: var(--ok); color: var(--accent-ink); }
+  .set-prev { color: var(--muted); font-size: var(--text-xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .set-input { height: 28px; border-radius: 6px; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-weight: 600; font-size: var(--text-sm); display: flex; align-items: center; justify-content: center; }
+  .set-row.done .set-input { background: transparent; border-color: transparent; color: var(--text); }
+  .set-row.active .set-input.focus { border-color: var(--accent); color: var(--accent-text); }
+  .set-check { width: 28px; height: 28px; border-radius: 7px; background: var(--surface-2); border: 1px solid var(--border); color: var(--faint); display: flex; align-items: center; justify-content: center; font-weight: 700; margin-left: auto; }
+  .set-row.done .set-check { background: var(--ok); border-color: var(--ok); color: var(--accent-ink); }
+
+  /* Exercise Library */
+  .search { height: 42px; border-radius: var(--radius); background: var(--surface-2); border: 1px solid var(--border); color: var(--text); font-size: var(--text-sm); display: flex; align-items: center; justify-content: space-between; padding: 0 var(--space-3); }
+  .lib-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
+  .lib-row:last-child { border-bottom: 0; }
+  .lib-row .info { flex: 1; min-width: 0; }
+  .lib-row .name { font-size: var(--text-sm); font-weight: 600; }
+  .lib-row .meta { font-size: var(--text-xs); color: var(--muted); margin-top: 2px; display: flex; gap: 6px; align-items: center; }
+  .cc-note { font-size: 11px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); line-height: 1.4; }
+  .cc-note b { color: var(--text); }
+
+  /* Summary Frame */
+  .hero-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2); }
+  .hero-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: var(--space-2); text-align: center; }
+  .hero-box .val { font-size: var(--text-md); font-weight: 700; color: var(--text); }
+  .hero-box .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+  .sum-ex { display: flex; flex-direction: column; gap: 6px; padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
+  .sum-ex:last-child { border-bottom: 0; }
+  .sum-set { display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--muted); }
+  .sum-set b { color: var(--text); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="toggle" id="theme-toggle">Switch to light</button>
+  <span class="nav">v1.1: <a href="pantry.html">Pantry</a> · <a href="supplements.html">Supplements</a> · <a href="recipes.html">Cooking</a> · <b>Workouts</b> · <a href="progress.html">Progress</a> · <a href="calendar.html">Calendar</a> · <a href="measure.html">Measure &amp; import</a> · <a href="today.html">v1 screens</a></span>
+</div>
+
+<div class="frames">
+  <!-- Frame 1: Workouts Hub -->
+  <div>
+    <p class="frame-label">1. Workouts Hub (active resume + history)</p>
+    <div class="phone">
+      <div class="status"><span>18:14</span><span>●●● 76%</span></div>
+      <div class="back"><span>‹ More</span><span style="color:var(--accent-text);font-weight:600">Exercises (19)</span></div>
+      <div class="appbar">
+        <h1>Workouts</h1>
+        <span class="sub">3 this week</span>
+      </div>
+
+      <div class="content">
+        <!-- Active session resume banner -->
+        <div class="card active-banner">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="display:inline-flex;align-items:center;gap:8px;font-size:var(--text-xs);font-weight:700;color:var(--timer);text-transform:uppercase;letter-spacing:0.05em">
+              <i class="pulse-dot"></i> Workout in progress
+            </span>
+            <span class="badge timer">42:18</span>
+          </div>
+          <div>
+            <div style="font-size:var(--text-lg);font-weight:700">Push Day A</div>
+            <div class="sub" style="margin-top:2px">Barbell Bench Press · Set 3 of 3 next</div>
+          </div>
+          <div class="btn-row">
+            <button class="btn primary sm">Resume workout</button>
+            <button class="btn danger sm">Discard</button>
+          </div>
+        </div>
+
+        <!-- Quick actions -->
+        <div class="btn-row">
+          <button class="btn ghost sm" style="border-color:var(--accent);color:var(--accent-text)">+ Empty workout</button>
+          <button class="btn ghost sm">Browse exercises</button>
+        </div>
+
+        <div class="section-label" style="margin-top:var(--space-1)">
+          <span>Recent Sessions</span>
+          <span style="color:var(--faint)">Oct 2026</span>
+        </div>
+
+        <!-- History Card 1 -->
+        <div class="card session-card">
+          <div class="session-head">
+            <div>
+              <div class="session-title">Pull &amp; Posterior Chain</div>
+              <div class="session-date">Sun, Oct 18 · 17:30</div>
+            </div>
+            <span class="badge pr">🏆 2 PRs</span>
+          </div>
+          <div class="metrics-row">
+            <div>Duration<b>51 min</b></div>
+            <div>Volume<b>6,420 kg</b></div>
+            <div>Sets<b>15 sets</b></div>
+          </div>
+          <div class="ex-preview">
+            <div><span>3 × Barbell Deadlift</span><span>Best: 120 kg × 5 🏆</span></div>
+            <div><span>4 × Weighted Pull-up</span><span>Best: +10 kg × 8 🏆</span></div>
+            <div><span>4 × Barbell Row</span><span>Best: 70 kg × 8</span></div>
+            <div><span>4 × Dumbbell Hammer Curl</span><span>Best: 16 kg × 10</span></div>
+          </div>
+        </div>
+
+        <!-- History Card 2 -->
+        <div class="card session-card">
+          <div class="session-head">
+            <div>
+              <div class="session-title">Lower Body Strength</div>
+              <div class="session-date">Fri, Oct 16 · 18:05</div>
+            </div>
+            <span class="badge ok">Completed</span>
+          </div>
+          <div class="metrics-row">
+            <div>Duration<b>48 min</b></div>
+            <div>Volume<b>7,180 kg</b></div>
+            <div>Sets<b>14 sets</b></div>
+          </div>
+          <div class="ex-preview">
+            <div><span>4 × Barbell Back Squat</span><span>Best: 100 kg × 6</span></div>
+            <div><span>3 × Romanian Deadlift</span><span>Best: 85 kg × 8</span></div>
+            <div><span>4 × Leg Press</span><span>Best: 180 kg × 10</span></div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="tabbar">
+        <a class="tab" href="today.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Today</a>
+        <a class="tab" href="log.html"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Log</a>
+        <a class="tab" href="pantry.html"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM5 10h14"/></svg>Pantry</a>
+        <a class="tab" href="progress.html"><svg viewBox="0 0 24 24"><path d="M4 19l5-6 4 3 7-9"/></svg>Progress</a>
+        <a class="tab on" href="workouts.html"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>More</a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Frame 2: Active Workout Logger -->
+  <div>
+    <p class="frame-label">2. Active Logger (previous hints + 2-tap sets)</p>
+    <div class="phone">
+      <div class="status"><span>18:15</span><span>●●● 76%</span></div>
+
+      <div class="logger-top">
+        <div class="logger-bar">
+          <div>
+            <div style="font-size:var(--text-md);font-weight:700">Push Day A</div>
+            <div style="font-size:var(--text-xs);color:var(--muted)">Started 17:32 · 3 exercises</div>
+          </div>
+          <span class="timer-pill"><i class="pulse-dot"></i> 42:18</span>
+          <button class="btn ok sm" style="width:auto;padding:0 14px">Finish</button>
+        </div>
+
+        <!-- Floating Rest Timer Bar -->
+        <div class="rest-strip">
+          <div>Rest timer · <span class="time">01:15</span> <span style="color:var(--muted)">/ 02:00</span></div>
+          <div class="rest-actions">
+            <span>-15s</span>
+            <span>+15s</span>
+            <span style="color:var(--accent-text)">Skip</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="content" style="padding-top:var(--space-3)">
+        <!-- Exercise 1: Barbell Bench Press -->
+        <div class="card ex-card">
+          <div class="ex-header">
+            <div class="art-thumb sm" title="@bryllim/workout-guide">
+              <svg viewBox="0 0 48 48" fill="none">
+                <rect x="6" y="30" width="36" height="4" rx="2" fill="var(--art-ink)"/>
+                <line x1="12" y1="34" x2="12" y2="42" stroke="var(--art-ink)" stroke-width="2.5"/>
+                <line x1="36" y1="34" x2="36" y2="42" stroke="var(--art-ink)" stroke-width="2.5"/>
+                <ellipse cx="22" cy="26" rx="10" ry="4" fill="var(--art-muscle)"/>
+                <circle cx="35" cy="25" r="3.5" fill="var(--art-ink)"/>
+                <line x1="8" y1="14" x2="40" y2="14" stroke="var(--art-ink)" stroke-width="2.5"/>
+                <rect x="9" y="10" width="3" height="8" rx="1" fill="var(--art-ink)"/>
+                <rect x="36" y="10" width="3" height="8" rx="1" fill="var(--art-ink)"/>
+                <line x1="22" y1="25" x2="22" y2="14" stroke="var(--art-secondary)" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="info">
+              <div class="name">Barbell Bench Press</div>
+              <div class="prev-hint">Last: 60 kg × 8, 8, 7 · Pause 1s on chest</div>
+            </div>
+            <span class="badge pr">🏆 PR</span>
+          </div>
+
+          <div class="set-table">
+            <div class="set-row head">
+              <span>Set</span>
+              <span>Previous</span>
+              <span style="text-align:center">kg</span>
+              <span style="text-align:center">Reps</span>
+              <span style="text-align:right">✓</span>
+            </div>
+            <div class="set-row done">
+              <span class="set-num w">W</span>
+              <span class="set-prev">40 kg × 10</span>
+              <span class="set-input">40</span>
+              <span class="set-input">10</span>
+              <span class="set-check">✓</span>
+            </div>
+            <div class="set-row done">
+              <span class="set-num">1</span>
+              <span class="set-prev">60 kg × 8</span>
+              <span class="set-input">62.5</span>
+              <span class="set-input">8</span>
+              <span class="set-check">✓</span>
+            </div>
+            <div class="set-row done">
+              <span class="set-num">2</span>
+              <span class="set-prev">60 kg × 8</span>
+              <span class="set-input">62.5</span>
+              <span class="set-input">8</span>
+              <span class="set-check">✓</span>
+            </div>
+            <div class="set-row active">
+              <span class="set-num">3</span>
+              <span class="set-prev">60 kg × 7</span>
+              <span class="set-input focus">62.5</span>
+              <span class="set-input">8</span>
+              <span class="set-check">✓</span>
+            </div>
+          </div>
+
+          <button class="btn sm" style="height:32px;margin-top:4px">+ Add Set (prefills 62.5 kg × 8)</button>
+        </div>
+
+        <!-- Exercise 2: Bodyweight / Weighted Dip -->
+        <div class="card ex-card">
+          <div class="ex-header">
+            <div class="art-thumb sm" title="@bryllim/workout-guide">
+              <svg viewBox="0 0 48 48" fill="none">
+                <path d="M12 24h24M14 24v16M34 24v16" stroke="var(--art-ink)" stroke-width="2.5" stroke-linecap="round"/>
+                <circle cx="24" cy="11" r="3.5" fill="var(--art-ink)"/>
+                <path d="M20 16h8l-1 10h-6z" fill="var(--art-muscle)"/>
+                <path d="M19 17l-4 7M29 17l4 7" stroke="var(--art-secondary)" stroke-width="3" stroke-linecap="round"/>
+                <path d="M22 26l-1 10M26 26l1 10" stroke="var(--art-ink)" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="info">
+              <div class="name">Chest Dip (Bodyweight)</div>
+              <div class="prev-hint">Last: BW × 10, 10, 9</div>
+            </div>
+            <span class="badge acc">BW + kg</span>
+          </div>
+
+          <div class="set-table">
+            <div class="set-row head">
+              <span>Set</span>
+              <span>Previous</span>
+              <span style="text-align:center">+kg</span>
+              <span style="text-align:center">Reps</span>
+              <span style="text-align:right">✓</span>
+            </div>
+            <div class="set-row done">
+              <span class="set-num">1</span>
+              <span class="set-prev">BW × 10</span>
+              <span class="set-input">0</span>
+              <span class="set-input">12</span>
+              <span class="set-check">✓</span>
+            </div>
+            <div class="set-row">
+              <span class="set-num">2</span>
+              <span class="set-prev">BW × 10</span>
+              <span class="set-input">0</span>
+              <span class="set-input">10</span>
+              <span class="set-check">✓</span>
+            </div>
+          </div>
+
+          <button class="btn sm" style="height:32px;margin-top:4px">+ Add Set</button>
+        </div>
+
+        <button class="btn ghost" style="border-color:var(--accent);color:var(--accent-text)">+ Add Exercise</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 3: Exercise Library & Picker -->
+  <div>
+    <p class="frame-label">3. Exercise Library (@bryllim/workout-guide art)</p>
+    <div class="phone">
+      <div class="status"><span>18:16</span><span>●●● 75%</span></div>
+      <div class="back"><span>‹ Active Workout</span><span style="color:var(--accent-text);font-weight:600">+ Custom</span></div>
+      <div class="appbar">
+        <h1 class="sm">Add Exercise</h1>
+        <span class="sub">17 built-in · 2 custom</span>
+      </div>
+
+      <div class="content">
+        <div class="search">
+          <span>press</span>
+          <span style="color:var(--muted);font-size:var(--text-xs)">✕ Clear</span>
+        </div>
+
+        <div class="chips">
+          <span class="chip on">All</span>
+          <span class="chip">Chest</span>
+          <span class="chip">Back</span>
+          <span class="chip">Legs</span>
+          <span class="chip">Shoulders</span>
+          <span class="chip">Arms</span>
+          <span class="chip">Core</span>
+        </div>
+
+        <div class="card" style="padding:var(--space-2) var(--space-3)">
+          <!-- Exercise Row 1 -->
+          <div class="lib-row">
+            <div class="art-thumb">
+              <svg viewBox="0 0 48 48" fill="none">
+                <rect x="6" y="30" width="36" height="4" rx="2" fill="var(--art-ink)"/>
+                <ellipse cx="22" cy="26" rx="10" ry="4" fill="var(--art-muscle)"/>
+                <circle cx="35" cy="25" r="3.5" fill="var(--art-ink)"/>
+                <line x1="8" y1="14" x2="40" y2="14" stroke="var(--art-ink)" stroke-width="2.5"/>
+                <line x1="22" y1="25" x2="22" y2="14" stroke="var(--art-secondary)" stroke-width="3"/>
+              </svg>
+            </div>
+            <div class="info">
+              <div class="name">Barbell Bench Press</div>
+              <div class="meta">
+                <span class="badge acc">Chest</span>
+                <span>Barbell · Last: 60 kg × 8</span>
+              </div>
+            </div>
+            <span style="color:var(--accent-text);font-weight:700;font-size:var(--text-lg)">+</span>
+          </div>
+
+          <!-- Exercise Row 2 -->
+          <div class="lib-row">
+            <div class="art-thumb">
+              <svg viewBox="0 0 48 48" fill="none">
+                <line x1="10" y1="36" x2="28" y2="20" stroke="var(--art-ink)" stroke-width="3.5" stroke-linecap="round"/>
+                <line x1="28" y1="36" x2="10" y2="36" stroke="var(--art-ink)" stroke-width="2.5"/>
+                <ellipse cx="21" cy="25" rx="7" ry="4" transform="rotate(-38 21 25)" fill="var(--art-muscle)"/>
+                <circle cx="28" cy="17" r="3.5" fill="var(--art-ink)"/>
+                <line x1="20" y1="24" x2="20" y2="11" stroke="var(--art-secondary)" stroke-width="3"/>
+                <rect x="16" y="9" width="8" height="3" rx="1" fill="var(--art-ink)"/>
+              </svg>
+            </div>
+            <div class="info">
+              <div class="name">Incline Dumbbell Press</div>
+              <div class="meta">
+                <span class="badge acc">Chest</span>
+                <span>Dumbbell · Last: 24 kg × 10</span>
+              </div>
+            </div>
+            <span style="color:var(--accent-text);font-weight:700;font-size:var(--text-lg)">+</span>
+          </div>
+
+          <!-- Exercise Row 3 -->
+          <div class="lib-row">
+            <div class="art-thumb">
+              <svg viewBox="0 0 48 48" fill="none">
+                <circle cx="24" cy="14" r="3.5" fill="var(--art-ink)"/>
+                <rect x="19" y="19" width="10" height="13" rx="2" fill="var(--art-ink)"/>
+                <circle cx="18" cy="21" r="3.5" fill="var(--art-muscle)"/>
+                <circle cx="30" cy="21" r="3.5" fill="var(--art-muscle)"/>
+                <path d="M16 20L13 10M32 20L35 10" stroke="var(--art-secondary)" stroke-width="2.8" stroke-linecap="round"/>
+                <line x1="8" y1="10" x2="40" y2="10" stroke="var(--art-ink)" stroke-width="2.5"/>
+                <path d="M21 32v10M27 32v10" stroke="var(--art-ink)" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="info">
+              <div class="name">Overhead Barbell Press</div>
+              <div class="meta">
+                <span class="badge rpe">Shoulders</span>
+                <span>Barbell · Last: 42.5 kg × 8</span>
+              </div>
+            </div>
+            <span style="color:var(--accent-text);font-weight:700;font-size:var(--text-lg)">+</span>
+          </div>
+
+          <!-- Exercise Row 4 -->
+          <div class="lib-row">
+            <div class="art-thumb">
+              <svg viewBox="0 0 48 48" fill="none">
+                <line x1="12" y1="36" x2="26" y2="28" stroke="var(--art-ink)" stroke-width="3" stroke-linecap="round"/>
+                <ellipse cx="25" cy="27" rx="6" ry="3.5" transform="rotate(-25 25 27)" fill="var(--art-muscle)"/>
+                <rect x="28" y="14" width="12" height="6" rx="1.5" transform="rotate(-25 28 14)" fill="var(--art-secondary)"/>
+                <circle cx="15" cy="29" r="3" fill="var(--art-ink)"/>
+              </svg>
+            </div>
+            <div class="info">
+              <div class="name">Leg Press</div>
+              <div class="meta">
+                <span class="badge ok">Legs</span>
+                <span>Machine · Last: 180 kg × 10</span>
+              </div>
+            </div>
+            <span style="color:var(--accent-text);font-weight:700;font-size:var(--text-lg)">+</span>
+          </div>
+
+          <!-- Exercise Row 5: Custom -->
+          <div class="lib-row">
+            <div class="art-thumb" style="background:var(--surface-2);color:var(--accent-text);font-weight:700;font-size:var(--text-md)">
+              CP
+            </div>
+            <div class="info">
+              <div class="name">Cable Chest Press (Seated)</div>
+              <div class="meta">
+                <span class="badge est">Custom</span>
+                <span>Cable · Chest · Last: 35 kg × 12</span>
+              </div>
+            </div>
+            <span style="color:var(--accent-text);font-weight:700;font-size:var(--text-lg)">+</span>
+          </div>
+        </div>
+
+        <!-- ADR-20 CC BY-SA 4.0 Attribution -->
+        <div class="cc-note">
+          <b>Exercise illustrations:</b> <code>@bryllim/workout-guide</code> by <b>Bryl Lim</b> and <b>Everkinetic</b>, licensed under <b>CC BY-SA 4.0</b> (unedited artwork per ADR-20).
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 4: Completed Workout Summary / Session Detail -->
+  <div>
+    <p class="frame-label">4. Workout Summary &amp; PR Breakdown</p>
+    <div class="phone">
+      <div class="status"><span>18:28</span><span>●●● 74%</span></div>
+      <div class="back"><span>‹ Workouts</span><span style="color:var(--over)">Delete</span></div>
+      <div class="appbar">
+        <div>
+          <span class="badge ok" style="margin-bottom:4px">✓ Workout Completed</span>
+          <h1 class="sm">Push Day A</h1>
+          <div class="sub">Thu, Oct 22 · 17:32 – 18:26</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <!-- Hero Stats -->
+        <div class="hero-grid">
+          <div class="hero-box">
+            <div class="val">54m</div>
+            <div class="lbl">Duration</div>
+          </div>
+          <div class="hero-box">
+            <div class="val">6.84t</div>
+            <div class="lbl">Volume</div>
+          </div>
+          <div class="hero-box">
+            <div class="val">16</div>
+            <div class="lbl">Sets</div>
+          </div>
+          <div class="hero-box" style="border-color:var(--pr);background:var(--pr-soft)">
+            <div class="val" style="color:var(--pr)">2 🏆</div>
+            <div class="lbl" style="color:var(--pr)">PRs</div>
+          </div>
+        </div>
+
+        <!-- Session Note -->
+        <div class="card" style="padding:var(--space-2) var(--space-3);font-size:var(--text-xs);color:var(--muted)">
+          <b style="color:var(--text)">Session note:</b> Felt strong on bench press (+2.5 kg over last week). Left shoulder warm-up helped.
+        </div>
+
+        <!-- Exercise Breakdown -->
+        <div class="card">
+          <div class="sum-ex">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <b style="font-size:var(--text-sm);color:var(--accent-text)">1. Barbell Bench Press</b>
+              <span class="badge est">Est. 1RM 79 kg</span>
+            </div>
+            <div class="sum-set"><span>Warmup</span><span>40 kg × 10</span></div>
+            <div class="sum-set"><span>Set 1</span><span><b>62.5 kg × 8</b> <span class="badge pr">🏆 Weight PR</span></span></div>
+            <div class="sum-set"><span>Set 2</span><span><b>62.5 kg × 8</b></span></div>
+            <div class="sum-set"><span>Set 3</span><span><b>62.5 kg × 8</b> <span class="badge pr">🏆 Volume PR</span></span></div>
+          </div>
+
+          <div class="sum-ex">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <b style="font-size:var(--text-sm);color:var(--accent-text)">2. Incline Dumbbell Press</b>
+              <span class="sub" style="font-size:11px">Vol: 1,344 kg</span>
+            </div>
+            <div class="sum-set"><span>Set 1</span><span><b>24 kg × 10</b></span></div>
+            <div class="sum-set"><span>Set 2</span><span><b>24 kg × 9</b></span></div>
+            <div class="sum-set"><span>Set 3</span><span><b>24 kg × 9</b></span></div>
+          </div>
+
+          <div class="sum-ex">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <b style="font-size:var(--text-sm);color:var(--accent-text)">3. Chest Dip (Bodyweight)</b>
+              <span class="sub" style="font-size:11px">32 total reps</span>
+            </div>
+            <div class="sum-set"><span>Set 1</span><span><b>BW × 12</b></span></div>
+            <div class="sum-set"><span>Set 2</span><span><b>BW × 10</b></span></div>
+            <div class="sum-set"><span>Set 3</span><span><b>BW × 10</b></span></div>
+          </div>
+        </div>
+
+        <button class="btn primary">Repeat this workout</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const btn = document.getElementById('theme-toggle');
+  btn.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = next;
+    btn.textContent = next === 'light' ? 'Switch to dark' : 'Switch to light';
+  });
+</script>
+<script src="../proto-nav.js"></script>
+</body>
+</html>
+
+

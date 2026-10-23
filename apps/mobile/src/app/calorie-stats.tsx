@@ -19,14 +19,59 @@ export default function CalorieStatsScreen() {
   const styles = makeStyles(theme);
   const insets = useSafeAreaInsets();
 
-  const { data, loading, acceptSuggestion } = useCalorieStats();
+  const { data, loading, error, refresh, acceptSuggestion } = useCalorieStats();
   const [updating, setUpdating] = useState(false);
   const [timeframe, setTimeframe] = useState<"7d" | "30d">("7d");
 
-  if (loading || !data) {
+  if (loading) {
     return (
-      <View style={[styles.screen, styles.centerBox, { paddingTop: insets.top }]}>
-        <ActivityIndicator color={theme.colors.accent} size="large" />
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
+        <View style={styles.appbar}>
+          <Pressable
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            hitSlop={8}
+            style={styles.backBtn}
+          >
+            <Text style={styles.backText}>‹ Back</Text>
+          </Pressable>
+          <Text style={styles.appbarTitle}>Calorie Stats & TDEE</Text>
+          <View style={styles.backBtnPlaceholder} />
+        </View>
+        <View style={[styles.screen, styles.centerBox]}>
+          <ActivityIndicator color={theme.colors.accent} size="large" />
+        </View>
+      </View>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
+        <View style={styles.appbar}>
+          <Pressable
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            hitSlop={8}
+            style={styles.backBtn}
+          >
+            <Text style={styles.backText}>‹ Back</Text>
+          </Pressable>
+          <Text style={styles.appbarTitle}>Calorie Stats & TDEE</Text>
+          <View style={styles.backBtnPlaceholder} />
+        </View>
+        <View style={[styles.screen, styles.centerBox, { paddingHorizontal: 24 }]}>
+          <Text style={[styles.cardSubtitle, { marginBottom: 16, textAlign: "center" }]}>
+            {"Couldn't load calorie statistics."}
+          </Text>
+          <Pressable
+            onPress={() => void refresh()}
+            accessibilityRole="button"
+            style={styles.acceptBtn}
+          >
+            <Text style={styles.acceptBtnText}>Retry</Text>
+          </Pressable>
+        </View>
       </View>
     );
   }

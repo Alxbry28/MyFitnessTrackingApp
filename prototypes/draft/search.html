@@ -1,0 +1,202 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search and pick - prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../theme.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--desk); color: var(--text); font-family: var(--font-sans); font-variant-numeric: tabular-nums; min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: var(--space-5); padding: var(--space-6) var(--space-4); }
+  .toolbar { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-sm); color: var(--muted); }
+  .toolbar a { color: var(--accent-text); }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .toggle { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: var(--space-2) var(--space-4); }
+  .frames { display: flex; gap: var(--space-6); flex-wrap: wrap; justify-content: center; }
+  .frame-label { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2); text-align: center; }
+  .phone { width: 360px; height: 760px; background: var(--bg); border: 1px solid var(--border); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+  .status { height: 28px; flex: none; padding: 0 var(--space-5); display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--muted); }
+  .content { flex: 1; overflow: hidden; padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+  svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .chips { display: flex; gap: var(--space-2); }
+  .chip { height: 32px; padding: 0 var(--space-3); border-radius: 999px; background: var(--surface-2); font-size: var(--text-sm); color: var(--muted); display: inline-flex; align-items: center; }
+  .chip.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+  .btn { height: var(--tap); border-radius: var(--radius); font-weight: 700; font-size: var(--text-md); display: flex; align-items: center; justify-content: center; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+
+  /* search bar */
+  .searchbar { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-4) var(--space-3); }
+  .back { width: 40px; height: 40px; margin-left: calc(-1 * var(--space-2)); display: flex; align-items: center; justify-content: center; color: var(--muted); flex: none; }
+  .search { flex: 1; height: var(--tap); border-radius: var(--radius); background: var(--surface-2); border: 1px solid var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3); font-size: var(--text-md); }
+  .search svg { color: var(--muted); }
+  .caret { display: inline-block; width: 2px; height: 18px; background: var(--accent); vertical-align: middle; margin-left: 1px; }
+  .scan-btn { width: var(--tap); height: var(--tap); border-radius: var(--radius); background: var(--surface-2); display: flex; align-items: center; justify-content: center; color: var(--accent-text); flex: none; }
+
+  /* results */
+  .section-label { font-size: var(--text-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .prod { display: flex; align-items: center; gap: var(--space-3); min-height: 60px; padding: var(--space-2) var(--space-4); }
+  .prod + .prod { border-top: 1px solid var(--border); }
+  .prod .info { flex: 1; min-width: 0; }
+  .prod .name { font-size: var(--text-md); font-weight: 500; }
+  .prod .name mark { background: none; color: var(--accent-text); font-weight: 700; }
+  .prod .meta { font-size: var(--text-sm); color: var(--muted); }
+  .prod .plus { width: 36px; height: 36px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); font-size: var(--text-lg); font-weight: 600; display: flex; align-items: center; justify-content: center; flex: none; }
+  .more { display: flex; align-items: center; gap: var(--space-3); min-height: 56px; padding: var(--space-2) var(--space-4); }
+  .more + .more { border-top: 1px solid var(--border); }
+  .more svg { color: var(--accent-text); flex: none; }
+  .more .info { flex: 1; }
+  .more .name { font-size: var(--text-md); font-weight: 600; }
+  .more .meta { font-size: var(--text-xs); color: var(--muted); }
+
+  /* amount sheet */
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-2) var(--space-4) var(--space-5); display: flex; flex-direction: column; gap: var(--space-4); }
+  .grabber { width: 36px; height: 4px; border-radius: 2px; background: var(--faint); margin: 0 auto; }
+  .sheet h2 { font-size: var(--text-lg); font-weight: 700; }
+  .sheet .sub { font-size: var(--text-sm); color: var(--muted); margin-top: 2px; }
+  .field label { display: block; font-size: var(--text-xs); color: var(--muted); font-weight: 600; margin-bottom: var(--space-1); }
+  .amount { display: flex; align-items: center; gap: var(--space-3); }
+  .input { flex: 1; height: var(--tap); border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); padding: 0 var(--space-3); display: flex; align-items: center; justify-content: space-between; font-size: var(--text-lg); font-weight: 600; }
+  .input .unit { color: var(--muted); font-size: var(--text-sm); font-weight: 400; }
+  .amount-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-1); }
+  .amount-head label { margin-bottom: 0; }
+  .useg { display: flex; background: var(--surface-2); border-radius: var(--radius-sm); padding: 2px; }
+  .useg span { min-width: 44px; height: 28px; padding: 0 var(--space-2); display: flex; align-items: center; justify-content: center; font-size: var(--text-xs); color: var(--muted); border-radius: 6px; }
+  .useg span.on { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 1px 2px var(--scrim); }
+  .step { width: var(--tap); height: var(--tap); border-radius: var(--radius-sm); background: var(--surface-2); font-size: var(--text-lg); font-weight: 600; }
+  .preview { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; padding: var(--space-3) 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .preview b { display: block; font-size: var(--text-lg); font-weight: 700; }
+  .preview span { font-size: var(--text-xs); color: var(--muted); }
+  .preview .kc b { color: var(--accent-text); }
+  .after { display: flex; justify-content: space-between; font-size: var(--text-sm); color: var(--muted); }
+  .after b { color: var(--ok); }
+  .bar { height: 4px; border-radius: 2px; background: var(--track); overflow: hidden; display: flex; margin-top: var(--space-2); }
+  .bar i { display: block; height: 100%; }
+  :where(.phone a) { color: inherit; text-decoration: none; }
+  .nav b { color: var(--text); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="toggle" id="theme-toggle">Switch to light</button>
+  <span class="nav"><a href="onboarding.html">Setup</a> · <a href="today.html">Today</a> · <a href="log.html">Log</a> · <a href="history.html">History</a> · <b>Search</b> · <a href="text-log.html">Text log</a> · <a href="products.html">Products</a> · <a href="settings.html">Settings</a></span>
+</div>
+
+<div class="frames">
+  <!-- Frame 1: results -->
+  <div>
+    <p class="frame-label">1 · Search your library</p>
+    <div class="phone">
+      <div class="status"><span>19:40</span><span>●●● 55%</span></div>
+      <div class="searchbar">
+        <button class="back" aria-label="Back"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <div class="search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><span>chick<span class="caret"></span></span></div>
+        <a class="scan-btn" href="products.html" aria-label="Scan barcode"><svg class="i" viewBox="0 0 24 24"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 8v8M11 8v8M14 8v8M17 8v8"/></svg></a>
+      </div>
+      <div class="content">
+        <div class="chips"><span class="chip">Breakfast</span><span class="chip">Lunch</span><span class="chip on">Dinner</span><span class="chip">Snacks</span></div>
+        <p class="section-label">Your library · 4 results</p>
+        <div class="card">
+          <div class="prod"><div class="info"><div class="name"><mark>Chick</mark>en breast, boiled</div><div class="meta">165 kcal / 100 g · last 250 g</div></div><span class="plus">+</span></div>
+          <div class="prod"><div class="info"><div class="name"><mark>Chick</mark>en breast, grilled</div><div class="meta">165 kcal / 100 g · last 180 g</div></div><span class="plus">+</span></div>
+          <div class="prod"><div class="info"><div class="name"><mark>Chick</mark>en thigh, roasted</div><div class="meta">229 kcal / 100 g</div></div><span class="plus">+</span></div>
+          <div class="prod"><div class="info"><div class="name"><mark>Chick</mark>peas, canned</div><div class="meta">Del Monte · 139 kcal / 100 g</div></div><span class="plus">+</span></div>
+        </div>
+        <p class="section-label">Not here?</p>
+        <div class="card">
+          <a class="more" href="products.html"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><div class="info"><div class="name">Search Open Food Facts</div><div class="meta">Packaged products · needs internet</div></div></a>
+          <div class="more"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><div class="info"><div class="name">Create "chick…" product</div><div class="meta">Enter values from a label</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 2: amount sheet -->
+  <div>
+    <p class="frame-label">2 · Set amount, see the day update</p>
+    <div class="phone">
+      <div class="status"><span>19:40</span><span>●●● 55%</span></div>
+      <div class="searchbar">
+        <button class="back" aria-label="Back"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <div class="search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><span>chick</span></div>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="prod"><div class="info"><div class="name"><mark>Chick</mark>en breast, boiled</div><div class="meta">165 kcal / 100 g · last 250 g</div></div><span class="plus">+</span></div>
+        </div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div><h2>Chicken breast, boiled</h2><p class="sub">Custom · 165 kcal per 100 g</p></div>
+        <div class="field">
+          <div class="amount-head"><label>Amount</label><div class="useg"><span class="on">g</span><span>oz</span></div></div>
+          <div class="amount"><button class="step">−</button><div class="input"><span>250<span class="caret"></span></span><span class="unit">g · 8.8 oz</span></div><button class="step">+</button></div>
+        </div>
+        <div class="chips"><span class="chip on">Last · 250 g</span><span class="chip">100 g</span><span class="chip">1 breast · 170 g</span></div>
+        <div class="preview">
+          <div class="kc"><b>413</b><span>kcal</span></div>
+          <div><b>77.5</b><span>protein g</span></div>
+          <div><b>0</b><span>carbs g</span></div>
+          <div><b>9</b><span>fat g</span></div>
+        </div>
+        <div>
+          <div class="after"><span>Today after this</span><span>1,833 / 2,200 · <b>367 left</b></span></div>
+          <div class="bar"><i style="width: 64.5%; background: var(--accent)"></i><i style="width: 18.8%; background: var(--accent-soft)"></i></div>
+        </div>
+        <button class="btn primary">Add to Dinner</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 3: liquid product, amount in mL -->
+  <div>
+    <p class="frame-label">3 · Liquids in mL or fl oz</p>
+    <div class="phone">
+      <div class="status"><span>07:15</span><span>●●● 91%</span></div>
+      <div class="searchbar">
+        <button class="back" aria-label="Back"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <div class="search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><span>milk</span></div>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="prod"><div class="info"><div class="name">Whole <mark>milk</mark></div><div class="meta">Arla · 64 kcal / 100 mL · last 250 mL</div></div><span class="plus">+</span></div>
+        </div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div><h2>Whole milk</h2><p class="sub">Arla · 64 kcal per 100 mL</p></div>
+        <div class="field">
+          <div class="amount-head"><label>Amount</label><div class="useg"><span>mL</span><span class="on">fl oz</span></div></div>
+          <div class="amount"><button class="step">−</button><div class="input"><span>8<span class="caret"></span></span><span class="unit">fl oz · 237 mL</span></div><button class="step">+</button></div>
+        </div>
+        <div class="chips"><span class="chip on">1 cup · 8 fl oz</span><span class="chip">1 glass · 250 mL</span><span class="chip">100 mL</span></div>
+        <div class="preview">
+          <div class="kc"><b>151</b><span>kcal</span></div>
+          <div><b>7.8</b><span>protein g</span></div>
+          <div><b>11.4</b><span>carbs g</span></div>
+          <div><b>8.5</b><span>fat g</span></div>
+        </div>
+        <button class="btn primary">Add to Breakfast</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const btn = document.getElementById('theme-toggle');
+  btn.onclick = () => {
+    const light = document.documentElement.dataset.theme !== 'light';
+    document.documentElement.dataset.theme = light ? 'light' : 'dark';
+    btn.textContent = light ? 'Switch to dark' : 'Switch to light';
+  };
+</script>
+<script src="../proto-nav.js"></script>
+</body>
+</html>
+
+

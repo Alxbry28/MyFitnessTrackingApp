@@ -1,0 +1,273 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Progress - prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../theme.css">
+<style>
+  /* shared v1.1 frame styles (same as recipes/progress/measure) */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--desk); color: var(--text); font-family: var(--font-sans); font-variant-numeric: tabular-nums; min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: var(--space-5); padding: var(--space-6) var(--space-4); }
+  .toolbar { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-sm); color: var(--muted); flex-wrap: wrap; justify-content: center; }
+  .toolbar a { color: var(--accent-text); }
+  .nav b { color: var(--text); font-weight: 600; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .toggle { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: var(--space-2) var(--space-4); }
+  .frames { display: flex; gap: var(--space-6); flex-wrap: wrap; justify-content: center; }
+  .frame-label { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2); text-align: center; max-width: 360px; }
+  .phone { width: 360px; height: 760px; background: var(--bg); border: 1px solid var(--border); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+  :where(.phone a) { color: inherit; text-decoration: none; }
+  .status { height: 28px; flex: none; padding: 0 var(--space-5); display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--muted); }
+  .appbar { padding: var(--space-2) var(--space-4) var(--space-3); display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+  .appbar h1 { font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.02em; }
+  .appbar h1.sm { font-size: var(--text-lg); }
+  .sub { font-size: var(--text-sm); color: var(--muted); }
+  .back { font-size: var(--text-sm); color: var(--accent-text); padding: var(--space-2) var(--space-4) 0; }
+  .content { flex: 1; overflow: hidden; padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3) var(--space-4); }
+  .section-label { font-size: var(--text-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .chips { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .chip { height: 32px; padding: 0 var(--space-3); border-radius: 999px; background: var(--surface-2); font-size: var(--text-sm); color: var(--muted); display: inline-flex; align-items: center; }
+  .chip.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+  .badge { font-size: var(--text-xs); font-weight: 600; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+  .badge.est { color: var(--estimate); background: var(--estimate-soft); }
+  .badge.over { color: var(--over); background: var(--over-soft); }
+  .badge.ok { color: var(--ok); background: var(--surface-2); }
+  .badge.acc { color: var(--accent-text); background: var(--accent-soft); }
+  .row { display: flex; align-items: center; gap: var(--space-3); min-height: 56px; padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: 0; }
+  .row .info { flex: 1; min-width: 0; }
+  .row .name { font-size: var(--text-md); font-weight: 500; }
+  .row .meta { font-size: var(--text-sm); color: var(--muted); margin-top: 2px; display: flex; gap: var(--space-1); flex-wrap: wrap; align-items: center; }
+  .row .amt { font-size: var(--text-md); font-weight: 600; text-align: right; white-space: nowrap; }
+  .row .amt small { display: block; font-size: var(--text-xs); color: var(--muted); font-weight: 400; }
+  .btn { height: var(--tap); border-radius: var(--radius); background: var(--surface-2); font-weight: 600; font-size: var(--text-sm); display: flex; align-items: center; justify-content: center; width: 100%; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.ghost { background: none; border: 1px solid var(--border); }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .btn-row.three { grid-template-columns: 1.4fr 1fr 1fr; }
+  .note { font-size: var(--text-xs); color: var(--muted); line-height: 1.45; }
+  .field { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); min-height: 48px; border-bottom: 1px solid var(--border); font-size: var(--text-sm); }
+  .field:last-child { border-bottom: 0; }
+  .field .lbl { color: var(--muted); }
+  .input { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); min-width: 88px; text-align: right; font-weight: 600; font-size: var(--text-md); }
+  .input.focus { box-shadow: 0 0 0 2px var(--accent); }
+  .input.empty { color: var(--faint); font-weight: 400; }
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; border-top: 1px solid var(--border); padding: var(--space-2) var(--space-4) var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+  .grabber { width: 36px; height: 4px; border-radius: 2px; background: var(--faint); margin: 0 auto var(--space-1); }
+  .sheet h2 { font-size: var(--text-lg); font-weight: 700; }
+  .fab { position: absolute; right: var(--space-4); bottom: calc(64px + var(--space-4)); height: 56px; padding: 0 var(--space-5); border-radius: 18px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: var(--text-md); display: flex; align-items: center; gap: var(--space-2); box-shadow: var(--shadow); }
+  .tabbar { height: 64px; flex: none; display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
+  .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); font-size: var(--text-xs); color: var(--muted); }
+  .tab.on { color: var(--accent-text); font-weight: 600; }
+  .tab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  /* progress-specific */
+  .content { overflow-y: auto; scrollbar-width: none; }
+  .k-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .k-title { font-size: var(--text-sm); color: var(--muted); font-weight: 600; }
+  .big { font-size: var(--text-num); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+  .big small { font-size: var(--text-md); color: var(--muted); font-weight: 500; letter-spacing: 0; }
+  .delta { font-size: var(--text-sm); font-weight: 600; }
+  .delta.good { color: var(--ok); }
+  .delta.neutral { color: var(--muted); }
+  svg.chart { width: 100%; display: block; overflow: visible; }
+  .grid line { stroke: var(--border); stroke-width: 1; }
+  .dot { fill: var(--faint); }
+  .trend { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .axis { font-size: 10px; fill: var(--faint); font-family: var(--font-sans); }
+  .src { display: inline-flex; gap: var(--space-1); align-items: center; font-size: var(--text-xs); color: var(--muted); background: var(--surface-2); padding: 2px 8px; border-radius: 999px; }
+  .bmi-scale { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: var(--space-3) 0 var(--space-1); position: relative; }
+  .bmi-scale i { display: block; height: 100%; }
+  .bmi-wrap { position: relative; }
+  .marker { position: absolute; top: -4px; width: 4px; height: 16px; border-radius: 2px; background: var(--text); box-shadow: 0 0 0 2px var(--surface); }
+  .scale-lbl { display: flex; justify-content: space-between; font-size: 10px; color: var(--faint); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+  .mini .v { font-size: var(--text-lg); font-weight: 700; }
+  .mini .l { font-size: var(--text-xs); color: var(--muted); }
+  .m-row { display: grid; grid-template-columns: 1fr auto 64px; gap: var(--space-2); align-items: center; min-height: 36px; font-size: var(--text-sm); border-bottom: 1px solid var(--border); }
+  .m-row:last-child { border-bottom: 0; }
+  .m-row b { font-weight: 600; text-align: right; }
+  .m-row .delta { text-align: right; }
+  .bars rect.b { fill: var(--accent); }
+  .bars rect.b.off { fill: var(--faint); }
+  .goal-line { stroke: var(--ok); stroke-width: 1.5; stroke-dasharray: 4 4; }
+  .legend { display: flex; gap: var(--space-4); font-size: var(--text-xs); color: var(--muted); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+  .line-l { fill: none; stroke: var(--protein); stroke-width: 2.5; }
+  .line-r { fill: none; stroke: var(--fat); stroke-width: 2.5; }
+  .pt-l { fill: var(--protein); }
+  .pt-r { fill: var(--fat); }
+  table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+  th { font-size: var(--text-xs); color: var(--muted); font-weight: 600; text-align: right; padding: var(--space-2) 0; }
+  th:first-child, td:first-child { text-align: left; }
+  td { text-align: right; padding: var(--space-2) 0; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="toggle" id="theme-toggle">Switch to light</button>
+  <span class="nav">v1.1: <a href="pantry.html">Pantry</a> · <a href="recipes.html">Recipes</a> · <b>Progress</b> · <a href="calendar.html">Calendar</a> · <a href="measure.html">Measure &amp; import</a> · <a href="measure-guide.html">Measure guide</a> · <a href="today.html">v1 screens</a></span>
+</div>
+
+<div class="frames">
+  <!-- Frame 1: progress overview -->
+  <div>
+    <p class="frame-label">1 · Progress tab: weight trend, BMI with waist-to-height, measurements</p>
+    <div class="phone">
+      <div class="status"><span>07:05</span><span>●●● 99%</span></div>
+      <div class="appbar"><h1>Progress</h1><a class="sub" href="measure.html" style="color: var(--accent-text)">+ Log weight</a></div>
+      <div class="content">
+        <div class="seg" style="display: grid; grid-template-columns: 1fr 1fr; background: var(--surface-2); border-radius: var(--radius); padding: 3px; flex: none"><span style="height: 34px; display: flex; align-items: center; justify-content: center; font-size: var(--text-sm); background: var(--surface); border-radius: 9px; font-weight: 600">Overview</span><a href="calendar.html" style="height: 34px; display: flex; align-items: center; justify-content: center; font-size: var(--text-sm); color: var(--muted)">Calendar</a></div>
+        <div class="card">
+          <div class="k-head"><span class="k-title">Weight · 7-day average</span><span class="src">Xiaomi scale · 06:42</span></div>
+          <div class="k-head" style="margin-top: var(--space-1)"><span class="big">69.6 <small>kg</small></span><span class="delta good">−0.4 kg this week</span></div>
+          <svg class="chart" viewBox="0 0 300 120" style="margin-top: var(--space-2)">
+            <g class="grid"><line x1="0" y1="10" x2="300" y2="10"/><line x1="0" y1="60" x2="300" y2="60"/><line x1="0" y1="110" x2="300" y2="110"/></g>
+            <text class="axis" x="300" y="8" text-anchor="end">70.6</text><text class="axis" x="300" y="108" text-anchor="end">69.2</text>
+            <g>
+              <circle class="dot" cx="10" cy="24" r="3"/><circle class="dot" cx="30" cy="46" r="3"/><circle class="dot" cx="50" cy="17" r="3"/><circle class="dot" cx="70" cy="39" r="3"/><circle class="dot" cx="90" cy="60" r="3"/><circle class="dot" cx="110" cy="31" r="3"/><circle class="dot" cx="130" cy="53" r="3"/><circle class="dot" cx="150" cy="67" r="3"/><circle class="dot" cx="170" cy="46" r="3"/><circle class="dot" cx="190" cy="74" r="3"/><circle class="dot" cx="210" cy="60" r="3"/><circle class="dot" cx="230" cy="89" r="3"/><circle class="dot" cx="250" cy="67" r="3"/><circle class="dot" cx="270" cy="96" r="3"/><circle class="dot" cx="290" cy="81" r="3"/>
+            </g>
+            <polyline class="trend" points="10,28 30,31 50,35 70,39 90,42 110,46 130,49 150,53 170,56 190,60 210,64 230,67 250,73 270,78 290,81"/>
+          </svg>
+          <div class="scale-lbl"><span>Sep 22</span><span>Oct 6</span><span>Oct 20</span></div>
+        </div>
+
+        <div class="card">
+          <div class="k-head"><span class="k-title">BMI</span><span class="badge est">Asia-Pacific scale</span></div>
+          <div class="k-head"><span class="big">24.1</span><span class="delta" style="color: var(--estimate)">At risk</span></div>
+          <div class="bmi-wrap">
+            <div class="bmi-scale"><i style="width: 23.3%; background: var(--track)"></i><i style="width: 30%; background: var(--ok)"></i><i style="width: 13.4%; background: var(--estimate)"></i><i style="width: 33.3%; background: var(--over)"></i></div>
+            <span class="marker" style="left: 60.7%"></span>
+          </div>
+          <div class="scale-lbl"><span>15</span><span>18.5</span><span>23</span><span>25</span><span>30</span></div>
+          <div class="two" style="margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border)">
+            <div class="mini"><div class="v" style="color: var(--ok)">0.48</div><div class="l">Waist-to-height · under 0.5 ✓</div></div>
+            <div class="mini"><div class="v">170 cm</div><div class="l">Height</div></div>
+          </div>
+          <p class="note" style="margin-top: var(--space-2)">BMI can't tell muscle from fat. Read it with your waist and measurements.</p>
+        </div>
+
+        <div class="card">
+          <div class="k-head" style="margin-bottom: var(--space-1)"><span class="k-title">Measurements · since Aug 25</span><span class="sub">next ~Oct 27</span></div>
+          <div class="m-row"><span>Waist</span><b>81.0 cm</b><span class="delta good">−3.0</span></div>
+          <div class="m-row"><span>Chest</span><b>98.5 cm</b><span class="delta good">+1.5</span></div>
+          <div class="m-row"><a href="#arms">Arms L / R ›</a><b>34.0 / 34.5</b><span class="delta good">+1.2</span></div>
+          <div class="m-row"><span>Thighs L / R</span><b>56.0 / 56.5</b><span class="delta good">+0.8</span></div>
+        </div>
+      </div>
+      <nav class="tabbar">
+        <a class="tab" href="today.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Today</a>
+        <a class="tab" href="log.html"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9"/></svg>Log</a>
+        <a class="tab" href="pantry.html"><svg viewBox="0 0 24 24"><path d="M4 5h16v3H4zM5 8h14v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1zM10 12h4"/></svg>Pantry</a>
+        <a class="tab on" href="progress.html"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-4 3 3 5-6"/></svg>Progress</a>
+        <a class="tab" href="recipes.html"><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/></svg>More</a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Frame 2: calorie stats -->
+  <div>
+    <p class="frame-label">2 · Calorie stats: averages, TDEE from your data, suggested target</p>
+    <div class="phone">
+      <div class="status"><span>21:15</span><span>●●● 33%</span></div>
+      <a class="back" href="progress.html">‹ Progress</a>
+      <div class="appbar"><h1 class="sm">Calories</h1></div>
+      <div class="content">
+        <div class="chips"><span class="chip on">This week</span><span class="chip">30 days</span></div>
+        <div class="card">
+          <div class="two">
+            <div class="mini"><div class="v">2,200</div><div class="l">avg kcal / day · goal 2,200</div></div>
+            <div class="mini"><div class="v">5 of 7</div><div class="l">days on target (±10%)</div></div>
+          </div>
+          <svg class="chart bars" viewBox="0 0 300 130" style="margin-top: var(--space-3)">
+            <rect class="b" x="12" y="23" width="26" height="77" rx="4"/>
+            <rect class="b" x="54" y="17" width="26" height="83" rx="4"/>
+            <rect class="b" x="96" y="26" width="26" height="74" rx="4"/>
+            <rect class="b" x="138" y="20" width="26" height="80" rx="4"/>
+            <rect class="b off" x="180" y="30" width="26" height="70" rx="4"/>
+            <rect class="b off" x="222" y="9" width="26" height="91" rx="4"/>
+            <rect class="b" x="264" y="25" width="26" height="75" rx="4"/>
+            <line class="goal-line" x1="0" y1="21" x2="300" y2="21"/>
+            <text class="axis" x="25" y="118" text-anchor="middle">M</text><text class="axis" x="67" y="118" text-anchor="middle">T</text><text class="axis" x="109" y="118" text-anchor="middle">W</text><text class="axis" x="151" y="118" text-anchor="middle">T</text><text class="axis" x="193" y="118" text-anchor="middle">F</text><text class="axis" x="235" y="118" text-anchor="middle">S</text><text class="axis" x="277" y="118" text-anchor="middle">S</text>
+          </svg>
+          <div class="legend"><span><i style="background: var(--accent)"></i>on target</span><span><i style="background: var(--faint)"></i>off target</span><span><i style="background: var(--ok)"></i>goal</span></div>
+          <div class="two" style="margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border)">
+            <div class="mini"><div class="v" style="color: var(--protein)">148 g</div><div class="l">avg protein · target 165</div></div>
+            <div class="mini"><div class="v">2.1 g/kg</div><div class="l">at 69.6 kg</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="k-head"><span class="k-title">Maintenance (TDEE)</span><span class="badge ok">from your data</span></div>
+          <div class="big">≈ 2,420 <small>kcal</small></div>
+          <p class="note">Last 14 days: 13 days logged, 6 weigh-ins, trend −0.4 kg. Formula estimate was 2,507.</p>
+        </div>
+        <div class="card" style="border-color: var(--accent)">
+          <div class="k-head"><span class="k-title">Suggested for your goal: Cut</span></div>
+          <div class="k-head"><span class="big" style="font-size: var(--text-xl)">2,020 kcal</span><span class="sub">now 2,200</span></div>
+          <p class="note">TDEE − 400 ≈ 0.35 kg a week. Your goal only changes if you confirm.</p>
+          <div class="btn-row" style="margin-top: var(--space-3)"><button class="btn ghost">Not now</button><button class="btn primary">Use 2,020</button></div>
+        </div>
+        <p class="note">Estimates for tracking trends, not medical advice.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 3: arms history -->
+  <div id="arms">
+    <p class="frame-label">3 · Measurement history: arms, left vs right</p>
+    <div class="phone">
+      <div class="status"><span>07:10</span><span>●●● 98%</span></div>
+      <a class="back" href="progress.html">‹ Progress</a>
+      <div class="appbar"><h1 class="sm">Arms</h1><span class="badge acc">flexed</span></div>
+      <div class="content">
+        <div class="chips"><span class="chip">Chest</span><span class="chip">Waist</span><span class="chip on">Arms</span><span class="chip">Thighs</span><span class="chip">Calves</span></div>
+        <div class="card">
+          <div class="two">
+            <div class="mini"><div class="v" style="color: var(--protein)">34.0 cm</div><div class="l">Left · +1.2 since Aug 25</div></div>
+            <div class="mini"><div class="v" style="color: var(--fat)">34.5 cm</div><div class="l">Right · +1.2 since Aug 25</div></div>
+          </div>
+          <svg class="chart" viewBox="0 0 300 120" style="margin-top: var(--space-3)">
+            <g class="grid"><line x1="0" y1="10" x2="300" y2="10"/><line x1="0" y1="60" x2="300" y2="60"/><line x1="0" y1="110" x2="300" y2="110"/></g>
+            <text class="axis" x="0" y="8">34.8</text><text class="axis" x="0" y="108">32.5</text>
+            <polyline class="line-r" points="30,75 110,58 190,40 270,23"/>
+            <polyline class="line-l" points="30,97 110,80 190,62 270,45"/>
+            <circle class="pt-r" cx="30" cy="75" r="4"/><circle class="pt-r" cx="110" cy="58" r="4"/><circle class="pt-r" cx="190" cy="40" r="4"/><circle class="pt-r" cx="270" cy="23" r="4"/>
+            <circle class="pt-l" cx="30" cy="97" r="4"/><circle class="pt-l" cx="110" cy="80" r="4"/><circle class="pt-l" cx="190" cy="62" r="4"/><circle class="pt-l" cx="270" cy="45" r="4"/>
+          </svg>
+          <div class="legend" style="margin-top: var(--space-2)"><span><i style="background: var(--protein)"></i>Left</span><span><i style="background: var(--fat)"></i>Right</span><span>Right is 0.5 cm bigger, steady</span></div>
+        </div>
+        <div class="card" style="padding-block: var(--space-1)">
+          <table>
+            <tr><th>Session</th><th>Left</th><th>Right</th><th>Weight</th></tr>
+            <tr><td>Oct 6</td><td>34.0</td><td>34.5</td><td>69.9</td></tr>
+            <tr><td>Sep 22</td><td>33.6</td><td>34.1</td><td>70.1</td></tr>
+            <tr><td>Sep 8</td><td>33.2</td><td>33.7</td><td>70.4</td></tr>
+            <tr><td>Aug 25</td><td>32.8</td><td>33.3</td><td>70.6</td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <div class="k-title">Next to strength <span class="badge est">later</span></div>
+          <p class="note" style="margin-top: var(--space-1)">Barbell curl best set: 30 kg × 8 → 35 kg × 8 over the same period.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const btn = document.getElementById('theme-toggle');
+  btn.onclick = () => {
+    const light = document.documentElement.dataset.theme !== 'light';
+    document.documentElement.dataset.theme = light ? 'light' : 'dark';
+    btn.textContent = light ? 'Switch to dark' : 'Switch to light';
+  };
+</script>
+<script src="../proto-nav.js"></script>
+</body>
+</html>
+
+

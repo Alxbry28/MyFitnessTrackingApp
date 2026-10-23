@@ -122,13 +122,18 @@ function FoodLine({
   styles: Styles;
   onPress: () => void;
 }) {
-  const { food, match, kcal } = line;
+  const { food, match, kcal, pantryItem } = line;
   const product = match.product;
   const estimate = product?.source === "ai_estimate";
   let src = food.raw;
   if (match.status === "not_found") src = `${amountText(food)} · not in your library`;
   else if (match.status === "check" && match.candidates.length > 1) src = `${food.raw} · ${match.candidates.length} matches`;
   if (food.unit !== "g" && match.status !== "not_found") src = `${src} (${gramsToText(Math.round(food.grams * 10) / 10)} g)`;
+  if (pantryItem) {
+    const leftAfter = Math.max(0, pantryItem.gramsLeft - food.amount);
+    const unitStr = pantryItem.unit ?? food.unit;
+    src = `${src} · 💊 Stock: ${pantryItem.gramsLeft} → ${leftAfter} ${unitStr}`;
+  }
 
   const tone = match.status === "matched" ? null : match.status === "check" ? "warn" : "bad";
   const action = match.status === "check" ? "Check" : match.status === "not_found" ? "Add" : null;
@@ -148,6 +153,7 @@ function FoodLine({
         <Text style={styles.name} numberOfLines={1}>
           {product?.name ?? food.name}
           {estimate && <Text style={styles.est}> est. </Text>}
+          {pantryItem && <Text style={styles.pantryTag}> 💊 Pantry </Text>}
         </Text>
         <Text
           style={[styles.src, tone === "warn" && styles.srcWarn, tone === "bad" && styles.srcBad]}
@@ -241,6 +247,7 @@ function makeStyles(theme: Theme) {
     info: { flex: 1, minWidth: 0 },
     name: { color: colors.text, fontSize: fontSize.sm, fontWeight: "500" },
     est: { color: colors.estimate, backgroundColor: colors.estimateSoft, fontSize: fontSize.xs, fontWeight: "600" },
+    pantryTag: { color: colors.ok, backgroundColor: colors.okSoft, fontSize: fontSize.xs, fontWeight: "600" },
     src: { color: colors.faint, fontSize: fontSize.xs },
     srcWarn: { color: colors.estimate },
     srcBad: { color: colors.over },

@@ -17,13 +17,12 @@ const DELETE_WIDTH = 88;
 // A log row from prototypes/log.html; swipe left to reveal Delete. Long press and the
 // accessibility action still delete for anyone who can't swipe. Shows grams and consumed macros.
 export function EntryRow({ entry, onPress, onDelete }: Props) {
-  const styles = makeStyles(useTheme());
+  const theme = useTheme();
+  const styles = makeStyles(theme);
+  const { colors } = theme;
   const grams = formatGrams(entry.grams);
   const kcal = formatKcal(entry.kcal);
   const hasMacros = entry.proteinG !== null || entry.carbsG !== null || entry.fatG !== null;
-  const macroText = hasMacros
-    ? ` · P ${formatMacro(entry.proteinG)} · C ${formatMacro(entry.carbsG)} · F ${formatMacro(entry.fatG)}`
-    : "";
   const macroAccessibility = hasMacros
     ? `, protein ${formatMacro(entry.proteinG)}g, carbs ${formatMacro(entry.carbsG)}g, fat ${formatMacro(entry.fatG)}g`
     : "";
@@ -65,7 +64,16 @@ export function EntryRow({ entry, onPress, onDelete }: Props) {
           </Text>
           <Text style={styles.qty} numberOfLines={1}>
             {grams}
-            {macroText}
+            {hasMacros && (
+              <>
+                {" · "}
+                <Text style={{ color: colors.protein }}>{formatMacro(entry.proteinG)}g P</Text>
+                {" · "}
+                <Text style={{ color: colors.carbs }}>{formatMacro(entry.carbsG)}g C</Text>
+                {" · "}
+                <Text style={{ color: colors.fat }}>{formatMacro(entry.fatG)}g F</Text>
+              </>
+            )}
           </Text>
         </View>
         <Text style={styles.kcal}>{kcal}</Text>
@@ -89,7 +97,7 @@ function makeStyles(theme: Theme) {
     pressed: { backgroundColor: colors.surface2 },
     info: { flex: 1, minWidth: 0 },
     name: { color: colors.text, fontSize: fontSize.md },
-    qty: { color: colors.muted, fontSize: fontSize.sm },
+    qty: { color: colors.muted, fontSize: fontSize.sm, fontVariant: ["tabular-nums"] },
     kcal: { color: colors.text, fontSize: fontSize.md, fontWeight: "500", fontVariant: ["tabular-nums"] },
     delete: { width: DELETE_WIDTH, alignItems: "center", justifyContent: "center", backgroundColor: colors.over },
     deleteLabel: { color: colors.bg, fontSize: fontSize.sm, fontWeight: "700" },

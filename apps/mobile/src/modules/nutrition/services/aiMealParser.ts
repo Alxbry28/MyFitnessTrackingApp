@@ -8,6 +8,8 @@ import type { MealType } from "../types/foodLog";
 export type ParsedAiFoodItem = {
   name: string;
   grams: number;
+  amount?: number;
+  unit?: "g" | "tabs" | "caps";
   calories: number;
   protein: number;
   carbs: number;
@@ -21,6 +23,7 @@ export type ParsedAiFoodItem = {
 export type ParsedAiMeal = {
   mealType: MealType;
   label: string;
+  isSupplements?: boolean;
   items: ParsedAiFoodItem[];
 };
 
@@ -33,16 +36,18 @@ export type AiMealParseResult = {
 };
 
 const SYSTEM_PROMPT = `You are a nutrition expert and nutritional calculator for a fitness tracking app.
-The user will provide a text log of their meals with portions (grams, ml, scoops, or standard servings).
+The user will provide a text log of their meals with portions (grams, ml, scoops, capsules, tablets, or standard servings).
 
 TASK:
-1. Parse every meal heading (e.g., Breakfast, Lunch, Dinner, Snacks, Pre-Workout, Post-Workout).
-   - Map Breakfast -> "breakfast"
-   - Map Lunch -> "lunch"
-   - Map Dinner -> "dinner"
-   - Map Snacks, Pre-Workout, Post-Workout, or anything else -> "snacks"
-2. For each food item, identify the exact food and portion in grams (1 ml = 1 g).
-3. Provide accurate nutritional values using authoritative databases (USDA, reliable nutritional data, and regional/Filipino food databases like FNRI for taho, sinigang, adobo, etc.).
+1. Parse every meal or supplement heading (e.g., Breakfast, Lunch, Dinner, Snacks, Supplements, Pre-Workout, Post-Workout) as its own separate section in the "meals" array.
+   - Map Breakfast -> mealType: "breakfast", label: "Breakfast"
+   - Map Lunch -> mealType: "lunch", label: "Lunch"
+   - Map Dinner -> mealType: "dinner", label: "Dinner"
+   - Map Snacks -> mealType: "snacks", label: "Snacks"
+   - Map Supplements -> mealType: "snacks", label: "Supplements" (IMPORTANT: Keep "Supplements" as a separate section in "meals" from "Snacks". Never combine Supplements into Snacks!)
+   - Map Pre-Workout, Post-Workout, or other headings -> mealType: "snacks", preserving their original heading in "label".
+2. For each item, identify the exact food or supplement, its portion in grams (1 ml = 1 g; for capsules/tablets use 1g per cap/tab if weight is not specified), and include "amount" and "unit" ("caps" | "tabs" | "g").
+3. Provide accurate nutritional values using authoritative databases (USDA, reliable nutritional data, and regional/Filipino food databases like FNRI for taho, sinigang, adobo, etc.). Non-caloric supplements like Creatine or Hydroxycut capsules have 0 calories and 0 macros.
 4. Return both the total calories/macros for the given portion AND the per-100g values.
 5. Return ONLY a single valid JSON object matching this exact schema:
 
@@ -50,11 +55,13 @@ TASK:
   "meals": [
     {
       "mealType": "breakfast" | "lunch" | "dinner" | "snacks",
-      "label": "Breakfast",
+      "label": "Breakfast" | "Lunch" | "Dinner" | "Snacks" | "Supplements",
       "items": [
         {
           "name": "Taho",
           "grams": 220,
+          "amount": 220,
+          "unit": "g",
           "calories": 187,
           "protein": 5.5,
           "carbs": 33.0,
@@ -474,6 +481,8 @@ export async function parseMealsWithAi(params: {
       items?: {
         name?: string;
         grams?: number;
+        amount?: number;
+        unit?: string;
         calories?: number;
         protein?: number;
         carbs?: number;
@@ -502,6 +511,9 @@ export async function parseMealsWithAi(params: {
 
   for (const m of rawMeals) {
     const rawMealType = (m.mealType ?? "snack").toLowerCase();
+    const rawLabel = m.label?.trim() ?? "";
+    const isSupplements =
+      /supplement/i.test(rawLabel) || /supplement/i.test(rawMealType);
     const validMealType: MealType =
       rawMealType === "breakfast" ||
       rawMealType === "lunch" ||
@@ -509,21 +521,30 @@ export async function parseMealsWithAi(params: {
         ? rawMealType
         : "snack";
 
-    const label =
-      m.label ??
-      (validMealType === "breakfast"
-        ? "Breakfast"
-        : validMealType === "lunch"
-          ? "Lunch"
-          : validMealType === "dinner"
-            ? "Dinner"
-            : "Snacks");
+    const label = isSupplements
+      ? "Supplements"
+      : rawLabel ||
+        (validMealType === "breakfast"
+          ? "Breakfast"
+          : validMealType === "lunch"
+            ? "Lunch"
+            : validMealType === "dinner"
+              ? "Dinner"
+              : "Snacks");
 
     const items: ParsedAiFoodItem[] = [];
 
     for (const item of m.items ?? []) {
       const name = item.name?.trim() || "Food Item";
-      const grams = Math.max(1, Math.round(item.grams ?? 100));
+      const grams = Math.max(1, Math.round(item.grams ?? item.amount ?? 100));
+      const rawUnit = (item.unit ?? "").toLowerCase();
+      const unit: "g" | "tabs" | "caps" =
+        rawUnit.startsWith("cap")
+          ? "caps"
+          : rawUnit.startsWith("tab")
+            ? "tabs"
+            : "g";
+      const amount = Math.max(1, Math.round(item.amount ?? grams));
 
       const kcalPer100g = Math.max(
         0,
@@ -550,6 +571,8 @@ export async function parseMealsWithAi(params: {
       items.push({
         name,
         grams,
+        amount,
+        unit,
         calories,
         protein,
         carbs,
@@ -570,6 +593,7 @@ export async function parseMealsWithAi(params: {
       normalizedMeals.push({
         mealType: validMealType,
         label,
+        isSupplements,
         items,
       });
     }

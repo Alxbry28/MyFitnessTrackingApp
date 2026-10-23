@@ -1,7 +1,20 @@
 import type { MealType } from "./foodLog";
 import type { Product } from "./product";
 
-export type PastedUnit = "g" | "ml" | "oz";
+export type PastedUnit =
+  | "g"
+  | "ml"
+  | "oz"
+  | "cap"
+  | "caps"
+  | "tab"
+  | "tabs"
+  | "tablet"
+  | "tablets"
+  | "capsule"
+  | "capsules"
+  | "scoop"
+  | "scoops";
 
 // grams is the amount converted for the log: ml counts as grams, oz as 28.35 g.
 export type PastedFood = {

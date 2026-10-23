@@ -1,7 +1,10 @@
-import { StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 
+import type { MealGroup } from "../hooks/useDayLog";
+import { MEAL_LABELS } from "../services/mealTime";
 import { formatKcal, macroTargets } from "../services/nutritionCalc";
 import type { Nutrients } from "../types/foodLog";
 
@@ -9,13 +12,15 @@ type Props = {
   totals?: Nutrients;
   eaten?: number;
   goal: number | null;
+  groups?: MealGroup[];
 };
 
-// The day total from prototypes/log.html with macro breakdown: kcal / goal, badge, split bar, and consumed macros.
-export function DayTotalCard({ totals, eaten: propEaten, goal }: Props) {
+// The day total from prototypes/log.html with macro breakdown: kcal / goal, badge, split bar, consumed macros, and per-meal macro breakdown.
+export function DayTotalCard({ totals, eaten: propEaten, goal, groups }: Props) {
   const theme = useTheme();
   const styles = makeStyles(theme);
   const { colors } = theme;
+  const [showBreakdown, setShowBreakdown] = useState(true);
   const eaten = totals?.kcal ?? propEaten ?? 0;
   const over = goal !== null && Math.round(eaten) > goal;
 
@@ -79,6 +84,42 @@ export function DayTotalCard({ totals, eaten: propEaten, goal }: Props) {
           styles={styles}
         />
       </View>
+
+      {groups && groups.length > 0 && (
+        <View style={styles.breakdownSection}>
+          <Pressable
+            onPress={() => setShowBreakdown((open) => !open)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showBreakdown }}
+            style={styles.breakdownToggle}
+          >
+            <Text style={styles.breakdownToggleText}>
+              {showBreakdown ? "▾ Meal macro breakdown" : "▸ Meal macro breakdown"}
+            </Text>
+            <Text style={styles.breakdownHint}>kcal · P · C · F</Text>
+          </Pressable>
+
+          {showBreakdown && (
+            <View style={styles.breakdownTable}>
+              {groups.map((g) => (
+                <View key={g.mealType} style={styles.breakdownRow}>
+                  <Text style={styles.bdMeal}>{MEAL_LABELS[g.mealType]}</Text>
+                  <Text style={styles.bdKcal}>{formatKcal(g.kcal)} kcal</Text>
+                  <Text style={[styles.bdMacro, { color: colors.protein }]}>
+                    {Math.round(g.totals.proteinG ?? 0)}g P
+                  </Text>
+                  <Text style={[styles.bdMacro, { color: colors.carbs }]}>
+                    {Math.round(g.totals.carbsG ?? 0)}g C
+                  </Text>
+                  <Text style={[styles.bdMacro, { color: colors.fat }]}>
+                    {Math.round(g.totals.fatG ?? 0)}g F
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -173,5 +214,56 @@ function makeStyles(theme: Theme) {
     macroTarget: { color: colors.faint, fontWeight: "400" },
     bar: { height: 4, borderRadius: 2, backgroundColor: colors.track, overflow: "hidden" },
     barFill: { height: "100%", borderRadius: 2 },
+    breakdownSection: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingHorizontal: space[4],
+      paddingVertical: space[2],
+    },
+    breakdownToggle: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: space[1],
+    },
+    breakdownToggleText: {
+      color: colors.accentText,
+      fontSize: fontSize.xs,
+      fontWeight: "600",
+    },
+    breakdownHint: {
+      color: colors.muted,
+      fontSize: fontSize.xs,
+    },
+    breakdownTable: {
+      marginTop: space[1],
+      gap: space[1],
+      paddingBottom: space[1],
+    },
+    breakdownRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 2,
+    },
+    bdMeal: {
+      flex: 1.3,
+      color: colors.muted,
+      fontSize: fontSize.xs,
+      fontWeight: "600",
+    },
+    bdKcal: {
+      flex: 1,
+      color: colors.text,
+      fontSize: fontSize.xs,
+      textAlign: "right",
+      fontVariant: ["tabular-nums"],
+    },
+    bdMacro: {
+      flex: 0.85,
+      fontSize: fontSize.xs,
+      fontWeight: "600",
+      textAlign: "right",
+      fontVariant: ["tabular-nums"],
+    },
   });
 }

@@ -72,6 +72,27 @@ paths below are relative to it. `apps/web/` and `apps/api/` come later.
 - Save fetched products to the local `products` table; the user's edits win over
   Open Food Facts data from then on
 
+## Cooking & AI Ingredient Parsing
+
+- Feature and module terminology: **Cooking** (Cooking & Cooked Batches), not "Recipes".
+- Cooking workflow sequence:
+  1. `New dish` (name & dish setup)
+  2. `List raw ingredients` (AI parse natural/messy notes for raw grams, units, oil check, raw batch nutrition)
+  3. `Start cooking` (active cooking timer with Start, Pause/Resume, Finish buttons like workout logger; raw ingredients locked/pantry deducted)
+  4. `Encode total cooked food` (weighed on scale at the end of cooking, NOT during cooking)
+  5. `Give estimated/calculated macros` (batch totals & per-100g cooked macros calculated from raw totals ÷ cooked weight)
+  6. `Save this meal for inventory` (saved to fridge inventory with remaining grams for later portion logging)
+- Prototype-first rule: UX and concept refinements must be reflected in `prototypes/` first; mobile app (`apps/mobile/`) code is only modified when explicitly requested.
+
+## Meal Prep & Tupperware Inventory
+
+- Meal prep workflow:
+  1. Select cooked inventory items (e.g. 500g chicken, 250g okra, 500g boiled eggs, 1kg white rice).
+  2. Input container count (e.g. 5 tupperwares) and optional AI partition prompt.
+  3. AI calculates exact portion weights and per-box macros (`kcal`, `protein`, `carbs`, `fat`).
+  4. Save prepped boxes to meal prep inventory, deducting bulk cooked items from fridge.
+  5. Food log allows 1-tap logging of 1 tupperware box and auto-decrements stock.
+
 ## Error Handling
 
 - Wrap database and network calls; show a short user-facing message, never a crash

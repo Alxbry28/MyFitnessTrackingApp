@@ -22,11 +22,12 @@ import { PasteLogPreview } from "@/modules/nutrition/components/PasteLogPreview"
 import { usePasteLog, type PreviewLine, type PreviewSection } from "@/modules/nutrition/hooks/usePasteLog";
 import * as foodLogRepo from "@/modules/nutrition/repositories/foodLogRepo";
 import * as productRepo from "@/modules/nutrition/repositories/productRepo";
+import * as pantryRepo from "@/modules/pantry/repositories/pantryRepo";
 import * as settingsRepo from "@/modules/nutrition/repositories/settingsRepo";
 import { parseMealsWithAi, type AiMealParseResult } from "@/modules/nutrition/services/aiMealParser";
 import { dayKey, formatDayLabel, MEAL_LABELS } from "@/modules/nutrition/services/mealTime";
 import { formatKcal } from "@/modules/nutrition/services/nutritionCalc";
-import { copyLunchToDinner, editorSpans } from "@/modules/nutrition/services/pasteLog";
+import { copyLunchToDinner, textFromEntries } from "@/modules/nutrition/services/pasteLog";
 
 type FoodLine = Extract<PreviewLine, { kind: "food" }>;
 type Styles = ReturnType<typeof makeStyles>;
@@ -61,7 +62,6 @@ export default function PasteLogScreen() {
   const [aiResult, setAiResult] = useState<AiMealParseResult | null>(null);
 
   const lunchCopy = useMemo(() => copyLunchToDinner(log.text), [log.text]);
-  const spans = useMemo(() => editorSpans(log.text), [log.text]);
   const dayLabel = formatDayLabel(log.day, dayKey(new Date()));
 
   // Android back on the Preview / AI Preview returns to the text instead of closing the screen.
@@ -151,6 +151,11 @@ export default function PasteLogScreen() {
     if (!aiResult) return;
     setAiSaving(true);
     try {
+      if (log.initialEntryIds.length > 0) {
+        for (const id of log.initialEntryIds) {
+          await foodLogRepo.softDelete(db, id);
+        }
+      }
       for (const meal of aiResult.meals) {
         for (const item of meal.items) {
           const searchResults = await productRepo.search(db, item.name);
@@ -186,11 +191,23 @@ export default function PasteLogScreen() {
             }
           }
           if (product) {
-            await foodLogRepo.create(db, product, {
-              day: log.day,
-              mealType: meal.mealType,
-              grams: item.grams,
-            });
+            const stockItem = await pantryRepo.stockForProduct(db, product.id);
+            if (stockItem) {
+              await pantryRepo.logPortion(db, {
+                itemId: stockItem.id,
+                product,
+                mealType: meal.mealType,
+                grams: item.grams,
+                day: log.day,
+                wholeUnit: false,
+              });
+            } else {
+              await foodLogRepo.create(db, product, {
+                day: log.day,
+                mealType: meal.mealType,
+                grams: item.grams,
+              });
+            }
           }
         }
       }
@@ -208,8 +225,8 @@ export default function PasteLogScreen() {
         icon="close"
         iconLabel="Close"
         onIcon={() => router.back()}
-        title={requestedAi === "1" ? "AI Meal Parse" : "Text log"}
-        sub={dayLabel}
+        title={requestedAi === "1" ? "AI Meal Parse" : log.isEditingExisting ? "Edit today's meals" : "Edit meal list"}
+        sub={log.isEditingExisting ? `${dayLabel} · ${log.initialEntryIds.length} items loaded` : dayLabel}
         top={insets.top}
         styles={styles}
         theme={theme}
@@ -261,6 +278,27 @@ export default function PasteLogScreen() {
         {appBar}
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.chips}>
+            {log.isEditingExisting && (
+              <Chip
+                label="Reload today's log"
+                onPress={async () => {
+                  const entries = await foodLogRepo.listByDay(db, log.day);
+                  log.setText(textFromEntries(entries));
+                }}
+                styles={styles}
+                theme={theme}
+              />
+            )}
+            <Chip
+              label="Format template"
+              onPress={() =>
+                log.setText(
+                  "Breakfast:\n100g food\n\nLunch:\n100g food\n\nDinner:\n100g food\n\nSnacks:\n100g food\n\nSupplements:\n1 cap Hydroxicut\n5g Creatine",
+                )
+              }
+              styles={styles}
+              theme={theme}
+            />
             <Chip icon="content_paste" label="Paste" onPress={() => void paste()} styles={styles} theme={theme} />
             <Chip
               icon="history"
@@ -297,42 +335,21 @@ export default function PasteLogScreen() {
 
           <View style={styles.halo}>
             <TextInput
+              value={log.text}
               onChangeText={log.setText}
               multiline
-              placeholder={"Breakfast:\n220g taho\n\nLunch:\n250g white rice\n110g boiled eggs\n250g boiled chicken breast\n50g okra"}
+              placeholder={"Breakfast:\n100g food\n\nLunch:\n100g food\n\nDinner:\n100g food\n\nSnacks:\n100g food\n\nSupplements:\n1 cap Hydroxicut\n5g Creatine"}
               placeholderTextColor={theme.colors.faint}
               accessibilityLabel="Paste your log"
               autoCorrect={false}
               autoCapitalize="none"
               textAlignVertical="top"
               style={styles.editor}
-            >
-              {/* Styled runs as children (frame 1 colors); their text always equals log.text. */}
-              {spans.map((line, index) => (
-                <Text key={index}>
-                  {index > 0 ? "\n" : ""}
-                  {line.map((span, i) => (
-                    <Text
-                      key={i}
-                      style={
-                        span.tone === "heading"
-                          ? styles.editorHeading
-                          : span.tone === "amount"
-                            ? styles.editorAmount
-                            : undefined
-                      }
-                    >
-                      {span.text}
-                    </Text>
-                  ))}
-                </Text>
-              ))}
-            </TextInput>
+            />
           </View>
 
           <Text style={styles.format}>
-            Type or paste meals naturally. Use <Text style={styles.code}>✨ AI Parse</Text> for instant accurate
-            macros lookup, or <Text style={styles.code}>Match</Text> to link with your local offline product library.
+            Format: <Text style={styles.code}>Breakfast:\n100g food</Text>, <Text style={styles.code}>Supplements:\n1 cap Hydroxicut\n5g Creatine</Text>. Logged supplements will automatically deduct from your Supplement Inventory.
           </Text>
 
           <View style={styles.actionsRow}>
@@ -600,8 +617,6 @@ function makeStyles(theme: Theme) {
       fontSize: fontSize.md,
       lineHeight: 23,
     },
-    editorHeading: { color: colors.accentText, fontWeight: "700" },
-    editorAmount: { color: colors.muted },
     format: { color: colors.muted, fontSize: fontSize.xs },
     code: { color: colors.text, backgroundColor: colors.surface2 },
     center: { alignItems: "center", gap: space[4] },

@@ -12,6 +12,7 @@ import {
   type SuggestedTargets,
   type TdeeResult,
 } from "../services/calorieStatsCalc";
+import { getCalorieGoal, setCalorieGoal } from "./settingsRepo";
 
 type DayAggRow = {
   day: string;
@@ -63,12 +64,12 @@ export const calorieStatsRepo = {
     // 1. Food log aggregated by day
     const foodRows = await db.getAllAsync<DayAggRow>(
       `SELECT day,
-              ROUND(SUM(calories)) AS total_kcal,
-              ROUND(SUM(protein_grams), 1) AS total_protein,
-              ROUND(SUM(carbs_grams), 1) AS total_carbs,
-              ROUND(SUM(fat_grams), 1) AS total_fat
+              ROUND(SUM(kcal)) AS total_kcal,
+              ROUND(SUM(protein_g), 1) AS total_protein,
+              ROUND(SUM(carbs_g), 1) AS total_carbs,
+              ROUND(SUM(fat_g), 1) AS total_fat
        FROM food_log_entries
-       WHERE day >= ?
+       WHERE day >= ? AND deleted_at IS NULL
        GROUP BY day
        ORDER BY day DESC`,
       [thirtyDaysStr],
@@ -86,7 +87,7 @@ export const calorieStatsRepo = {
     const weightRows = await db.getAllAsync<WeightRow>(
       `SELECT day, weight_kg
        FROM body_weight_entries
-       WHERE day >= ?
+       WHERE day >= ? AND deleted_at IS NULL
        ORDER BY measured_at ASC`,
       [fourteenDaysStr],
     );
@@ -100,7 +101,7 @@ export const calorieStatsRepo = {
 
     // Latest weight overall
     const latestWeightRow = await db.getFirstAsync<{ weight_kg: number }>(
-      "SELECT weight_kg FROM body_weight_entries ORDER BY measured_at DESC LIMIT 1",
+      "SELECT weight_kg FROM body_weight_entries WHERE deleted_at IS NULL ORDER BY measured_at DESC LIMIT 1",
     );
     const currentWeightKg = latestWeightRow?.weight_kg ?? null;
 
@@ -127,10 +128,22 @@ export const calorieStatsRepo = {
     const formulaTdee = Math.round(tdee(formulaBmr, activityLevel));
 
     // 4. Current goal from settings
-    const goalSetting = await db.getFirstAsync<{ value: string }>(
-      "SELECT value FROM settings WHERE key = 'calorie_goal'",
-    );
-    const currentTargetKcal = goalSetting?.value ? parseInt(goalSetting.value, 10) : 2000;
+    const storedGoal = await getCalorieGoal(db);
+    let currentTargetKcal = storedGoal;
+    if (currentTargetKcal == null) {
+      const legacySetting = await db.getFirstAsync<{ value: string }>(
+        "SELECT value FROM settings WHERE key = 'calorie_goal'",
+      );
+      if (legacySetting?.value) {
+        const parsed = parseInt(legacySetting.value, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+          currentTargetKcal = parsed;
+        }
+      }
+    }
+    if (currentTargetKcal == null) {
+      currentTargetKcal = 2000;
+    }
 
     // 5. Calculations
     const intake14Days = dailyIntake30Days.filter((d) => d.day >= fourteenDaysStr);
@@ -159,12 +172,6 @@ export const calorieStatsRepo = {
   },
 
   async updateCalorieGoal(db: SQLiteDatabase, newGoalKcal: number): Promise<void> {
-    const now = new Date().toISOString();
-    await db.runAsync(
-      `INSERT INTO settings (key, value, updated_at)
-       VALUES ('calorie_goal', ?, ?)
-       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-      [String(newGoalKcal), now],
-    );
+    await setCalorieGoal(db, newGoalKcal);
   },
 };

@@ -13,7 +13,7 @@ import { MEAL_LABELS } from "./mealTime";
 // Kept free of React and SQLite so it can get unit tests once a runner exists.
 
 const BULLET = /^[-*•]\s+/;
-const FOOD = /^(\d+(?:[.,]\d+)?)\s*(g|ml|oz)\s+(.+)$/i;
+const FOOD = /^(\d+(?:[.,]\d+)?)\s*(g|ml|oz|caps?|tabs?|tablets?|capsules?|scoops?)\s+(.+)$/i;
 const OZ_GRAMS = 28.35;
 
 const HEADING_MEALS: Record<string, MealType> = {
@@ -22,6 +22,8 @@ const HEADING_MEALS: Record<string, MealType> = {
   dinner: "dinner",
   snack: "snack",
   snacks: "snack",
+  supplement: "snack",
+  supplements: "snack",
 };
 
 // One key for typed names, product names, remembered matches and choices.
@@ -101,7 +103,7 @@ export function matchLine(
 
 export type EditorSpan = { text: string; tone: "heading" | "amount" | "plain" };
 
-const RAW_FOOD = /^(\s*(?:[-*•]\s+)?)(\d+(?:[.,]\d+)?\s*(?:g|ml|oz))(\s+.+)$/i;
+const RAW_FOOD = /^(\s*(?:[-*•]\s+)?)(\d+(?:[.,]\d+)?\s*(?:g|ml|oz|caps?|tabs?|tablets?|capsules?|scoops?))(\s+.+)$/i;
 
 // Splits the editor text into styled runs (frame 1: headings in accent, amounts muted),
 // keeping every character so the TextInput's text is unchanged.
@@ -121,14 +123,40 @@ export function editorSpans(text: string): EditorSpan[][] {
   });
 }
 
-// Yesterday's log written back in the paste format, meals in their usual order.
-export function textFromEntries(entries: FoodLogEntry[]): string {
-  return MEAL_TYPES.flatMap((meal) => {
-    const lines = entries
+// Yesterday's or current log written back in the paste format, meals in their usual order.
+export function textFromEntries(
+  entries: FoodLogEntry[],
+  pantryItems?: { id: string; productId: string | null; kind: string; unit: string }[],
+): string {
+  const isSupp = (e: FoodLogEntry) => {
+    if (!pantryItems) return false;
+    const item = pantryItems.find((p) => p.id === e.pantryItemId || (e.productId && p.productId === e.productId));
+    return item?.kind === "supplement";
+  };
+
+  const suppEntries = entries.filter(isSupp);
+  const normalEntries = entries.filter((e) => !isSupp(e));
+
+  const mealSections = MEAL_TYPES.flatMap((meal) => {
+    const lines = normalEntries
       .filter((e) => e.mealType === meal)
       .map((e) => `${gramsToText(e.grams)}g ${e.productName}`);
     return lines.length > 0 ? [`${MEAL_LABELS[meal]}:\n${lines.join("\n")}`] : [];
-  }).join("\n\n");
+  });
+
+  if (suppEntries.length > 0) {
+    const suppLines = suppEntries.map((e) => {
+      const item = pantryItems?.find((p) => p.id === e.pantryItemId || (e.productId && p.productId === e.productId));
+      const unit = item?.unit;
+      const unitStr =
+        unit === "caps" ? (e.grams === 1 ? "cap" : "caps") : unit === "tabs" ? (e.grams === 1 ? "tab" : "tabs") : "g";
+      const space = unitStr === "g" ? "" : " ";
+      return `${gramsToText(e.grams)}${space}${unitStr} ${e.productName}`;
+    });
+    mealSections.push(`Supplements:\n${suppLines.join("\n")}`);
+  }
+
+  return mealSections.join("\n\n");
 }
 
 // Appends a Dinner: copy of the first Lunch: section's food lines, or null when it has none.

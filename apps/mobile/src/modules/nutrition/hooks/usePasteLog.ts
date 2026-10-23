@@ -1,19 +1,21 @@
 import { useFocusEffect } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import * as foodLogRepo from "../repositories/foodLogRepo";
 import * as productRepo from "../repositories/productRepo";
 import * as textLogMatchRepo from "../repositories/textLogMatchRepo";
+import * as pantryRepo from "@/modules/pantry/repositories/pantryRepo";
+import type { PantryStock } from "@/modules/pantry/types/pantry";
 import { addDays, defaultMeal, logDay } from "../services/mealTime";
 import { forGrams } from "../services/nutritionCalc";
-import { matchLine, parsePastedLog, textFromEntries } from "../services/pasteLog";
+import { matchLine, nameKey, parsePastedLog, textFromEntries } from "../services/pasteLog";
 import type { MealType } from "../types/foodLog";
 import type { LineMatch, PastedFood, RememberedMatch } from "../types/pasteLog";
 import type { Product } from "../types/product";
 
 export type PreviewLine =
-  | { kind: "food"; food: PastedFood; match: LineMatch; kcal: number | null }
+  | { kind: "food"; food: PastedFood; match: LineMatch; kcal: number | null; pantryItem?: PantryStock | null }
   | { kind: "unread"; raw: string };
 
 export type PreviewSection = {
@@ -26,7 +28,7 @@ export type PreviewSection = {
 };
 
 type Choice = { product: Product; remember: boolean };
-type Library = { products: Product[]; remembered: RememberedMatch[] };
+type Library = { products: Product[]; remembered: RememberedMatch[]; pantryStock: PantryStock[] };
 type LoadState = { status: "loading" } | ({ status: "ready" } & Library) | { status: "error" };
 
 export function usePasteLog(requestedDay?: string) {
@@ -42,17 +44,42 @@ export function usePasteLog(requestedDay?: string) {
   const [choices, setChoices] = useState<ReadonlyMap<string, Choice>>(new Map());
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [initialEntryIds, setInitialEntryIds] = useState<string[]>([]);
+  const loadedCurrentDay = useRef(false);
   const savingRef = useRef(false);
   const latestRequest = useRef(0);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const [entries, stock] = await Promise.all([
+          foodLogRepo.listByDay(db, day),
+          pantryRepo.listStock(db),
+        ]);
+        if (active && !loadedCurrentDay.current && entries.length > 0) {
+          loadedCurrentDay.current = true;
+          setInitialEntryIds(entries.map((e) => e.id));
+          setText(textFromEntries(entries, stock));
+        }
+      } catch {
+        // Ignored
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [db, day]);
 
   const reload = useCallback(async () => {
     const request = ++latestRequest.current;
     try {
-      const [products, remembered] = await Promise.all([
+      const [products, remembered, pantryStock] = await Promise.all([
         productRepo.search(db, ""),
         textLogMatchRepo.listActive(db),
+        pantryRepo.listStock(db),
       ]);
-      if (request === latestRequest.current) setLoad({ status: "ready", products, remembered });
+      if (request === latestRequest.current) setLoad({ status: "ready", products, remembered, pantryStock });
     } catch {
       if (request === latestRequest.current) setLoad({ status: "error" });
     }
@@ -70,6 +97,7 @@ export function usePasteLog(requestedDay?: string) {
   }, [reload]);
 
   const products = useMemo(() => (load.status === "ready" ? load.products : []), [load]);
+  const pantryStock = useMemo(() => (load.status === "ready" ? load.pantryStock : []), [load]);
 
   const sections = useMemo<PreviewSection[]>(() => {
     const remembered = load.status === "ready" ? load.remembered : [];
@@ -84,7 +112,10 @@ export function usePasteLog(requestedDay?: string) {
         if (line.kind === "unread") return line;
         const match = matchLine(line.key, products, remembered, live);
         const kcal = match.product ? forGrams(match.product, line.grams).kcal : null;
-        return { kind: "food", food: line, match, kcal };
+        const pantryItem = match.product
+          ? pantryStock.find((item) => item.productId === match.product?.id) ?? null
+          : pantryStock.find((item) => nameKey(item.name) === line.key) ?? null;
+        return { kind: "food", food: line, match, kcal, pantryItem };
       });
       return {
         id,
@@ -95,7 +126,7 @@ export function usePasteLog(requestedDay?: string) {
         lines,
       };
     });
-  }, [text, fallbackMeal, meals, choices, products, load]);
+  }, [text, fallbackMeal, meals, choices, products, pantryStock, load]);
 
   const summary = useMemo(() => {
     const counts = { foods: 0, matched: 0, check: 0, notFound: 0, unread: 0, kcal: 0 };
@@ -159,6 +190,9 @@ export function usePasteLog(requestedDay?: string) {
     let productGone = false;
     try {
       await db.withExclusiveTransactionAsync(async (txn) => {
+        for (const id of initialEntryIds) {
+          await foodLogRepo.softDelete(txn, id);
+        }
         const remembered = new Set<string>();
         for (const section of sections) {
           for (const line of section.lines) {
@@ -170,7 +204,18 @@ export function usePasteLog(requestedDay?: string) {
               productGone = true;
               throw new Error("Matched product is gone");
             }
-            await foodLogRepo.create(txn, product, { mealType: section.meal, grams: line.food.grams, day });
+            if (line.pantryItem) {
+              await pantryRepo.logPortion(txn, {
+                itemId: line.pantryItem.id,
+                product,
+                mealType: section.meal,
+                grams: line.food.grams,
+                day,
+                wholeUnit: false,
+              });
+            } else {
+              await foodLogRepo.create(txn, product, { mealType: section.meal, grams: line.food.grams, day });
+            }
             const choice = choices.get(line.food.key);
             if (choice?.remember && choice.product.id === product.id && !remembered.has(line.food.key)) {
               remembered.add(line.food.key);
@@ -180,10 +225,12 @@ export function usePasteLog(requestedDay?: string) {
         }
       });
       return true;
-    } catch {
+    } catch (e) {
       if (productGone) {
         setSaveError("A matched product was removed. Check the lines and try again.");
         void reload();
+      } else if (e instanceof pantryRepo.NotEnoughStockError) {
+        setSaveError(`Not enough stock in pantry. Only ${e.gramsLeft} left.`);
       } else {
         setSaveError("Couldn't save your log. Nothing was saved.");
       }
@@ -209,5 +256,7 @@ export function usePasteLog(requestedDay?: string) {
     saving,
     saveError,
     confirm,
+    initialEntryIds,
+    isEditingExisting: initialEntryIds.length > 0,
   };
 }

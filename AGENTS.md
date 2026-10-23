@@ -29,6 +29,13 @@ because the directory isn't empty.
 
 The workflow is defined by the local skills and context files below.
 
+## Project rules
+
+- **Cooking workflow & AI ingredient parsing**: The feature, routes, and UI concept previously referred to as "Recipes" is renamed to **Cooking** (Cooking & Cooked Batches). The workflow sequence is: `New dish` -> `List raw ingredients (AI parse)` -> `Start cooking (active timer with Start, Pause/Resume, Finish buttons like workout logger)` -> `Encode total cooked food (weighed at the end, not during cooking)` -> `Give estimated/calculated macros (batch & per-100g)` -> `Save meal for inventory (fridge stock)`.
+- **Meal prep & tupperware inventory**: Cooked foods in inventory (e.g. cooked chicken, okra, boiled eggs, rice) can be partitioned across tupperwares using equal division (÷ N), manual gram allocation, or an optional AI prompt. Each batch has an assigned Name/Identifier (e.g. `High-Protein Lunch Box`). Calculates per-tupperware macros, saves boxes to meal prep inventory, and enables 1-tap or text logging (`1 tupperware [Name]`) that decrements tupperware counts.
+- **Prototype-first before mobile app**: UX, workflow, and concept updates must be vetted and reflected in the HTML prototypes (`prototypes/`) first. Do not modify mobile app (`apps/mobile/`) code until the user explicitly requests implementation.
+
+
 ## Proportional engineering
 
 Build for established requirements, not hypothetical scale, threats, or future

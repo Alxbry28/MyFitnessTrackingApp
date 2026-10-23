@@ -48,7 +48,23 @@ export default function LogScreen() {
     const empty = groups.filter((g) => g.entries.length === 0);
     body = (
       <ScrollView contentContainerStyle={styles.content}>
-        <DayTotalCard totals={totals} goal={goal.state.status === "ready" ? goal.state.goal : null} />
+        <DayTotalCard
+          totals={totals}
+          groups={groups}
+          goal={goal.state.status === "ready" ? goal.state.goal : null}
+        />
+        {filled.length > 0 && (
+          <Pressable
+            onPress={() => router.push({ pathname: "/paste-log", params: { day } })}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.editMealBtn, pressed && styles.pressed]}
+          >
+            <Text style={styles.editMealBtnText}>✏️ Edit meal list</Text>
+            <Text style={styles.editMealBtnSub}>
+              {groups.reduce((acc, g) => acc + g.entries.length, 0)} items logged · tap to edit
+            </Text>
+          </Pressable>
+        )}
         {isEmpty && (
           <Text style={styles.message}>{day === today ? "No food logged today" : "Nothing logged this day"}</Text>
         )}
@@ -72,7 +88,7 @@ export default function LogScreen() {
             accessibilityRole="button"
             style={({ pressed }) => [styles.addRow, empty.length > 0 && styles.divided, pressed && styles.pressed]}
           >
-            <Text style={styles.addLabel}>Type or paste a meal list</Text>
+            <Text style={styles.addLabel}>✏️ Edit meal list (Type or paste)</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -109,6 +125,19 @@ function makeStyles(theme: Theme) {
     content: { paddingHorizontal: space[4], paddingBottom: tap * 2, gap: space[3] },
     center: { flex: 1, alignItems: "center", justifyContent: "center", gap: space[4] },
     message: { color: colors.muted, fontSize: fontSize.md, textAlign: "center", paddingVertical: space[3] },
+    editMealBtn: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderColor: colors.accent,
+      borderWidth: 1,
+      borderRadius: radius.md,
+      paddingHorizontal: space[4],
+      paddingVertical: space[3],
+    },
+    editMealBtnText: { color: colors.accentText, fontSize: fontSize.md, fontWeight: "700" },
+    editMealBtnSub: { color: colors.muted, fontSize: fontSize.xs },
     card: {
       borderRadius: radius.md,
       borderWidth: 1,

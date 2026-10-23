@@ -17,7 +17,9 @@ type Props = {
 
 // A meal card from prototypes/log.html. The "+ Add" link is an addition so past days stay editable.
 export function MealSection({ group, onAdd, onEdit, onDelete }: Props) {
-  const styles = makeStyles(useTheme());
+  const theme = useTheme();
+  const styles = makeStyles(theme);
+  const { colors } = theme;
   const label = MEAL_LABELS[group.mealType];
 
   return (
@@ -29,8 +31,11 @@ export function MealSection({ group, onAdd, onEdit, onDelete }: Props) {
           </Text>
           {group.entries.length > 0 && (
             <Text style={styles.macros}>
-              P {Math.round(group.totals.proteinG ?? 0)} · C {Math.round(group.totals.carbsG ?? 0)} · F{" "}
-              {Math.round(group.totals.fatG ?? 0)}
+              <Text style={{ color: colors.protein }}>{Math.round(group.totals.proteinG ?? 0)}g P</Text>
+              {" · "}
+              <Text style={{ color: colors.carbs }}>{Math.round(group.totals.carbsG ?? 0)}g C</Text>
+              {" · "}
+              <Text style={{ color: colors.fat }}>{Math.round(group.totals.fatG ?? 0)}g F</Text>
             </Text>
           )}
         </View>

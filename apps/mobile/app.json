@@ -20,6 +20,13 @@
       ],
       "package": "com.bryan.myfitnesstrackingapp"
     },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.bryan.myfitnesstrackingapp",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to scan product barcodes."
+      }
+    },
     "plugins": [
       "expo-router",
       [

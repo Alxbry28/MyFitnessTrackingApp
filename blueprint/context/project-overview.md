@@ -65,7 +65,7 @@ After 13, build the Android APK (`eas build -p android --profile preview`) and u
     8c. **Pantry in food search and log edits** - In my pantry on Add food; log edits restore stock.
 9. **Canned and opened items** - drained values and weight; opened can with grams left.
 10. **Supplements** - pantry items counted in grams per scoop.
-12. **Recipes and cooked batches** - recipes; batches with settled cooked weight; per-100 g portions.
+12. **Cooking and cooked batches** (formerly Recipes) - cooking dishes with AI ingredient parsing; batches with settled cooked weight; per-100 g portions.
 19. **Workouts** - exercise library, session flow, sets with previous hints, history. Illustrations from `@bryllim/workout-guide` (ADR-20: CC BY-SA 4.0, credit Bryl Lim and Everkinetic, art unedited).
 20. **Body measurements** - sites, sessions, change since start, waist-to-height.
 21. **Calorie stats** - weekly averages, 30-day chart, learned TDEE from food and weight trend, suggested target.

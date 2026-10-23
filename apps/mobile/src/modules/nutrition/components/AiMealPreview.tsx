@@ -34,70 +34,90 @@ export function AiMealPreview({ result, dayLabel, saving, onSave, onBack, onRemo
           <View style={styles.macrosRow}>
             <View style={styles.macroPill}>
               <Text style={styles.macroLabel}>Protein</Text>
-              <Text style={styles.macroValue}>{result.totalProtein}g</Text>
+              <Text style={[styles.macroValue, { color: theme.colors.protein }]}>{result.totalProtein}g</Text>
             </View>
             <View style={styles.macroPill}>
               <Text style={styles.macroLabel}>Carbs</Text>
-              <Text style={styles.macroValue}>{result.totalCarbs}g</Text>
+              <Text style={[styles.macroValue, { color: theme.colors.carbs }]}>{result.totalCarbs}g</Text>
             </View>
             <View style={styles.macroPill}>
               <Text style={styles.macroLabel}>Fat</Text>
-              <Text style={styles.macroValue}>{result.totalFat}g</Text>
+              <Text style={[styles.macroValue, { color: theme.colors.fat }]}>{result.totalFat}g</Text>
             </View>
           </View>
         </View>
 
-        {/* Meals Sections */}
+        {/* Meals & Supplements Sections (Supplements separated from Snacks) */}
         {result.meals.map((meal, mealIdx) => {
           const mealKcal = meal.items.reduce((sum, item) => sum + item.calories, 0);
           const mealProtein = Math.round(meal.items.reduce((sum, item) => sum + item.protein, 0) * 10) / 10;
+          const isSupplements = meal.isSupplements || /supplement/i.test(meal.label);
 
           return (
             <View key={meal.mealType + meal.label + mealIdx} style={styles.mealSection}>
               <View style={styles.mealHeaderRow}>
                 <Text style={styles.mealTitle}>{meal.label}</Text>
-                <Text style={styles.mealKcal}>
-                  {formatKcal(mealKcal)} kcal · {mealProtein}g P
-                </Text>
+                {isSupplements ? (
+                  <View style={styles.suppBadge}>
+                    <Text style={styles.suppBadgeText}>📦 Auto-Deducts Inventory</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.mealKcal}>
+                    {formatKcal(mealKcal)} kcal · {mealProtein}g P
+                  </Text>
+                )}
               </View>
 
-              <View style={styles.mealCard}>
-                {meal.items.map((item, itemIdx) => (
-                  <View
-                    key={item.name + itemIdx}
-                    style={[styles.itemRow, itemIdx > 0 && styles.rowDivided]}
-                  >
-                    <View style={styles.itemMainCol}>
-                      <Text style={styles.itemName}>{item.name}</Text>
-                      <Text style={styles.itemSub}>
-                        {item.grams}g · {item.kcalPer100g} kcal/100g
-                      </Text>
-                    </View>
+              <View style={[styles.mealCard, isSupplements && styles.suppCard]}>
+                {meal.items.map((item, itemIdx) => {
+                  const unitLabel =
+                    item.unit === "caps"
+                      ? `${item.amount ?? item.grams} ${(item.amount ?? item.grams) === 1 ? "cap" : "caps"}`
+                      : item.unit === "tabs"
+                        ? `${item.amount ?? item.grams} ${(item.amount ?? item.grams) === 1 ? "tab" : "tabs"}`
+                        : `${item.grams}g`;
 
-                    <View style={styles.itemNutrCol}>
-                      <Text style={styles.itemKcal}>{formatKcal(item.calories)}</Text>
-                      <Text style={styles.itemMacros}>
-                        {item.protein}P · {item.carbs}C · {item.fat}F
-                      </Text>
-                    </View>
+                  return (
+                    <View
+                      key={item.name + itemIdx}
+                      style={[styles.itemRow, itemIdx > 0 && styles.rowDivided]}
+                    >
+                      <View style={styles.itemMainCol}>
+                        <Text style={styles.itemName}>{item.name}</Text>
+                        <Text style={[styles.itemSub, isSupplements && styles.suppItemSub]}>
+                          {isSupplements
+                            ? `${unitLabel} · 💊 Deducts from Supplement Inventory`
+                            : `${unitLabel} · ${item.kcalPer100g} kcal/100g`}
+                        </Text>
+                      </View>
 
-                    {onRemoveItem && (
-                      <Pressable
-                        onPress={() => onRemoveItem(mealIdx, itemIdx)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Remove ${item.name}`}
-                        style={styles.removeBtn}
-                        hitSlop={8}
-                      >
-                        <SymbolView
-                          name={{ android: "close", web: "close" }}
-                          tintColor={theme.colors.muted}
-                          size={16}
-                        />
-                      </Pressable>
-                    )}
-                  </View>
-                ))}
+                      <View style={styles.itemNutrCol}>
+                        <Text style={styles.itemKcal}>
+                          {isSupplements && item.calories === 0 ? unitLabel : formatKcal(item.calories)}
+                        </Text>
+                        <Text style={styles.itemMacros}>
+                          {item.protein}P · {item.carbs}C · {item.fat}F
+                        </Text>
+                      </View>
+
+                      {onRemoveItem && (
+                        <Pressable
+                          onPress={() => onRemoveItem(mealIdx, itemIdx)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Remove ${item.name}`}
+                          style={styles.removeBtn}
+                          hitSlop={8}
+                        >
+                          <SymbolView
+                            name={{ android: "close", web: "close" }}
+                            tintColor={theme.colors.muted}
+                            size={16}
+                          />
+                        </Pressable>
+                      )}
+                    </View>
+                  );
+                })}
               </View>
             </View>
           );
@@ -205,7 +225,7 @@ function makeStyles(theme: Theme) {
     mealHeaderRow: {
       flexDirection: "row",
       justifyContent: "space-between",
-      alignItems: "baseline",
+      alignItems: "center",
       paddingHorizontal: space[1],
     },
     mealTitle: {
@@ -218,12 +238,26 @@ function makeStyles(theme: Theme) {
       fontWeight: "600",
       color: colors.muted,
     },
+    suppBadge: {
+      backgroundColor: colors.okSoft,
+      paddingHorizontal: space[2],
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+    },
+    suppBadgeText: {
+      fontSize: fontSize.xs,
+      fontWeight: "700",
+      color: colors.ok,
+    },
     mealCard: {
       backgroundColor: colors.surface,
       borderRadius: radius.md,
       borderWidth: 1,
       borderColor: colors.border,
       overflow: "hidden",
+    },
+    suppCard: {
+      borderColor: colors.accent,
     },
     itemRow: {
       flexDirection: "row",
@@ -249,6 +283,9 @@ function makeStyles(theme: Theme) {
     itemSub: {
       fontSize: fontSize.xs,
       color: colors.muted,
+    },
+    suppItemSub: {
+      color: colors.ok,
     },
     itemNutrCol: {
       alignItems: "flex-end",

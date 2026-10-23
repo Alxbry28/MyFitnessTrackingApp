@@ -11,9 +11,12 @@ export function useCalorieStats() {
   const db = useSQLiteContext();
   const [data, setData] = useState<CalorieStatsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const latestRequest = useRef(0);
 
   const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     const request = ++latestRequest.current;
     try {
       const result = await calorieStatsRepo.getCalorieStats(db);
@@ -21,8 +24,9 @@ export function useCalorieStats() {
         setData(result);
         setLoading(false);
       }
-    } catch {
+    } catch (err) {
       if (request === latestRequest.current) {
+        setError(err instanceof Error ? err : new Error(String(err)));
         setLoading(false);
       }
     }
@@ -45,6 +49,7 @@ export function useCalorieStats() {
   return {
     data,
     loading,
+    error,
     refresh: load,
     acceptSuggestion,
   };
