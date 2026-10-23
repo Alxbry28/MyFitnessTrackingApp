@@ -14,9 +14,10 @@
     { file: "supplements.html", label: "Supplements" },
     { file: "products.html", label: "Products & Scan" },
     { file: "search.html", label: "Add Food" },
-    { file: "text-log.html", label: "Edit Meal List & ✨ AI Breakdown" },
-    { file: "recipes.html", label: "Cooking ★" },
-    { file: "meal-prep.html", label: "Meal Prep ★" },
+    { file: "text-log.html", label: "Edit Meal List & AI" },
+    { file: "recipes.html", label: "Recipes (Current) ★" },
+    { file: "cooking.html", label: "Cooking (Draft) ★" },
+    { file: "meal-prep.html", label: "Meal Prep (Draft) ★" },
     { file: "progress.html", label: "Progress" },
     { file: "measure.html", label: "Measurements" },
     { file: "workouts.html", label: "Workouts" },
@@ -190,7 +191,7 @@
       <div class="proto-brand">
         <a href="../index.html" class="proto-btn" title="Open Side-by-Side Comparison Hub">⇄ Compare Hub</a>
         <span class="proto-pill ${isCurrent ? "current" : "draft"}">
-          ${isCurrent ? "● Current Mobile App" : "○ Original Draft"}
+          ${isCurrent ? "● Current Mobile App" : "○ Draft Prototype"}
         </span>
       </div>
       <div class="proto-controls">

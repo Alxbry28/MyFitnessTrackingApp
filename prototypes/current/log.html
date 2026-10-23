@@ -110,9 +110,6 @@
             <div class="bd-row">
               <span>Snacks</span><span>290 kcal</span><span style="color:var(--protein)">28g P</span><span style="color:var(--carbs)">28g C</span><span style="color:var(--fat)">11g F</span>
             </div>
-            <div class="bd-row">
-              <span>Supplements</span><span>0 kcal</span><span style="color:var(--protein)">0g P</span><span style="color:var(--carbs)">0g C</span><span style="color:var(--fat)">0g F</span>
-            </div>
           </div>
         </div>
 
@@ -221,34 +218,9 @@
           </div>
         </div>
 
-        <!-- Supplements Card (Inventory Synced) -->
-        <div class="card" style="border-left: 3px solid var(--accent);">
-          <div class="meal-head">
-            <div>
-              <div class="meal-title">Supplements · 2 items</div>
-              <div class="meal-macros"><span style="color:var(--ok)">📦 Synced with Supplement Inventory</span></div>
-            </div>
-            <button class="meal-add" data-go="text-log.html#frame-1">✏️ Edit</button>
-          </div>
-          <div class="entry" data-go="supplements.html#frame-1">
-            <div>
-              <div class="entry-name">Hydroxicut</div>
-              <div class="entry-meta">1 cap · <span style="color:var(--muted)">Pantry Stock: 99 caps left (-1 cap)</span></div>
-            </div>
-            <div class="entry-kcal">0 kcal</div>
-          </div>
-          <div class="entry" data-go="supplements.html#frame-1">
-            <div>
-              <div class="entry-name">Creatine Monohydrate</div>
-              <div class="entry-meta">5 g · <span style="color:var(--muted)">Pantry Stock: 295 g left (-5 g)</span></div>
-            </div>
-            <div class="entry-kcal">0 kcal</div>
-          </div>
-        </div>
-
         <!-- Edit Meal List & AI Breakdown Quick Action Card -->
         <div class="card" style="display:flex; flex-direction:column; gap:var(--space-2); align-items:center; text-align:center; padding:var(--space-4);">
-          <div style="font-size:var(--text-xs); color:var(--muted)">Batch edit or parse entire day's meals &amp; supplements with AI:</div>
+          <div style="font-size:var(--text-xs); color:var(--muted)">Batch edit or parse entire day's meals with AI:</div>
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:var(--space-2); width:100%">
             <button class="btn" data-go="text-log.html#frame-1">✏️ Edit meal list</button>
             <button class="btn primary" data-go="text-log.html#frame-3">✨ AI Breakdown</button>

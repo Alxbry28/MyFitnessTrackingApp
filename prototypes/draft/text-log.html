@@ -1,221 +1,839 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Text log - prototype</title>
+<title>Edit Meal List &amp; Tupperware AI Log (Draft Feature) - prototype</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../theme.css">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--desk); color: var(--text); font-family: var(--font-sans); font-variant-numeric: tabular-nums; min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: var(--space-5); padding: var(--space-6) var(--space-4); }
-  .toolbar { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-sm); color: var(--muted); }
-  .toolbar a { color: var(--accent-text); }
   button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
-  .toggle { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: var(--space-2) var(--space-4); }
   .frames { display: flex; gap: var(--space-6); flex-wrap: wrap; justify-content: center; }
-  .frame-label { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2); text-align: center; }
-  .phone { width: 360px; height: 760px; background: var(--bg); border: 1px solid var(--border); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+  .frame-label { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2); text-align: center; font-weight: 600; max-width: 360px; }
+  .phone { width: 360px; height: 780px; background: var(--bg); border: 1px solid var(--border); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+  :where(.phone a) { color: inherit; text-decoration: none; }
   .status { height: 28px; flex: none; padding: 0 var(--space-5); display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--muted); }
   .appbar { padding: var(--space-2) var(--space-4) var(--space-3); display: flex; align-items: center; gap: var(--space-2); }
-  .appbar h2 { font-size: var(--text-lg); font-weight: 700; flex: 1; }
-  .appbar .sub { font-size: var(--text-sm); color: var(--muted); }
-  .icon-btn { width: var(--tap); height: var(--tap); margin-left: calc(-1 * var(--space-3)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--muted); flex: none; }
-  .content { flex: 1; overflow: hidden; padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
-  svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .chip { height: 32px; padding: 0 var(--space-3); border-radius: 999px; background: var(--surface-2); font-size: var(--text-sm); color: var(--muted); display: inline-flex; align-items: center; gap: var(--space-1); }
-  .chip svg { width: 16px; height: 16px; }
-  .btn { height: var(--tap); border-radius: var(--radius); font-weight: 700; font-size: var(--text-md); display: flex; align-items: center; justify-content: center; }
-  .btn.primary { background: var(--accent); color: var(--accent-ink); }
-  .btn.ghost { background: var(--surface-2); color: var(--text); }
-  .est { font-size: var(--text-xs); font-weight: 600; color: var(--estimate); background: var(--estimate-soft); padding: 1px 6px; border-radius: 999px; margin-left: var(--space-1); }
-
-  /* editor */
+  .appbar h1 { font-size: var(--text-lg); font-weight: 700; flex: 1; }
+  .appbar .sub { font-size: var(--text-xs); color: var(--muted); }
+  .icon-btn { width: 36px; height: 36px; margin-left: -8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--muted); flex: none; }
+  .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+  .content { flex: 1; overflow-y: auto; padding: 0 var(--space-4) var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3) var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
   .chips { display: flex; gap: var(--space-2); flex-wrap: wrap; }
-  .editor { flex: 1; padding: var(--space-4); font-size: var(--text-md); line-height: 1.55; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); overflow: hidden; }
-  .editor .h { font-weight: 700; color: var(--accent-text); }
-  .editor .g { color: var(--muted); }
-  .editor .blank { height: var(--space-2); }
-  .caret { display: inline-block; width: 2px; height: 18px; background: var(--accent); vertical-align: middle; margin-left: 1px; }
-  .format { font-size: var(--text-xs); color: var(--muted); }
-  .format code { font-family: inherit; color: var(--text); background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+  .chip { height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-pill); background: var(--surface-2); font-size: var(--text-xs); color: var(--muted); display: inline-flex; align-items: center; gap: 4px; cursor: pointer; border: 1px solid transparent; user-select: none; }
+  .chip:hover { border-color: var(--border); color: var(--text); }
+  .chip.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; border-color: var(--accent); }
+  .halo { padding: 3px; border-radius: calc(var(--radius) + 3px); background: var(--accent-soft); display: flex; flex-direction: column; }
+  .textarea { background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius); padding: var(--space-3) var(--space-4); font-size: var(--text-sm); line-height: 1.55; color: var(--text); min-height: 230px; width: 100%; font-family: inherit; resize: vertical; outline: none; }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .btn { min-height: var(--tap); border-radius: var(--radius); background: var(--surface-2); font-weight: 700; font-size: var(--text-sm); display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; cursor: pointer; border: 1px solid var(--border); color: var(--text); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .row:last-child { border-bottom: 0; }
+  .row .name { font-size: var(--text-sm); font-weight: 600; }
+  .row .meta { font-size: var(--text-xs); color: var(--muted); margin-top: 2px; }
+  .badge { font-size: var(--text-xs); font-weight: 600; padding: 2px 8px; border-radius: var(--radius-pill); }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.est { background: var(--estimate-soft); color: var(--estimate); }
+  .badge.acc { background: var(--accent-soft); color: var(--accent-text); }
+  .format-note { font-size: var(--text-xs); color: var(--muted); line-height: 1.45; }
+  .format-note code { font-family: inherit; color: var(--text); background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
 
-  /* preview */
-  .summary { display: flex; gap: var(--space-2); }
-  .pill { font-size: var(--text-xs); font-weight: 600; padding: var(--space-1) var(--space-2); border-radius: 999px; }
-  .pill.ok { color: var(--ok); background: var(--surface-2); }
-  .pill.warn { color: var(--estimate); background: var(--estimate-soft); }
-  .pill.bad { color: var(--over); background: var(--over-soft); }
-  .group-head { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4) var(--space-1); }
-  .group-head b { font-size: var(--text-md); font-weight: 600; }
-  .group-head .map { font-size: var(--text-xs); color: var(--muted); display: flex; align-items: center; gap: var(--space-1); }
-  .group-head .map span { color: var(--accent-text); font-weight: 600; background: var(--accent-soft); padding: 2px 8px; border-radius: 999px; }
-  .group-head .sum { font-size: var(--text-sm); color: var(--muted); }
-  .line { display: flex; align-items: center; gap: var(--space-3); min-height: 48px; padding: var(--space-2) var(--space-4); border-top: 1px solid var(--border); }
-  .line .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--ok); }
-  .line.warn .dot { background: var(--estimate); }
-  .line.bad .dot { background: var(--over); }
-  .line .info { flex: 1; min-width: 0; }
-  .line .name { font-size: var(--text-sm); font-weight: 500; }
-  .line .src { font-size: var(--text-xs); color: var(--faint); }
-  .line.warn .src { color: var(--estimate); }
-  .line.bad .src { color: var(--over); }
-  .line .kcal { font-size: var(--text-sm); font-weight: 600; }
-  .line .fix { height: 32px; padding: 0 var(--space-3); border-radius: 999px; font-size: var(--text-xs); font-weight: 700; background: var(--accent-soft); color: var(--accent-text); }
-  .bottom { flex: none; padding: var(--space-3) var(--space-4) var(--space-4); border-top: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; gap: var(--space-3); }
-  .bottom .tot { display: flex; justify-content: space-between; align-items: baseline; font-size: var(--text-sm); color: var(--muted); }
-  .bottom .tot b { font-size: var(--text-lg); color: var(--text); }
-  .bottom .row { display: grid; grid-template-columns: 1fr 2fr; gap: var(--space-2); }
-
-  /* match picker sheet */
-  .scrim { position: absolute; inset: 0; background: var(--scrim); }
-  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-2) var(--space-4) var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
-  .grabber { width: 36px; height: 4px; border-radius: 2px; background: var(--faint); margin: 0 auto; }
-  .sheet h3 { font-size: var(--text-lg); font-weight: 700; }
-  .sheet .q { font-size: var(--text-sm); color: var(--muted); }
-  .sheet .q b { color: var(--text); }
-  .opt { display: flex; align-items: center; gap: var(--space-3); min-height: 60px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--border); }
-  .opt.on { border-color: var(--accent); background: var(--accent-soft); }
-  .opt .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--faint); flex: none; }
-  .opt.on .radio { border: 6px solid var(--accent); }
-  .opt .info { flex: 1; }
-  .opt .name { font-size: var(--text-md); font-weight: 500; }
-  .opt .meta { font-size: var(--text-sm); color: var(--muted); }
-  .opt .kcal { font-weight: 600; }
-  .remember { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--muted); }
-  .box { width: 20px; height: 20px; border-radius: 5px; background: var(--accent); color: var(--accent-ink); display: flex; align-items: center; justify-content: center; font-size: var(--text-xs); font-weight: 700; }
-  :where(.phone a) { color: inherit; text-decoration: none; }
-  .nav b { color: var(--text); font-weight: 600; }
+  /* AI Breakdown (AiMealPreview.tsx exact styles) */
+  .ai-total-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .ai-total-header {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .ai-total-kcal {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .ai-macros-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-2);
+    margin-top: 4px;
+  }
+  .ai-macro-pill {
+    background: var(--surface-2);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .ai-macro-label {
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .ai-macro-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .ai-meal-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .ai-meal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0 4px;
+  }
+  .ai-meal-title {
+    font-size: var(--text-md);
+    font-weight: 700;
+    color: var(--text);
+  }
+  .ai-meal-kcal {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .ai-meal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .ai-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--border);
+  }
+  .ai-item-row:first-child {
+    border-top: 0;
+  }
+  .ai-item-main {
+    flex: 1;
+    padding-right: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ai-item-name {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text);
+  }
+  .ai-item-sub {
+    font-size: var(--text-xs);
+    color: var(--muted);
+  }
+  .ai-item-nutr {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+  .ai-item-kcal {
+    font-size: var(--text-sm);
+    font-weight: 700;
+    color: var(--text);
+  }
+  .ai-item-macros {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .ai-remove-btn {
+    margin-left: var(--space-3);
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .ai-remove-btn:hover {
+    background: var(--over-soft);
+    color: var(--over);
+  }
+  .bottom-bar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4) var(--space-4);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+  .back-btn {
+    min-height: var(--tap);
+    padding: 0 var(--space-3);
+    border-radius: var(--radius);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .back-btn:hover {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+  .save-btn {
+    flex: 1;
+    min-height: var(--tap);
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-radius: var(--radius);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-4);
+  }
 </style>
 </head>
 <body>
-<div class="toolbar">
-  <button class="toggle" id="theme-toggle">Switch to light</button>
-  <span class="nav"><a href="onboarding.html">Setup</a> · <a href="today.html">Today</a> · <a href="log.html">Log</a> · <a href="history.html">History</a> · <a href="search.html">Search</a> · <b>Text log</b> · <a href="products.html">Products</a> · <a href="settings.html">Settings</a></span>
-</div>
 
 <div class="frames">
-  <!-- Frame 1: write / paste -->
-  <div>
-    <p class="frame-label">1 · Type or paste the day</p>
+  <!-- Frame 1: Edit Meal List / AI Meal Parse Input (paste-log.tsx mode="write") -->
+  <div id="frame-1">
+    <p class="frame-label">1 · Edit Meal List: Write / Paste &amp; Trigger ✨ AI Parse</p>
     <div class="phone">
-      <div class="status"><span>21:30</span><span>●●● 38%</span></div>
+      <div class="status"><span>13:20</span><span>●●● 82%</span></div>
       <div class="appbar">
-        <button class="icon-btn" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-        <h2>Text log</h2><span class="sub">Tue, Oct 20</span>
+        <button class="icon-btn" data-go="log.html#frame-1" aria-label="Close">✕</button>
+        <h1>Edit today's meals</h1>
+        <span class="sub">Today · 9 items loaded</span>
       </div>
       <div class="content">
         <div class="chips">
-          <span class="chip"><svg class="i" viewBox="0 0 24 24"><rect x="8" y="4" width="11" height="14" rx="2"/><path d="M5 8v11a1 1 0 0 0 1 1h9"/></svg>Paste</span>
-          <span class="chip"><svg class="i" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4"/></svg>Copy yesterday</span>
-          <span class="chip">Lunch → Dinner</span>
+          <span class="chip on" id="chip-today" onclick="setTemplate('today')">Reload today's log</span>
+          <span class="chip" id="chip-mealprep" onclick="setTemplate('mealprep')">🍱 Meal Prep (Tupperware)</span>
+          <span class="chip" id="chip-fmt" onclick="setTemplate('format')">Format template</span>
+          <span class="chip" onclick="copyLunchToDinner()">Lunch → Dinner</span>
         </div>
-        <div class="card editor">
-          <div class="h">Breakfast:</div>
-          <div><span class="g">220g</span> taho</div>
-          <div class="blank"></div>
-          <div class="h">Lunch:</div>
-          <div><span class="g">250g</span> white rice</div>
-          <div><span class="g">110g</span> boiled eggs</div>
-          <div><span class="g">250g</span> boiled chicken breast</div>
-          <div><span class="g">50g</span> okra</div>
-          <div class="blank"></div>
-          <div class="h">Pre-Workout:</div>
-          <div><span class="g">7g</span> Wake Pre workout</div>
-          <div><span class="g">5g</span> creatine</div>
-          <div class="blank"></div>
-          <div class="h">Dinner:</div>
-          <div><span class="g">250g</span> white rice</div>
-          <div><span class="g">110g</span> boiled eggs</div>
-          <div><span class="g">250g</span> boiled chicken breast</div>
-          <div><span class="g">50g</span> okra</div>
-          <div class="blank"></div>
-          <div class="h">Post-workout:</div>
-          <div><span class="g">30g</span> just whey<span class="caret"></span></div>
+
+        <div class="halo">
+          <textarea id="meal-input" class="textarea" rows="14" spellcheck="false">Breakfast:
+80g Rolled Oats
+30g Gold Standard 100% Whey Vanilla
+100g Whole Eggs
+
+Lunch:
+240g Chicken Adobo Batch
+230g Cooked Jasmine Rice
+
+Snacks:
+150g Greek Yogurt
+28g Mixed Nuts
+
+Supplements:
+1 cap Hydroxicut
+5g Creatine</textarea>
         </div>
-        <p class="format">One header per meal, then one food per line: <code>250g white rice</code>, <code>250ml milk</code> or <code>8oz chicken</code>. Matched against your library, works offline.</p>
-        <button class="btn primary">Preview 12 foods</button>
+
+        <p class="format-note">
+          Format: <code>Breakfast:\n100g food</code>, <code>1 tupperware High-Protein Lunch Box</code>, <code>Supplements:\n1 cap Hydroxicut</code>. Logged meal prep boxes &amp; supplements automatically deduct from inventory!
+        </p>
+
+        <div class="btn-row">
+          <button class="btn" data-go="#frame-2">Match (9)</button>
+          <button class="btn primary" data-go="#frame-3">✨ AI Parse</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Frame 2: parsed preview -->
-  <div>
-    <p class="frame-label">2 · Check matches, then log</p>
+  <!-- Frame 2: Match Preview (Offline Match, PasteLogPreview.tsx) -->
+  <div id="frame-2">
+    <p class="frame-label">2 · Offline Match Preview (PasteLogPreview)</p>
     <div class="phone">
-      <div class="status"><span>21:31</span><span>●●● 38%</span></div>
+      <div class="status"><span>13:21</span><span>●●● 82%</span></div>
       <div class="appbar">
-        <button class="icon-btn" aria-label="Back to text"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
-        <h2>Preview</h2><span class="sub">Tue, Oct 20</span>
+        <button class="icon-btn" data-go="#frame-1" aria-label="Back to text">←</button>
+        <h1>Match preview</h1>
+        <span class="sub">Today</span>
       </div>
       <div class="content">
-        <div class="summary"><span class="pill ok">10 matched</span><span class="pill warn">1 to check</span><span class="pill bad">1 not found</span></div>
-        <div class="card">
-          <div class="group-head"><b>Breakfast</b><span class="sum">194 kcal</span></div>
-          <div class="line"><span class="dot"></span><div class="info"><div class="name">Taho, homemade <span class="est">est.</span></div><div class="src">220g taho</div></div><span class="kcal">194</span></div>
+        <div class="chips">
+          <span class="badge ok">9 matched</span>
+          <span class="badge acc">💊 2 pantry stock deductions</span>
+          <span class="badge box" id="prep-deduct-badge" style="display:none">🍱 1 Meal Prep Box (5 → 4)</span>
         </div>
-        <div class="card">
-          <div class="group-head"><b>Lunch</b><span class="sum">920 kcal</span></div>
-          <div class="line warn"><span class="dot"></span><div class="info"><div class="name">White rice, cooked</div><div class="src">250g white rice · 2 matches</div></div><a class="fix" href="#pick">Check</a></div>
-          <div class="line"><span class="dot"></span><div class="info"><div class="name">Egg, boiled</div><div class="src">110g boiled eggs</div></div><span class="kcal">171</span></div>
-          <div class="line"><span class="dot"></span><div class="info"><div class="name">Chicken breast, boiled</div><div class="src">250g boiled chicken breast</div></div><span class="kcal">413</span></div>
-          <div class="line"><span class="dot"></span><div class="info"><div class="name">Okra, boiled</div><div class="src">50g okra</div></div><span class="kcal">11</span></div>
+
+        <!-- Breakfast Card -->
+        <div class="card" id="match-breakfast-card">
+          <div style="display:flex; justify-content:space-between">
+            <b>Breakfast</b>
+            <span style="font-size:var(--text-xs); color:var(--muted)">565 kcal</span>
+          </div>
+          <div class="row" data-go="products.html#frame-1">
+            <div>
+              <div class="name">Rolled Oats</div>
+              <div class="meta">80g Rolled Oats</div>
+            </div>
+            <b>303</b>
+          </div>
+          <div class="row" data-go="supplements.html#frame-5">
+            <div>
+              <div class="name">Gold Standard Whey <span class="badge ok">💊 Pantry</span></div>
+              <div class="meta">30g · 💊 Stock: 1240 → 1210 g</div>
+            </div>
+            <b>120</b>
+          </div>
+          <div class="row" data-go="products.html#frame-4">
+            <div>
+              <div class="name">Whole Eggs</div>
+              <div class="meta">100g Whole Eggs</div>
+            </div>
+            <b>142</b>
+          </div>
         </div>
+
+        <!-- Lunch Card -->
         <div class="card">
-          <div class="group-head"><b>Pre-Workout</b><span class="map">logs as <span>Snack ▾</span></span></div>
-          <div class="line bad"><span class="dot"></span><div class="info"><div class="name">Wake Pre workout</div><div class="src">7g · not in your library</div></div><a class="fix" href="products.html">Add</a></div>
-          <div class="line"><span class="dot"></span><div class="info"><div class="name">Creatine monohydrate</div><div class="src">5g creatine</div></div><span class="kcal">0</span></div>
+          <div style="display:flex; justify-content:space-between">
+            <b>Lunch</b>
+            <span style="font-size:var(--text-xs); color:var(--muted)">685 kcal</span>
+          </div>
+          <div class="row" data-go="recipes.html#frame-1">
+            <div>
+              <div class="name">Chicken Adobo Batch</div>
+              <div class="meta">240g Chicken Adobo Batch</div>
+            </div>
+            <b>385</b>
+          </div>
+          <div class="row" data-go="products.html#frame-1">
+            <div>
+              <div class="name">Cooked Jasmine Rice</div>
+              <div class="meta">230g Cooked Jasmine Rice</div>
+            </div>
+            <b>300</b>
+          </div>
         </div>
+
+        <!-- Snacks Card -->
         <div class="card">
-          <div class="group-head"><b>Dinner</b><span class="sum">920 kcal</span></div>
-          <div class="line"><span class="dot"></span><div class="info"><div class="name">White rice, cooked</div><div class="src">250g white rice · same as lunch</div></div><span class="kcal">325</span></div>
+          <div style="display:flex; justify-content:space-between">
+            <b>Snacks</b>
+            <span style="font-size:var(--text-xs); color:var(--muted)">290 kcal</span>
+          </div>
+          <div class="row" data-go="products.html#frame-1">
+            <div>
+              <div class="name">Greek Yogurt</div>
+              <div class="meta">150g Greek Yogurt</div>
+            </div>
+            <b>130</b>
+          </div>
+          <div class="row" data-go="products.html#frame-1">
+            <div>
+              <div class="name">Mixed Nuts</div>
+              <div class="meta">28g Mixed Nuts</div>
+            </div>
+            <b>160</b>
+          </div>
+        </div>
+
+        <!-- Supplements Card -->
+        <div class="card" style="border-color:var(--accent);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b>Supplements</b>
+            <span class="badge ok">📦 Auto-Deducts Inventory</span>
+          </div>
+          <div class="row" data-go="supplements.html#frame-1">
+            <div>
+              <div class="name">Hydroxicut <span class="badge ok">💊 Pantry</span></div>
+              <div class="meta" style="color:var(--ok)">1 cap · 💊 Stock: 100 → 99 caps</div>
+            </div>
+            <b>0</b>
+          </div>
+          <div class="row" data-go="supplements.html#frame-1">
+            <div>
+              <div class="name">Creatine Monohydrate <span class="badge ok">💊 Pantry</span></div>
+              <div class="meta" style="color:var(--ok)">5g · 💊 Stock: 300 → 295 g</div>
+            </div>
+            <b>0</b>
+          </div>
         </div>
       </div>
-      <div class="bottom">
-        <div class="tot"><span>Total so far</span><b>2,154 kcal</b></div>
-        <div class="row"><button class="btn ghost">Edit text</button><button class="btn primary">Log 11, skip 1</button></div>
+      <div class="bottom-bar" style="flex-direction:column; align-items:stretch; gap:var(--space-2)">
+        <div style="display:flex; justify-content:space-between; align-items:baseline">
+          <span style="font-size:var(--text-xs); color:var(--muted)">Total so far</span>
+          <b style="font-size:var(--text-lg)">1,540 kcal</b>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 2fr; gap:var(--space-2)">
+          <button class="btn" data-go="#frame-1">Edit text</button>
+          <button class="btn primary" data-go="log.html#frame-1">Log 9</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Frame 3: resolve an ambiguous match -->
-  <div>
-    <p class="frame-label" id="pick">3 · Pick a match once, remembered after</p>
+  <!-- Frame 3: AI Breakdown Screen (AiMealPreview.tsx in paste-log.tsx mode="ai_preview") -->
+  <div id="frame-3">
+    <p class="frame-label">3 · ✨ AI Breakdown Screen (AiMealPreview.tsx)</p>
     <div class="phone">
-      <div class="status"><span>21:31</span><span>●●● 38%</span></div>
-      <div class="appbar"><h2>Preview</h2></div>
-      <div class="content">
-        <div class="card">
-          <div class="group-head"><b>Lunch</b><span class="sum">920 kcal</span></div>
-          <div class="line warn"><span class="dot"></span><div class="info"><div class="name">White rice, cooked</div><div class="src">250g white rice · 2 matches</div></div><button class="fix">Check</button></div>
+      <div class="status"><span>13:22</span><span>●●● 82%</span></div>
+      <div class="appbar">
+        <button class="icon-btn" data-go="#frame-1" aria-label="Back to text">←</button>
+        <h1>AI Breakdown</h1>
+        <span class="sub">Today</span>
+      </div>
+
+      <div class="content" id="ai-breakdown-content">
+        <!-- Grand Total Summary Card -->
+        <div class="ai-total-card">
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <span class="ai-total-header">AI PARSED TOTALS (TODAY)</span>
+            <button class="badge acc" onclick="resetAiItems()" id="ai-reset-btn" style="display:none">↺ Reset items</button>
+          </div>
+          <div class="ai-total-kcal" id="ai-total-kcal">1,540 kcal</div>
+          <div class="ai-macros-row">
+            <div class="ai-macro-pill">
+              <span class="ai-macro-label">Protein</span>
+              <span class="ai-macro-value" id="ai-total-p" style="color:var(--protein)">142g</span>
+            </div>
+            <div class="ai-macro-pill">
+              <span class="ai-macro-label">Carbs</span>
+              <span class="ai-macro-value" id="ai-total-c" style="color:var(--carbs)">148g</span>
+            </div>
+            <div class="ai-macro-pill">
+              <span class="ai-macro-label">Fat</span>
+              <span class="ai-macro-value" id="ai-total-f" style="color:var(--fat)">41g</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Breakfast Section -->
+        <div class="ai-meal-section" data-meal="Breakfast">
+          <div class="ai-meal-header">
+            <span class="ai-meal-title">Breakfast</span>
+            <span class="ai-meal-kcal" data-meal-sum>565 kcal · 47.6g P</span>
+          </div>
+          <div class="ai-meal-card">
+            <div class="ai-item-row" data-kcal="303" data-p="10.6" data-c="54.2" data-f="5.2">
+              <div class="ai-item-main">
+                <span class="ai-item-name">Rolled Oats</span>
+                <span class="ai-item-sub">80g · 379 kcal/100g</span>
+              </div>
+              <div class="ai-item-nutr">
+                <span class="ai-item-kcal">303</span>
+                <span class="ai-item-macros">10.6P · 54.2C · 5.2F</span>
+              </div>
+              <button class="ai-remove-btn" onclick="removeAiRow(this)" title="Remove item">✕</button>
+            </div>
+            <div class="ai-item-row" data-kcal="120" data-p="24" data-c="3" data-f="1.5">
+              <div class="ai-item-main">
+                <span class="ai-item-name">Gold Standard 100% Whey Vanilla</span>
+                <span class="ai-item-sub">30g · 400 kcal/100g · 💊 Pantry stock</span>
+              </div>
+              <div class="ai-item-nutr">
+                <span class="ai-item-kcal">120</span>
+                <span class="ai-item-macros">24P · 3C · 1.5F</span>
+              </div>
+              <button class="ai-remove-btn" onclick="removeAiRow(this)" title="Remove item">✕</button>
+            </div>
+            <div class="ai-item-row" data-kcal="142" data-p="13" data-c="1.1" data-f="9.5">
+              <div class="ai-item-main">
+                <span class="ai-item-name">Whole Eggs</span>
+                <span class="ai-item-sub">100g · 142 kcal/100g</span>
+              </div>
+              <div class="ai-item-nutr">
+                <span class="ai-item-kcal">142</span>
+                <span class="ai-item-macros">13P · 1.1C · 9.5F</span>
+              </div>
+              <button class="ai-remove-btn" onclick="removeAiRow(this)" title="Remove item">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lunch Section -->
+        <div class="ai-meal-section" data-meal="Lunch">
+          <div class="ai-meal-header">
+            <span class="ai-meal-title">Lunch</span>
+            <span class="ai-meal-kcal" data-meal-sum>685 kcal · 58.2g P</span>
+          </div>
+          <div class="ai-meal-card">
+            <div class="ai-item-row" data-kcal="385" data-p="52" data-c="4" data-f="17">
+              <div class="ai-item-main">
+                <span class="ai-item-name">Chicken Adobo Batch</span>
+                <span class="ai-item-sub">240g · 160 kcal/100g · 🍲 Cooked batch</span>
+              </div>
+              <div class="ai-item-nutr">
+                <span class="ai-item-kcal">385</span>
+                <span class="ai-item-macros">52P · 4C · 17F</span>
+              </div>
+              <button class="ai-remove-btn" onclick="removeAiRow(this)" title="Remove item">✕</button>
+            </div>
+            <div class="ai-item-row" data-kcal="300" data-p="6.2" data-c="54" data-f="0.6">
+              <div class="ai-item-main">
+                <span class="ai-item-name">Cooked Jasmine Rice</span>
+                <span class="ai-item-sub">230g · 130 kcal/100g</span>
+              </div>
+              <div class="ai-item-nutr">
+                <span class="ai-item-kcal">300</span>
+                <span class="ai-item-macros">6.2P · 54C · 0.6F</span>
+              </div>
+              <button class="ai-remove-btn" onclick="removeAiRow(this)" title="Remove item">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Snacks Section -->
+        <div class="ai-meal-section" data-meal="Snacks">
+          <div class="ai-meal-header">
+            <span class="ai-meal-title">Snacks</span>
+            <span class="ai-meal-kcal" data-meal-sum>290 kcal · 21g P</span>
+          </div>
+          <div class="ai-meal-card">
+            <div class="ai-item-row" data-kcal="130" data-p="15" data-c="6" data-f="5">
+              <div class="ai-item-main">
+                <span class="ai-item-name">Greek Yogurt</span>
+                <span class="ai-item-sub">150g · 87 kcal/100g</span>
+              </div>
+              <div class="ai-item-nutr">
+                <span class="ai-item-kcal">130</span>
+                <span class="ai-item-macros">15P · 6C · 5F</span>
+              </div>
+              <button class="ai-remove-btn" onclick="removeAiRow(this)" title="Remove item">✕</button>
+            </div>
+            <div class="ai-item-row" data-kcal="160" data-p="6" data-c="6" data-f="14">
+              <div class="ai-item-main">
+                <span class="ai-item-name">Mixed Nuts</span>
+                <span class="ai-item-sub">28g · 571 kcal/100g</span>
+              </div>
+              <div class="ai-item-nutr">
+                <span class="ai-item-kcal">160</span>
+                <span class="ai-item-macros">6P · 6C · 14F</span>
+              </div>
+              <button class="ai-remove-btn" onclick="removeAiRow(this)" title="Remove item">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Supplements Section (Separated from Snacks) -->
+        <div class="ai-meal-section" data-meal="Supplements">
+          <div class="ai-meal-header">
+            <span class="ai-meal-title">Supplements</span>
+            <span class="badge ok" data-supp-badge>📦 Auto-Deducts Inventory</span>
+          </div>
+          <div class="ai-meal-card" style="border-color:var(--accent)">
+            <div class="ai-item-row" data-kcal="0" data-p="0" data-c="0" data-f="0">
+              <div class="ai-item-main">
+                <span class="ai-item-name">Hydroxicut</span>
+                <span class="ai-item-sub" style="color:var(--ok)">1 cap · 💊 Stock: 100 → 99 caps left (-1 cap)</span>
+              </div>
+              <div class="ai-item-nutr">
+                <span class="ai-item-kcal">1 cap</span>
+                <span class="ai-item-macros">0 kcal · 0P · 0C · 0F</span>
+              </div>
+              <button class="ai-remove-btn" onclick="removeAiRow(this)" title="Remove item">✕</button>
+            </div>
+            <div class="ai-item-row" data-kcal="0" data-p="0" data-c="0" data-f="0">
+              <div class="ai-item-main">
+                <span class="ai-item-name">Creatine Monohydrate</span>
+                <span class="ai-item-sub" style="color:var(--ok)">5g · 💊 Stock: 300 → 295 g left (-5 g)</span>
+              </div>
+              <div class="ai-item-nutr">
+                <span class="ai-item-kcal">5 g</span>
+                <span class="ai-item-macros">0 kcal · 0P · 0C · 0F</span>
+              </div>
+              <button class="ai-remove-btn" onclick="removeAiRow(this)" title="Remove item">✕</button>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="scrim"></div>
-      <div class="sheet">
-        <div class="grabber"></div>
-        <h3>Which white rice?</h3>
-        <p class="q">For <b>250g white rice</b> in Lunch and Dinner</p>
-        <div class="opt on"><span class="radio"></span><div class="info"><div class="name">White rice, cooked</div><div class="meta">Custom · 130 kcal / 100 g</div></div><span class="kcal">325</span></div>
-        <div class="opt"><span class="radio"></span><div class="info"><div class="name">Jasmine rice, uncooked</div><div class="meta">Royal Umbrella · 356 kcal / 100 g</div></div><span class="kcal">890</span></div>
-        <div class="remember"><span class="box">✓</span>Always use this for "white rice"</div>
-        <button class="btn primary">Use White rice, cooked</button>
+
+      <!-- Floating Bottom Bar (AiMealPreview.tsx) -->
+      <div class="bottom-bar">
+        <button class="back-btn" data-go="#frame-1">Edit text</button>
+        <button class="save-btn" data-go="log.html#frame-1">
+          <span>✓</span>
+          <span>Log all to Today</span>
+        </button>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-  const btn = document.getElementById('theme-toggle');
-  btn.onclick = () => {
-    const light = document.documentElement.dataset.theme !== 'light';
-    document.documentElement.dataset.theme = light ? 'light' : 'dark';
-    btn.textContent = light ? 'Switch to dark' : 'Switch to light';
-  };
+  const TEMPLATE_TODAY = `Breakfast:
+80g Rolled Oats
+30g Gold Standard 100% Whey Vanilla
+100g Whole Eggs
+
+Lunch:
+240g Chicken Adobo Batch
+230g Cooked Jasmine Rice
+
+Snacks:
+150g Greek Yogurt
+28g Mixed Nuts
+
+Supplements:
+1 cap Hydroxicut
+5g Creatine`;
+
+  const TEMPLATE_MEALPREP = `Breakfast:
+1 tupperware High-Protein Lunch Box
+1 cup Black Coffee
+
+Lunch:
+240g Chicken Adobo Batch
+230g Cooked Jasmine Rice
+
+Supplements:
+1 cap Hydroxicut
+5g Creatine`;
+
+  const TEMPLATE_FORMAT = `Breakfast:
+100g food
+
+Lunch:
+100g food
+
+Dinner:
+100g food
+
+Snacks:
+100g food
+
+Supplements:
+1 cap Hydroxicut
+5g Creatine`;
+
+  function setTemplate(type) {
+    const el = document.getElementById('meal-input');
+    const chipToday = document.getElementById('chip-today');
+    const chipMealPrep = document.getElementById('chip-mealprep');
+    const chipFmt = document.getElementById('chip-fmt');
+    const prepBadge = document.getElementById('prep-deduct-badge');
+
+    chipToday.classList.remove('on');
+    chipMealPrep.classList.remove('on');
+    chipFmt.classList.remove('on');
+
+    if (type === 'today') {
+      el.value = TEMPLATE_TODAY;
+      chipToday.classList.add('on');
+      if (prepBadge) prepBadge.style.display = 'none';
+      renderBreakfastMode('default');
+    } else if (type === 'mealprep') {
+      el.value = TEMPLATE_MEALPREP;
+      chipMealPrep.classList.add('on');
+      if (prepBadge) prepBadge.style.display = 'inline-flex';
+      renderBreakfastMode('mealprep');
+    } else {
+      el.value = TEMPLATE_FORMAT;
+      chipFmt.classList.add('on');
+      if (prepBadge) prepBadge.style.display = 'none';
+      renderBreakfastMode('default');
+    }
+  }
+
+  function renderBreakfastMode(mode) {
+    const bfCard = document.getElementById('match-breakfast-card');
+    const aiBfCard = document.querySelector(".ai-meal-section[data-meal='Breakfast'] .ai-meal-card");
+
+    if (mode === 'mealprep') {
+      if (bfCard) {
+        bfCard.innerHTML = `
+          <div style="display:flex; justify-content:space-between">
+            <b>Breakfast</b>
+            <span style="font-size:var(--text-xs); color:var(--muted)">550 kcal</span>
+          </div>
+          <div class="row" data-go="meal-prep.html#frame-4">
+            <div>
+              <div class="name">High-Protein Lunch Box <span class="badge box">🍱 Meal Prep</span></div>
+              <div class="meta" style="color:var(--ok)">1 tupperware (450g) · 🍱 Stock: 5 → 4 boxes</div>
+            </div>
+            <b>548</b>
+          </div>
+          <div class="row">
+            <div>
+              <div class="name">Black Coffee</div>
+              <div class="meta">1 cup brewed (240ml)</div>
+            </div>
+            <b>2</b>
+          </div>
+        `;
+      }
+      if (aiBfCard) {
+        aiBfCard.innerHTML = `
+          <div class="ai-item-row" data-kcal="548" data-p="48" data-c="62" data-f="12">
+            <div class="ai-item-main">
+              <span class="ai-item-name">🍱 High-Protein Lunch Box <span class="badge box" style="font-size:10px">Meal Prep</span></span>
+              <span class="ai-item-sub">1 tupperware (450g: 100g Chicken, 50g Okra, 100g Egg, 200g Rice) · 🍱 Stock: 5 → 4 boxes</span>
+            </div>
+            <div class="ai-item-nutr">
+              <span class="ai-item-kcal">548</span>
+              <span class="ai-item-macros">48P · 62C · 12F</span>
+            </div>
+            <button class="ai-remove-btn" onclick="removeAiRow(this)" title="Remove item">✕</button>
+          </div>
+          <div class="ai-item-row" data-kcal="2" data-p="0.2" data-c="0" data-f="0">
+            <div class="ai-item-main">
+              <span class="ai-item-name">Black Coffee</span>
+              <span class="ai-item-sub">1 cup (240g) · 1 kcal/100g</span>
+            </div>
+            <div class="ai-item-nutr">
+              <span class="ai-item-kcal">2</span>
+              <span class="ai-item-macros">0.2P · 0C · 0F</span>
+            </div>
+            <button class="ai-remove-btn" onclick="removeAiRow(this)" title="Remove item">✕</button>
+          </div>
+        `;
+      }
+    } else {
+      if (bfCard) {
+        bfCard.innerHTML = `
+          <div style="display:flex; justify-content:space-between">
+            <b>Breakfast</b>
+            <span style="font-size:var(--text-xs); color:var(--muted)">565 kcal</span>
+          </div>
+          <div class="row" data-go="products.html#frame-1">
+            <div>
+              <div class="name">Rolled Oats</div>
+              <div class="meta">80g Rolled Oats</div>
+            </div>
+            <b>303</b>
+          </div>
+          <div class="row" data-go="supplements.html#frame-5">
+            <div>
+              <div class="name">Gold Standard Whey <span class="badge ok">💊 Pantry</span></div>
+              <div class="meta">30g · 💊 Stock: 1240 → 1210 g</div>
+            </div>
+            <b>120</b>
+          </div>
+          <div class="row" data-go="products.html#frame-4">
+            <div>
+              <div class="name">Whole Eggs</div>
+              <div class="meta">100g Whole Eggs</div>
+            </div>
+            <b>142</b>
+          </div>
+        `;
+      }
+      if (aiBfCard) {
+        aiBfCard.innerHTML = `
+          <div class="ai-item-row" data-kcal="303" data-p="10.6" data-c="54.2" data-f="5.2">
+            <div class="ai-item-main">
+              <span class="ai-item-name">Rolled Oats</span>
+              <span class="ai-item-sub">80g · 379 kcal/100g</span>
+            </div>
+            <div class="ai-item-nutr">
+              <span class="ai-item-kcal">303</span>
+              <span class="ai-item-macros">10.6P · 54.2C · 5.2F</span>
+            </div>
+            <button class="ai-remove-btn" onclick="removeAiRow(this)" title="Remove item">✕</button>
+          </div>
+          <div class="ai-item-row" data-kcal="120" data-p="24" data-c="3" data-f="1.5">
+            <div class="ai-item-main">
+              <span class="ai-item-name">Gold Standard 100% Whey Vanilla</span>
+              <span class="ai-item-sub">30g · 400 kcal/100g · 💊 Pantry stock</span>
+            </div>
+            <div class="ai-item-nutr">
+              <span class="ai-item-kcal">120</span>
+              <span class="ai-item-macros">24P · 3C · 1.5F</span>
+            </div>
+            <button class="ai-remove-btn" onclick="removeAiRow(this)" title="Remove item">✕</button>
+          </div>
+          <div class="ai-item-row" data-kcal="142" data-p="13" data-c="1.1" data-f="9.5">
+            <div class="ai-item-main">
+              <span class="ai-item-name">Whole Eggs</span>
+              <span class="ai-item-sub">100g · 142 kcal/100g</span>
+            </div>
+            <div class="ai-item-nutr">
+              <span class="ai-item-kcal">142</span>
+              <span class="ai-item-macros">13P · 1.1C · 9.5F</span>
+            </div>
+            <button class="ai-remove-btn" onclick="removeAiRow(this)" title="Remove item">✕</button>
+          </div>
+        `;
+      }
+    }
+    recalcAiTotals();
+  }
+
+  function copyLunchToDinner() {
+    const el = document.getElementById('meal-input');
+    if (!/dinner:/i.test(el.value)) {
+      el.value = el.value.replace(
+        /(Lunch:\n[\s\S]*?)(\n\n|$)/i,
+        "$1\n\nDinner:\n240g Chicken Adobo Batch\n230g Cooked Jasmine Rice$2"
+      );
+    }
+  }
+
+  function recalcAiTotals() {
+    let totalKcal = 0, totalP = 0, totalC = 0, totalF = 0;
+    document.querySelectorAll('#ai-breakdown-content .ai-meal-section').forEach((sec) => {
+      let mKcal = 0, mP = 0;
+      sec.querySelectorAll('.ai-item-row').forEach((row) => {
+        if (row.style.display === 'none') return;
+        const k = parseFloat(row.dataset.kcal || '0');
+        const p = parseFloat(row.dataset.p || '0');
+        const c = parseFloat(row.dataset.c || '0');
+        const f = parseFloat(row.dataset.f || '0');
+        mKcal += k;
+        mP += p;
+        totalKcal += k;
+        totalP += p;
+        totalC += c;
+        totalF += f;
+      });
+      const sumEl = sec.querySelector('[data-meal-sum]');
+      if (sumEl) {
+        sumEl.textContent = `${Math.round(mKcal).toLocaleString()} kcal · ${Math.round(mP * 10) / 10}g P`;
+      }
+    });
+    document.getElementById('ai-total-kcal').textContent = `${Math.round(totalKcal).toLocaleString()} kcal`;
+    document.getElementById('ai-total-p').textContent = `${Math.round(totalP * 10) / 10}g`;
+    document.getElementById('ai-total-c').textContent = `${Math.round(totalC * 10) / 10}g`;
+    document.getElementById('ai-total-f').textContent = `${Math.round(totalF * 10) / 10}g`;
+  }
+
+  function removeAiRow(btn) {
+    const row = btn.closest('.ai-item-row');
+    if (row) {
+      row.style.display = 'none';
+      document.getElementById('ai-reset-btn').style.display = 'inline-flex';
+      recalcAiTotals();
+    }
+  }
+
+  function resetAiItems() {
+    document.querySelectorAll('#ai-breakdown-content .ai-item-row').forEach((row) => {
+      row.style.display = 'flex';
+    });
+    document.getElementById('ai-reset-btn').style.display = 'none';
+    recalcAiTotals();
+  }
 </script>
 <script src="../proto-nav.js"></script>
 </body>
 </html>
-
-

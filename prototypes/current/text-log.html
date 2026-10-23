@@ -227,12 +227,11 @@
       <div class="appbar">
         <button class="icon-btn" data-go="log.html#frame-1" aria-label="Close">✕</button>
         <h1>Edit today's meals</h1>
-        <span class="sub">Today · 9 items loaded</span>
+        <span class="sub">Today · 7 items loaded</span>
       </div>
       <div class="content">
         <div class="chips">
           <span class="chip on" id="chip-today" onclick="setTemplate('today')">Reload today's log</span>
-          <span class="chip" id="chip-mealprep" onclick="setTemplate('mealprep')">🍱 Meal Prep (Tupperware)</span>
           <span class="chip" id="chip-fmt" onclick="setTemplate('format')">Format template</span>
           <span class="chip" onclick="copyLunchToDinner()">Lunch → Dinner</span>
         </div>
@@ -249,15 +248,11 @@ Lunch:
 
 Snacks:
 150g Greek Yogurt
-28g Mixed Nuts
-
-Supplements:
-1 cap Hydroxicut
-5g Creatine</textarea>
+28g Mixed Nuts</textarea>
         </div>
 
         <p class="format-note">
-          Format: <code>Breakfast:\n100g food</code>, <code>1 tupperware High-Protein Lunch Box</code>, <code>Supplements:\n1 cap Hydroxicut</code>. Logged meal prep boxes &amp; supplements automatically deduct from inventory!
+          Format: <code>Breakfast:\n100g food</code>. Use Lunch → Dinner to copy meals, or ✨ AI Parse to breakdown items with live macro totals.
         </p>
 
         <div class="btn-row">
@@ -358,27 +353,6 @@ Supplements:
           </div>
         </div>
 
-        <!-- Supplements Card -->
-        <div class="card" style="border-color:var(--accent);">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <b>Supplements</b>
-            <span class="badge ok">📦 Auto-Deducts Inventory</span>
-          </div>
-          <div class="row" data-go="supplements.html#frame-1">
-            <div>
-              <div class="name">Hydroxicut <span class="badge ok">💊 Pantry</span></div>
-              <div class="meta" style="color:var(--ok)">1 cap · 💊 Stock: 100 → 99 caps</div>
-            </div>
-            <b>0</b>
-          </div>
-          <div class="row" data-go="supplements.html#frame-1">
-            <div>
-              <div class="name">Creatine Monohydrate <span class="badge ok">💊 Pantry</span></div>
-              <div class="meta" style="color:var(--ok)">5g · 💊 Stock: 300 → 295 g</div>
-            </div>
-            <b>0</b>
-          </div>
-        </div>
       </div>
       <div class="bottom-bar" style="flex-direction:column; align-items:stretch; gap:var(--space-2)">
         <div style="display:flex; justify-content:space-between; align-items:baseline">
@@ -387,7 +361,7 @@ Supplements:
         </div>
         <div style="display:grid; grid-template-columns: 1fr 2fr; gap:var(--space-2)">
           <button class="btn" data-go="#frame-1">Edit text</button>
-          <button class="btn primary" data-go="log.html#frame-1">Log 9</button>
+          <button class="btn primary" data-go="log.html#frame-1">Log 7</button>
         </div>
       </div>
     </div>
@@ -534,38 +508,6 @@ Supplements:
             </div>
           </div>
         </div>
-
-        <!-- Supplements Section (Separated from Snacks) -->
-        <div class="ai-meal-section" data-meal="Supplements">
-          <div class="ai-meal-header">
-            <span class="ai-meal-title">Supplements</span>
-            <span class="badge ok" data-supp-badge>📦 Auto-Deducts Inventory</span>
-          </div>
-          <div class="ai-meal-card" style="border-color:var(--accent)">
-            <div class="ai-item-row" data-kcal="0" data-p="0" data-c="0" data-f="0">
-              <div class="ai-item-main">
-                <span class="ai-item-name">Hydroxicut</span>
-                <span class="ai-item-sub" style="color:var(--ok)">1 cap · 💊 Stock: 100 → 99 caps left (-1 cap)</span>
-              </div>
-              <div class="ai-item-nutr">
-                <span class="ai-item-kcal">1 cap</span>
-                <span class="ai-item-macros">0 kcal · 0P · 0C · 0F</span>
-              </div>
-              <button class="ai-remove-btn" onclick="removeAiRow(this)" title="Remove item">✕</button>
-            </div>
-            <div class="ai-item-row" data-kcal="0" data-p="0" data-c="0" data-f="0">
-              <div class="ai-item-main">
-                <span class="ai-item-name">Creatine Monohydrate</span>
-                <span class="ai-item-sub" style="color:var(--ok)">5g · 💊 Stock: 300 → 295 g left (-5 g)</span>
-              </div>
-              <div class="ai-item-nutr">
-                <span class="ai-item-kcal">5 g</span>
-                <span class="ai-item-macros">0 kcal · 0P · 0C · 0F</span>
-              </div>
-              <button class="ai-remove-btn" onclick="removeAiRow(this)" title="Remove item">✕</button>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- Floating Bottom Bar (AiMealPreview.tsx) -->
@@ -592,23 +534,7 @@ Lunch:
 
 Snacks:
 150g Greek Yogurt
-28g Mixed Nuts
-
-Supplements:
-1 cap Hydroxicut
-5g Creatine`;
-
-  const TEMPLATE_MEALPREP = `Breakfast:
-1 tupperware High-Protein Lunch Box
-1 cup Black Coffee
-
-Lunch:
-240g Chicken Adobo Batch
-230g Cooked Jasmine Rice
-
-Supplements:
-1 cap Hydroxicut
-5g Creatine`;
+28g Mixed Nuts`;
 
   const TEMPLATE_FORMAT = `Breakfast:
 100g food
@@ -620,38 +546,22 @@ Dinner:
 100g food
 
 Snacks:
-100g food
-
-Supplements:
-1 cap Hydroxicut
-5g Creatine`;
+100g food`;
 
   function setTemplate(type) {
     const el = document.getElementById('meal-input');
     const chipToday = document.getElementById('chip-today');
-    const chipMealPrep = document.getElementById('chip-mealprep');
     const chipFmt = document.getElementById('chip-fmt');
-    const prepBadge = document.getElementById('prep-deduct-badge');
 
     chipToday.classList.remove('on');
-    chipMealPrep.classList.remove('on');
     chipFmt.classList.remove('on');
 
     if (type === 'today') {
       el.value = TEMPLATE_TODAY;
       chipToday.classList.add('on');
-      if (prepBadge) prepBadge.style.display = 'none';
-      renderBreakfastMode('default');
-    } else if (type === 'mealprep') {
-      el.value = TEMPLATE_MEALPREP;
-      chipMealPrep.classList.add('on');
-      if (prepBadge) prepBadge.style.display = 'inline-flex';
-      renderBreakfastMode('mealprep');
     } else {
       el.value = TEMPLATE_FORMAT;
       chipFmt.classList.add('on');
-      if (prepBadge) prepBadge.style.display = 'none';
-      renderBreakfastMode('default');
     }
   }
 

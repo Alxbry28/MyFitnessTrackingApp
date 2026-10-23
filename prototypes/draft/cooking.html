@@ -1,0 +1,948 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cooking &amp; AI Ingredient Parse (Draft Feature) - prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../theme.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--desk); color: var(--text); font-family: var(--font-sans); font-variant-numeric: tabular-nums; min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: var(--space-5); padding: var(--space-6) var(--space-4); }
+  .toolbar { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-sm); color: var(--muted); flex-wrap: wrap; justify-content: center; }
+  .toolbar a { color: var(--accent-text); }
+  .nav b { color: var(--text); font-weight: 600; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .toggle { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: var(--space-2) var(--space-4); }
+  .frames { display: flex; gap: var(--space-6); flex-wrap: wrap; justify-content: center; }
+  .frame-label { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2); text-align: center; font-weight: 600; max-width: 360px; }
+  .phone { width: 360px; height: 810px; background: var(--bg); border: 1px solid var(--border); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+  :where(.phone a) { color: inherit; text-decoration: none; }
+  .status { height: 28px; flex: none; padding: 0 var(--space-5); display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--muted); }
+  .appbar { padding: var(--space-2) var(--space-4) var(--space-3); display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+  .appbar h1 { font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.02em; }
+  .appbar h1.sm { font-size: var(--text-lg); }
+  .sub { font-size: var(--text-sm); color: var(--muted); }
+  .back { font-size: var(--text-sm); color: var(--accent-text); padding: var(--space-2) var(--space-4) 0; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; text-decoration: none; }
+  .content { flex: 1; overflow-y: auto; padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3) var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
+  .section-label { font-size: var(--text-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .chips { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .chip { height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-pill); background: var(--surface-2); font-size: var(--text-xs); color: var(--muted); display: inline-flex; align-items: center; gap: 4px; cursor: pointer; border: 1px solid transparent; user-select: none; }
+  .chip:hover { border-color: var(--border); color: var(--text); }
+  .chip.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; border-color: var(--accent); }
+  .badge { font-size: var(--text-xs); font-weight: 600; padding: 2px 8px; border-radius: var(--radius-pill); white-space: nowrap; }
+  .badge.est { color: var(--estimate); background: var(--estimate-soft); }
+  .badge.ok { color: var(--ok); background: var(--ok-soft); }
+  .badge.acc { color: var(--accent-text); background: var(--accent-soft); }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 52px; padding: var(--space-2) 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .row:last-child { border-bottom: 0; }
+  .row .info { flex: 1; min-width: 0; }
+  .row .name { font-size: var(--text-sm); font-weight: 600; }
+  .row .meta { font-size: var(--text-xs); color: var(--muted); margin-top: 2px; display: flex; gap: var(--space-1); flex-wrap: wrap; align-items: center; }
+  .row .amt { font-size: var(--text-md); font-weight: 700; text-align: right; white-space: nowrap; }
+  .row .amt small { display: block; font-size: var(--text-xs); color: var(--muted); font-weight: 400; }
+  .btn { min-height: var(--tap); border-radius: var(--radius); background: var(--surface-2); font-weight: 700; font-size: var(--text-sm); display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; cursor: pointer; border: 1px solid var(--border); color: var(--text); text-decoration: none; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { background: none; border: 1px solid var(--border); }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .note { font-size: var(--text-xs); color: var(--muted); line-height: 1.45; }
+  .tabbar { height: 64px; flex: none; display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
+  .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); font-size: var(--text-xs); color: var(--muted); }
+  .tab.on { color: var(--accent-text); font-weight: 600; }
+  .tab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* AI Ingredient Parse styles */
+  .halo { padding: 3px; border-radius: calc(var(--radius) + 3px); background: var(--accent-soft); display: flex; flex-direction: column; }
+  .textarea { background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius); padding: var(--space-3); font-size: var(--text-sm); line-height: 1.5; color: var(--text); min-height: 105px; width: 100%; font-family: inherit; resize: vertical; outline: none; }
+  .ai-meta-bar { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px; font-size: 11px; color: var(--muted); }
+  .ai-provider-pill { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; color: var(--accent-text); background: var(--accent-soft); padding: 2px 8px; border-radius: var(--radius-pill); }
+
+  /* AI summary card */
+  .ai-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3) var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
+  .ai-summary-head { display: flex; justify-content: space-between; align-items: center; }
+  .ai-summary-head h3 { font-size: var(--text-sm); font-weight: 700; color: var(--text); }
+  .macro-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
+  .macro-box { background: var(--surface-2); border-radius: var(--radius-sm); padding: 6px 4px; display: flex; flex-direction: column; gap: 2px; }
+  .macro-box .v { font-size: var(--text-sm); font-weight: 700; color: var(--text); }
+  .macro-box .l { font-size: 10px; color: var(--muted); text-transform: uppercase; font-weight: 600; }
+  .ratio-banner { background: var(--surface-2); border-radius: var(--radius-sm); padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); color: var(--muted); }
+
+  /* Parsed Ingredients List */
+  .ing-row { display: grid; grid-template-columns: 58px 1fr auto; gap: var(--space-2); align-items: center; min-height: 40px; padding: var(--space-2) 0; border-bottom: 1px solid var(--border); font-size: var(--text-sm); }
+  .ing-row:last-child { border-bottom: 0; }
+  .ing-row .amt-col { font-weight: 700; text-align: right; font-size: 13px; color: var(--text); }
+  .ing-row .main-col { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .ing-row .ing-name { font-weight: 600; font-size: var(--text-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ing-row .ing-sub { font-size: 11px; color: var(--muted); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .del-btn { width: 22px; height: 22px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; }
+  .del-btn:hover { background: var(--over-soft); color: var(--over); }
+
+  /* Smart Warning & Banner */
+  .warn { display: flex; gap: var(--space-3); align-items: flex-start; background: var(--estimate-soft); color: var(--text); border-radius: var(--radius); padding: var(--space-3); font-size: var(--text-xs); line-height: 1.45; }
+  .warn b { color: var(--estimate); }
+  .smart-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: var(--radius-pill); background: var(--ok-soft); color: var(--ok); }
+  .flow-bar { display: flex; align-items: center; justify-content: space-between; background: var(--surface-2); padding: 6px 12px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; color: var(--muted); }
+
+  /* Workout-style Active Timer styles */
+  .timer-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--timer-soft);
+    color: var(--timer);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid transparent;
+    user-select: none;
+  }
+  .timer-pill.paused {
+    background: var(--estimate-soft);
+    color: var(--estimate);
+    border-color: var(--estimate);
+  }
+  .timer-pill.stopped {
+    background: var(--surface-2);
+    color: var(--muted);
+  }
+  .timer-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--timer);
+    animation: timerPulse 1.5s infinite;
+  }
+  .timer-pill.paused .timer-dot {
+    background: var(--estimate);
+    animation: none;
+  }
+  .timer-pill.stopped .timer-dot {
+    background: var(--faint);
+    animation: none;
+  }
+  @keyframes timerPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.85); }
+  }
+
+  .timer-hero-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-2);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.22);
+  }
+  .timer-hero-sub {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .timer-hero-num {
+    font-size: 46px;
+    font-weight: 800;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+  .timer-status-caption {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .timer-btn-cluster {
+    display: grid;
+    grid-template-columns: 1.3fr 1.3fr auto;
+    gap: var(--space-2);
+    width: 100%;
+    margin-top: var(--space-2);
+  }
+  .timer-ctrl-btn {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+  .timer-ctrl-btn.resume {
+    background: var(--timer-soft);
+    color: var(--timer);
+    border-color: var(--timer);
+  }
+  .timer-ctrl-btn.start {
+    background: var(--ok-soft);
+    color: var(--ok);
+    border-color: var(--ok);
+  }
+  .timer-finish-btn {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+  .timer-reset-btn {
+    background: var(--surface-2);
+    width: 44px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-md);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .timer-reset-btn:hover {
+    color: var(--text);
+  }
+
+  /* Weight Input Box on Scale */
+  .scale-box { background: var(--surface-2); border: 2px solid var(--accent); border-radius: var(--radius); padding: var(--space-4); display: flex; flex-direction: column; align-items: center; gap: var(--space-2); text-align: center; }
+  .scale-num-wrap { display: flex; align-items: baseline; gap: 6px; }
+  .scale-input { font-size: 38px; font-weight: 800; color: var(--text); background: transparent; border: 0; outline: none; width: 140px; text-align: right; font-family: inherit; }
+  .scale-unit { font-size: var(--text-lg); color: var(--accent-text); font-weight: 700; }
+  .scale-helpers { display: flex; gap: var(--space-2); }
+  .scale-btn { padding: 4px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-pill); font-size: var(--text-xs); font-weight: 600; cursor: pointer; color: var(--text); }
+  .scale-btn:hover { border-color: var(--accent); }
+
+  /* Hero macros on final step */
+  .hero-macro-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+  .hero-density { font-size: 28px; font-weight: 800; color: var(--text); line-height: 1.1; letter-spacing: -0.02em; }
+  .hero-density small { font-size: var(--text-sm); font-weight: 500; color: var(--muted); }
+  .check-row { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-xs); }
+  .box { width: 20px; height: 20px; border-radius: 5px; background: var(--accent); color: var(--accent-ink); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; flex: none; }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="toggle" id="theme-toggle">Switch to light</button>
+  <span class="nav">v1.1: <a href="pantry.html">Pantry</a> · <b>Cooking</b> · <a href="progress.html">Progress</a> · <a href="calendar.html">Calendar</a> · <a href="measure.html">Measure &amp; import</a> · <a href="today.html">Today</a></span>
+</div>
+
+<div class="frames">
+  <!-- Frame 1: Cooking Hub (Overview & Inventory) -->
+  <div id="frame-1">
+    <p class="frame-label">1 · Cooking Hub (Inventory &amp; Start Flow)</p>
+    <div class="phone">
+      <div class="status"><span>11:20</span><span>●●● 96%</span></div>
+      <div class="appbar">
+        <div>
+          <h1>Cooking</h1>
+          <div class="sub">Cooked meals in fridge inventory</div>
+        </div>
+        <a class="badge acc" href="#frame-2" style="text-decoration:none">+ New Dish</a>
+      </div>
+      <div class="content">
+        <!-- Workflow pill indicator -->
+        <div class="flow-bar">
+          <span class="flow-step">1. New dish</span> ›
+          <span class="flow-step">2. Ingredients</span> ›
+          <span class="flow-step">3. Cook (Timer)</span> ›
+          <span class="flow-step">4. Cooked weight</span> ›
+          <span class="flow-step">5. Macros</span> ›
+          <span class="flow-step">6. Inventory</span>
+        </div>
+
+        <p class="section-label">Cooked Meals In Fridge Inventory</p>
+        <div class="card" style="padding-block: 0" id="fridge-inventory-list">
+          <div class="row">
+            <div class="info">
+              <div class="name">🍗 Chicken Adobo (Skinless Thighs)</div>
+              <div class="meta"><b style="color:var(--text)">385 g remaining</b> · Cook time 24m · ratio ×0.63</div>
+            </div>
+            <div class="amt">214<small>kcal/100 g</small></div>
+          </div>
+          <div class="row">
+            <div class="info">
+              <div class="name">🥦 Chopsuey Batch</div>
+              <div class="meta"><b style="color:var(--text)">550 g remaining</b> · Cook time 18m · ratio ×0.87</div>
+            </div>
+            <div class="amt">48<small>kcal/100 g</small></div>
+          </div>
+          <div class="row">
+            <div class="info">
+              <div class="name">🍚 Cooked Jasmine Rice</div>
+              <div class="meta"><b style="color:var(--text)">620 g remaining</b> · Cook time 35m · ratio ×2.8</div>
+            </div>
+            <div class="amt">129<small>kcal/100 g</small></div>
+          </div>
+        </div>
+
+        <p class="section-label">Start Cooking New Dish</p>
+        <div class="card" style="padding:var(--space-3) var(--space-4)">
+          <div style="font-size:var(--text-sm);font-weight:700;margin-bottom:4px">Ready to cook something?</div>
+          <p class="note">Enter raw ingredients first, start the cooking timer on stove, then weigh the finished batch at the end.</p>
+          <a class="btn primary" href="#frame-2" style="margin-top:var(--space-2)">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Start New Dish Flow
+          </a>
+        </div>
+
+        <div class="warn">
+          <b>⏱️ Workout-Style Active Timer</b>
+          <span>Just like workout logging, Cooking has a dedicated live timer with Start, Pause, Resume, and Finish buttons to track your exact simmering and cooking time!</span>
+        </div>
+      </div>
+
+      <nav class="tabbar">
+        <a class="tab" href="today.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Today</a>
+        <a class="tab" href="log.html"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9"/></svg>Log</a>
+        <a class="tab" href="pantry.html"><svg viewBox="0 0 24 24"><path d="M4 5h16v3H4zM5 8h14v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1zM10 12h4"/></svg>Pantry</a>
+        <a class="tab" href="progress.html"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-4 3 3 5-6"/></svg>Progress</a>
+        <a class="tab on" href="cooking.html"><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/></svg>More</a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Frame 2: Step 1 & 2 - New Dish & List Raw Ingredients (AI Parse) -->
+  <div id="frame-2">
+    <p class="frame-label">2 · Steps 1 &amp; 2: New Dish &amp; List Raw Ingredients</p>
+    <div class="phone">
+      <div class="status"><span>11:22</span><span>●●● 96%</span></div>
+      <a class="back" href="#frame-1">‹ Cooking Hub</a>
+      <div class="appbar">
+        <div>
+          <h1 class="sm" id="dish-title-header">Chicken Adobo (Skinless Thighs)</h1>
+          <span class="sub">Step 1 &amp; 2 · List Raw Ingredients</span>
+        </div>
+        <span class="badge acc">Raw Stage</span>
+      </div>
+      <div class="content">
+        <!-- Preset quick chips -->
+        <div class="chips">
+          <span class="chip on" id="chip-adobo" onclick="loadDishPreset('adobo')">🍗 Chicken Adobo</span>
+          <span class="chip" id="chip-chopsuey" onclick="loadDishPreset('chopsuey')">🥦 Chopsuey</span>
+          <span class="chip" id="chip-tuna" onclick="loadDishPreset('tuna')">🐟 Tuna Pasta</span>
+        </div>
+
+        <!-- AI Textarea with halo (Raw ingredients only - no cooked weight!) -->
+        <div class="halo">
+          <textarea id="ai-ing-text" class="textarea" rows="6" spellcheck="false" placeholder="List raw ingredients with grams or spoons (e.g. 500g raw chicken, 3 tbsp soy sauce, 1 tbsp oil...)"></textarea>
+          <div class="ai-meta-bar">
+            <span class="ai-provider-pill">✨ Gemini 2.5 Flash</span>
+            <span id="ai-word-count">Raw ingredients only</span>
+          </div>
+        </div>
+
+        <button type="button" class="btn primary" id="parse-ai-btn" onclick="triggerAiParse()">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+          ✨ AI Parse Raw Ingredients
+        </button>
+
+        <!-- Raw Batch Nutrition Card -->
+        <div class="ai-summary-card">
+          <div class="ai-summary-head">
+            <h3>Total Raw Batch Nutrition</h3>
+            <span class="badge est">Before Cooking</span>
+          </div>
+          <div class="macro-grid">
+            <div class="macro-box">
+              <span class="v" id="raw-macro-kcal">824</span>
+              <span class="l">Raw kcal</span>
+            </div>
+            <div class="macro-box">
+              <span class="v" id="raw-macro-prot" style="color:var(--protein)">98.5g</span>
+              <span class="l">Protein</span>
+            </div>
+            <div class="macro-box">
+              <span class="v" id="raw-macro-carb" style="color:var(--carbs)">18.2g</span>
+              <span class="l">Carbs</span>
+            </div>
+            <div class="macro-box">
+              <span class="v" id="raw-macro-fat" style="color:var(--fat)">41.0g</span>
+              <span class="l">Fat</span>
+            </div>
+          </div>
+          <div class="ratio-banner">
+            <span>Total Raw Weight: <b id="stat-raw-g" style="color:var(--text)">616 g</b></span>
+            <span>Cooked weight: <b style="color:var(--muted)">Weighed at the end</b></span>
+          </div>
+        </div>
+
+        <!-- Parsed ingredients list -->
+        <p class="section-label" style="margin-top:2px">Raw Ingredients (<span id="ing-count-label">6</span>)</p>
+        <div class="card" style="padding-block: 0" id="ingredients-container">
+          <!-- Populated by JS -->
+        </div>
+
+        <div id="ai-smart-banner"></div>
+
+        <div class="btn-row">
+          <button type="button" class="btn" onclick="addOilPrompt()">+ Add oil</button>
+          <a class="btn primary" href="#frame-3">Start Cooking 🍳 →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 3: Step 3 - Start Cooking with Active Timer (Workout-Style) -->
+  <div id="frame-3">
+    <p class="frame-label">3 · Step 3: Cooking in Progress (Active Timer)</p>
+    <div class="phone">
+      <div class="status"><span>11:30</span><span>●●● 95%</span></div>
+      <a class="back" href="#frame-2">‹ Back to Ingredients</a>
+      <div class="appbar">
+        <div>
+          <h1 class="sm">Cooking in progress</h1>
+          <span class="sub" id="cooking-dish-name">Chicken Adobo · On the stove</span>
+        </div>
+        <!-- Workout-style Timer Pill -->
+        <div class="timer-pill" id="cooking-timer-pill" onclick="toggleCookingTimer()" title="Tap to pause/resume">
+          <span class="timer-dot" id="cooking-timer-dot"></span>
+          <span id="cooking-timer-pill-text">COOKING · 24:35</span>
+        </div>
+      </div>
+      <div class="content">
+        <!-- Dedicated Hero Timer Card with Start, Pause, Resume, Finish -->
+        <div class="timer-hero-card">
+          <div class="timer-hero-sub">COOKING DURATION TIMER</div>
+          <div class="timer-hero-num" id="cooking-timer-display">24:35</div>
+          <div class="timer-status-caption" id="cooking-timer-caption">● Cooking pot on stove · Simmering</div>
+
+          <!-- Action buttons cluster identical to workout logger -->
+          <div class="timer-btn-cluster">
+            <button type="button" class="btn timer-ctrl-btn" id="cooking-start-pause-btn" onclick="toggleCookingTimer()">
+              ⏸ Pause
+            </button>
+            <button type="button" class="btn timer-finish-btn" id="cooking-finish-btn" onclick="finishCookingTimer()">
+              Finish 🏁
+            </button>
+            <button type="button" class="btn timer-reset-btn" id="cooking-reset-btn" onclick="resetCookingTimer()" title="Reset timer">
+              ↺
+            </button>
+          </div>
+        </div>
+
+        <!-- Dish overview card -->
+        <div class="card" style="padding:var(--space-3) var(--space-4);gap:var(--space-2)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h2 style="font-size:var(--text-md);font-weight:700" id="in-cook-title">Chicken Adobo (Skinless Thighs)</h2>
+            <span class="badge acc">Pot on stove</span>
+          </div>
+          <div class="macro-grid" style="margin-top:2px">
+            <div class="macro-box"><span class="v" id="cook-ing-count">6</span><span class="l">Ingredients</span></div>
+            <div class="macro-box"><span class="v" id="cook-raw-weight">616 g</span><span class="l">Raw weight</span></div>
+            <div class="macro-box"><span class="v" id="cook-total-kcal">824</span><span class="l">Raw kcal</span></div>
+            <div class="macro-box"><span class="v" id="cook-total-p" style="color:var(--protein)">98.5g</span><span class="l">Protein</span></div>
+          </div>
+        </div>
+
+        <div class="card" style="padding:var(--space-3)">
+          <div class="check-row">
+            <span class="box">✓</span>
+            <div>
+              <b style="color:var(--text);font-size:var(--text-sm)">Deduct raw items from Pantry</b>
+              <div class="sub" style="font-size:11px;margin-top:2px">Raw chicken (500g), soy sauce, and garlic stocks deducted from your pantry inventory.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="warn">
+          <b>⚖️ When Cooking is Done</b>
+          <span>Tap <b>Finish 🏁</b> above or below once you turn off the heat. Tare your container to 0g on your kitchen scale and weigh the total cooked meal.</span>
+        </div>
+
+        <button type="button" class="btn primary" onclick="finishCookingTimer()" style="margin-top:auto">
+          Finish Cooking &amp; Weigh Dish ⚖️ →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 4: Step 4 & 5 - Encode Total Cooked Food & Give Estimated Macros -->
+  <div id="frame-4">
+    <p class="frame-label">4 · Steps 4 &amp; 5: Encode Cooked Weight &amp; Estimated Macros</p>
+    <div class="phone">
+      <div class="status"><span>12:05</span><span>●●● 94%</span></div>
+      <a class="back" href="#frame-3">‹ Cooking Timer</a>
+      <div class="appbar">
+        <div>
+          <h1 class="sm">Done Cooking</h1>
+          <span class="sub">Step 4 &amp; 5 · Encode cooked food</span>
+        </div>
+        <span class="badge" id="final-cook-time-badge" style="background:var(--timer-soft);color:var(--timer)">Cooked for 24m 35s</span>
+      </div>
+      <div class="content">
+        <p class="section-label">Step 4: Total Cooked Weight (on scale)</p>
+        <div class="scale-box">
+          <span style="font-size:var(--text-xs);color:var(--muted);font-weight:600">PLACE FINISHED DISH ON SCALE</span>
+          <div class="scale-num-wrap">
+            <input type="number" id="final-cooked-input" class="scale-input" value="385" oninput="onCookedWeightChange(this.value)">
+            <span class="scale-unit">g</span>
+          </div>
+          <div class="scale-helpers">
+            <button type="button" class="scale-btn" onclick="adjustScale(-20)">-20g</button>
+            <button type="button" class="scale-btn" onclick="adjustScale(-5)">-5g</button>
+            <button type="button" class="scale-btn" onclick="adjustScale(5)">+5g</button>
+            <button type="button" class="scale-btn" onclick="adjustScale(20)">+20g</button>
+          </div>
+        </div>
+
+        <p class="section-label">Step 5: Calculated Estimated Macros</p>
+        <div class="hero-macro-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div class="hero-density" id="calc-density-num">214 <small>kcal / 100g cooked</small></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:4px">
+                Cooked ratio: <b style="color:var(--accent-text)" id="calc-ratio-text">×0.63</b> (385g cooked ÷ 616g raw)
+              </div>
+            </div>
+            <span class="badge ok">Ready to Log</span>
+          </div>
+
+          <!-- Per 100g Macro pills -->
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-top:4px">Per 100g Cooked Nutrition:</div>
+          <div class="macro-grid">
+            <div class="macro-box">
+              <span class="v" id="per100-p" style="color:var(--protein)">25.6g</span>
+              <span class="l">Protein</span>
+            </div>
+            <div class="macro-box">
+              <span class="v" id="per100-c" style="color:var(--carbs)">4.7g</span>
+              <span class="l">Carbs</span>
+            </div>
+            <div class="macro-box">
+              <span class="v" id="per100-f" style="color:var(--fat)">10.6g</span>
+              <span class="l">Fat</span>
+            </div>
+            <div class="macro-box">
+              <span class="v" id="full-batch-kcal">824</span>
+              <span class="l">Full Pot kcal</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="padding:var(--space-3)">
+          <div style="font-size:var(--text-xs);color:var(--muted)">
+            <b>Entire cooked batch:</b> <span id="full-batch-summary">385g total = 824 kcal, 98.5g P, 18.2g C, 41.0g F</span>.
+          </div>
+        </div>
+
+        <a class="btn primary" href="#frame-5">
+          Step 6: Save this meal for inventory 📦 →
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frame 5: Step 6 - Save this meal for inventory (Ready in Fridge) -->
+  <div id="frame-5">
+    <p class="frame-label">5 · Step 6: Saved for Inventory (Fridge Stock)</p>
+    <div class="phone">
+      <div class="status"><span>12:10</span><span>●●● 93%</span></div>
+      <div class="appbar">
+        <div>
+          <h1 class="sm">Fridge Inventory</h1>
+          <span class="sub">Step 6 · Meal Saved Successfully</span>
+        </div>
+        <span class="badge ok">In Stock</span>
+      </div>
+      <div class="content">
+        <div class="card" style="background:var(--ok-soft);border-color:var(--ok);padding:var(--space-3) var(--space-4)">
+          <div style="display:flex;gap:8px;align-items:center">
+            <span style="font-size:22px">🎉</span>
+            <div>
+              <b style="color:var(--ok);font-size:var(--text-sm)">Meal Saved to Inventory!</b>
+              <div style="font-size:11px;color:var(--text);margin-top:2px">Available in your Fridge for today and upcoming days.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <h2 style="font-size:var(--text-md);font-weight:700" id="saved-dish-title">🍗 Chicken Adobo (Skinless Thighs)</h2>
+            <span class="badge ok">Active Batch</span>
+          </div>
+          <div class="macro-grid" style="margin-top:4px">
+            <div class="macro-box">
+              <span class="v" id="inv-stock-g" style="color:var(--accent-text)">385 g</span>
+              <span class="l">Stock Left</span>
+            </div>
+            <div class="macro-box">
+              <span class="v" id="inv-per-kcal">214</span>
+              <span class="l">kcal / 100g</span>
+            </div>
+            <div class="macro-box">
+              <span class="v" id="inv-per-prot" style="color:var(--protein)">25.6g</span>
+              <span class="l">Protein / 100g</span>
+            </div>
+            <div class="macro-box">
+              <span class="v" id="inv-cook-time" style="color:var(--timer)">24m 35s</span>
+              <span class="l">Cook Time</span>
+            </div>
+          </div>
+          <p class="note" style="margin-top:4px">When you eat, just scoop your portion and log the grams eaten (e.g. 150g = 321 kcal). The app deducts the stock automatically.</p>
+        </div>
+
+        <div class="btn-row">
+          <a class="btn primary" href="log.html#frame-1">Log a portion now</a>
+          <a class="btn ghost" href="#frame-1">Back to Cooking</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Presets without pre-set cooked weight in the text - cooked weight is entered at the end!
+  const presets = {
+    adobo: {
+      title: "Chicken Adobo (Skinless Thighs)",
+      rawText: `500g chicken thighs, boneless skinless raw
+3 tbsp soy sauce (~45g)
+2 tbsp cane vinegar (~30g)
+1 tbsp brown sugar (~12g)
+15g garlic minced
+1 tbsp canola cooking oil (~14g)`,
+      rawG: 616,
+      kcal: 824,
+      protein: 98.5,
+      carbs: 18.2,
+      fat: 41.0,
+      defaultCookedG: 385,
+      demoSeconds: 1475, // 24m 35s
+      hasOil: true,
+      items: [
+        { amt: "500 g", name: "Chicken Thigh, Boneless Skinless", note: "Product Library · Pantry: 1,000g", ok: true, inPantry: true },
+        { amt: "~45 g", name: "Silver Swan Soy Sauce", note: "3 tbsp · Pantry match", ok: true, inPantry: true },
+        { amt: "~30 g", name: "Datu Puti Cane Vinegar", note: "2 tbsp · Pantry match", ok: true, inPantry: true },
+        { amt: "~12 g", name: "Brown sugar", note: "1 tbsp · Pantry match", ok: true, inPantry: false },
+        { amt: "15 g", name: "Garlic, raw minced", note: "3 cloves", ok: true, inPantry: true },
+        { amt: "~14 g", name: "Canola cooking oil", note: "1 tbsp cooking oil detected", ok: true, inPantry: true }
+      ]
+    },
+    chopsuey: {
+      title: "Chopsuey Batch",
+      rawText: `32g broccoli stem
+283g broccoli florets
+194.8g carrots
+45g onions
+22g garlic
+1 tbsp soy sauce (~16g)
+1 tbsp oyster sauce (~18g)`,
+      rawG: 611,
+      kcal: 254,
+      protein: 14.1,
+      carbs: 38.2,
+      fat: 4.6,
+      defaultCookedG: 532,
+      demoSeconds: 1090, // 18m 10s
+      hasOil: false,
+      items: [
+        { amt: "32 g", name: "Broccoli stem, raw", note: "Product Library match", ok: true, inPantry: true },
+        { amt: "283 g", name: "Broccoli florets, raw", note: "Product Library match", ok: true, inPantry: true },
+        { amt: "194.8 g", name: "Carrots, raw", note: "Pantry stock will deduct", ok: true, inPantry: true },
+        { amt: "45 g", name: "Onion, raw", note: '"onions" resolved', ok: true, inPantry: true },
+        { amt: "22 g", name: "Garlic, raw", note: "4 cloves estimated", ok: true, inPantry: false },
+        { amt: "~16 g", name: "Soy sauce", note: "1 tbsp estimated", ok: true, inPantry: true },
+        { amt: "~18 g", name: "Oyster sauce", note: "1 tbsp estimated", ok: true, inPantry: true }
+      ]
+    },
+    tuna: {
+      title: "Tuna Pasta (High Protein)",
+      rawText: `150g dry rigatoni pasta
+2 cans Century Tuna Flakes in Water drained (240g)
+1 tbsp olive oil (14g)
+150g tomato passata
+20g grated parmesan`,
+      rawG: 574,
+      kcal: 986,
+      protein: 76.4,
+      carbs: 115.0,
+      fat: 24.6,
+      defaultCookedG: 680,
+      demoSeconds: 840, // 14m 00s
+      hasOil: true,
+      items: [
+        { amt: "150 g", name: "Rigatoni pasta (dry)", note: "Pantry match", ok: true, inPantry: true },
+        { amt: "240 g", name: "Century Tuna Flakes (drained)", note: "2 cans detected", ok: true, inPantry: true },
+        { amt: "14 g", name: "Extra virgin olive oil", note: "1 tbsp cooking oil detected", ok: true, inPantry: true },
+        { amt: "150 g", name: "Tomato passata / puree", note: "Pantry match", ok: true, inPantry: true },
+        { amt: "20 g", name: "Parmesan cheese, grated", note: "Fridge dairy", ok: true, inPantry: true }
+      ]
+    }
+  };
+
+  let activePresetKey = "adobo";
+
+  // Cooking Timer Engine
+  let cookingSeconds = 1475; // 24m 35s
+  let cookingState = "running"; // "running" | "paused" | "stopped"
+  let cookingInterval = null;
+
+  function formatTimer(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function formatDurationText(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    if (m === 0) return `${s}s`;
+    return `${m}m ${s.toString().padStart(2, '0')}s`;
+  }
+
+  function updateTimerUI() {
+    const disp = document.getElementById("cooking-timer-display");
+    const pill = document.getElementById("cooking-timer-pill");
+    const pillText = document.getElementById("cooking-timer-pill-text");
+    const ctrlBtn = document.getElementById("cooking-start-pause-btn");
+    const caption = document.getElementById("cooking-timer-caption");
+
+    if (disp) disp.textContent = formatTimer(cookingSeconds);
+
+    if (cookingState === "running") {
+      pill.className = "timer-pill";
+      pillText.textContent = `COOKING · ${formatTimer(cookingSeconds)}`;
+      ctrlBtn.className = "btn timer-ctrl-btn";
+      ctrlBtn.innerHTML = "⏸ Pause";
+      caption.innerHTML = "● Cooking pot on stove · Simmering";
+    } else if (cookingState === "paused") {
+      pill.className = "timer-pill paused";
+      pillText.textContent = `PAUSED · ${formatTimer(cookingSeconds)}`;
+      ctrlBtn.className = "btn timer-ctrl-btn resume";
+      ctrlBtn.innerHTML = "▶ Resume";
+      caption.innerHTML = "⏸ Timer paused · Off the heat";
+    } else {
+      pill.className = "timer-pill stopped";
+      pillText.textContent = "START · 00:00";
+      ctrlBtn.className = "btn timer-ctrl-btn start";
+      ctrlBtn.innerHTML = "▶ Start";
+      caption.innerHTML = "Pot ready · Tap Start when fire is on";
+    }
+  }
+
+  function startTimerInterval() {
+    if (cookingInterval) clearInterval(cookingInterval);
+    cookingInterval = setInterval(() => {
+      cookingSeconds++;
+      updateTimerUI();
+    }, 1000);
+  }
+
+  function toggleCookingTimer() {
+    if (cookingState === "running") {
+      cookingState = "paused";
+      if (cookingInterval) clearInterval(cookingInterval);
+    } else if (cookingState === "paused") {
+      cookingState = "running";
+      startTimerInterval();
+    } else {
+      cookingState = "running";
+      if (cookingSeconds === 0) cookingSeconds = 1;
+      startTimerInterval();
+    }
+    updateTimerUI();
+  }
+
+  function resetCookingTimer() {
+    cookingState = "stopped";
+    if (cookingInterval) clearInterval(cookingInterval);
+    cookingSeconds = 0;
+    updateTimerUI();
+  }
+
+  function finishCookingTimer() {
+    if (cookingInterval) clearInterval(cookingInterval);
+    const durationStr = formatDurationText(cookingSeconds);
+    const cookBadge = document.getElementById("final-cook-time-badge");
+    if (cookBadge) cookBadge.textContent = `Cooked for ${durationStr}`;
+    const invCookTime = document.getElementById("inv-cook-time");
+    if (invCookTime) invCookTime.textContent = durationStr;
+    window.location.hash = "#frame-4";
+  }
+
+  function renderDish(data) {
+    // Frame 2
+    document.getElementById("dish-title-header").textContent = data.title;
+    document.getElementById("ai-ing-text").value = data.rawText;
+    document.getElementById("raw-macro-kcal").textContent = data.kcal;
+    document.getElementById("raw-macro-prot").textContent = data.protein.toFixed(1) + "g";
+    document.getElementById("raw-macro-carb").textContent = data.carbs.toFixed(1) + "g";
+    document.getElementById("raw-macro-fat").textContent = data.fat.toFixed(1) + "g";
+    document.getElementById("stat-raw-g").textContent = data.rawG + " g";
+    document.getElementById("ing-count-label").textContent = data.items.length;
+
+    // Frame 3 (Start Cooking)
+    document.getElementById("cooking-dish-name").textContent = data.title + " · On the stove";
+    document.getElementById("in-cook-title").textContent = data.title;
+    document.getElementById("cook-ing-count").textContent = data.items.length;
+    document.getElementById("cook-raw-weight").textContent = data.rawG + " g";
+    document.getElementById("cook-total-kcal").textContent = data.kcal;
+    document.getElementById("cook-total-p").textContent = data.protein.toFixed(1) + "g";
+
+    // Ingredients list render
+    const container = document.getElementById("ingredients-container");
+    container.innerHTML = "";
+    data.items.forEach((item, idx) => {
+      const row = document.createElement("div");
+      row.className = "ing-row";
+
+      const amtCol = document.createElement("div");
+      amtCol.className = "amt-col";
+      amtCol.textContent = item.amt;
+
+      const mainCol = document.createElement("div");
+      mainCol.className = "main-col";
+
+      const nameDiv = document.createElement("div");
+      nameDiv.className = "ing-name";
+      nameDiv.textContent = item.name;
+
+      const subDiv = document.createElement("div");
+      subDiv.className = "ing-sub";
+      subDiv.innerHTML = item.note + (item.inPantry ? ' · <span class="smart-badge">Pantry Stock</span>' : '');
+
+      mainCol.appendChild(nameDiv);
+      mainCol.appendChild(subDiv);
+
+      const actCol = document.createElement("div");
+      actCol.className = "action-col";
+      actCol.innerHTML = '<span style="color:var(--ok);font-weight:700">✓</span>';
+
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "del-btn";
+      delBtn.textContent = "✕";
+      delBtn.onclick = () => {
+        data.items.splice(idx, 1);
+        renderDish(data);
+      };
+      actCol.appendChild(delBtn);
+
+      row.appendChild(amtCol);
+      row.appendChild(mainCol);
+      row.appendChild(actCol);
+      container.appendChild(row);
+    });
+
+    // Warning Banner
+    const smartBanner = document.getElementById("ai-smart-banner");
+    if (!data.hasOil) {
+      smartBanner.innerHTML = `
+        <div class="warn">
+          <b style="font-size:var(--text-lg);line-height:1">!</b>
+          <div>
+            <b>No cooking oil detected.</b> If you used oil to saute or fry, 1 tbsp adds ~120 kcal. Tap <b>+ Add oil</b> below.
+          </div>
+        </div>`;
+    } else {
+      smartBanner.innerHTML = `
+        <div class="card" style="padding:var(--space-2) var(--space-3);background:var(--surface-2);border-color:var(--ok-soft)">
+          <div style="display:flex;gap:8px;align-items:center;font-size:var(--text-xs);color:var(--ok)">
+            <span style="font-weight:700">✨ Raw ingredients validated</span>
+            <span style="color:var(--muted)">· Cooking oil accounted for · Ready to cook</span>
+          </div>
+        </div>`;
+    }
+
+    // Set scale input on Frame 4
+    document.getElementById("final-cooked-input").value = data.defaultCookedG;
+    calculateMacrosFromCookedG(data.defaultCookedG);
+
+    // Frame 5 setup
+    document.getElementById("saved-dish-title").textContent = data.title;
+
+    // Reset timer to preset demo duration
+    cookingSeconds = data.demoSeconds;
+    cookingState = "running";
+    startTimerInterval();
+    updateTimerUI();
+  }
+
+  function onCookedWeightChange(val) {
+    const cookedG = parseFloat(val) || 1;
+    calculateMacrosFromCookedG(cookedG);
+  }
+
+  function adjustScale(delta) {
+    const input = document.getElementById("final-cooked-input");
+    let cur = parseFloat(input.value) || 300;
+    cur = Math.max(50, cur + delta);
+    input.value = cur;
+    calculateMacrosFromCookedG(cur);
+  }
+
+  function calculateMacrosFromCookedG(cookedG) {
+    const data = presets[activePresetKey];
+    const ratio = (cookedG / data.rawG).toFixed(2);
+    const kcalPer100 = Math.round((data.kcal / cookedG) * 100);
+    const protPer100 = ((data.protein / cookedG) * 100).toFixed(1);
+    const carbPer100 = ((data.carbs / cookedG) * 100).toFixed(1);
+    const fatPer100 = ((data.fat / cookedG) * 100).toFixed(1);
+
+    // Frame 4 fields
+    document.getElementById("calc-density-num").innerHTML = `${kcalPer100} <small>kcal / 100g cooked</small>`;
+    document.getElementById("calc-ratio-text").textContent = `×${ratio}`;
+    document.getElementById("per100-p").textContent = `${protPer100}g`;
+    document.getElementById("per100-c").textContent = `${carbPer100}g`;
+    document.getElementById("per100-f").textContent = `${fatPer100}g`;
+    document.getElementById("full-batch-kcal").textContent = data.kcal;
+    document.getElementById("full-batch-summary").textContent = `${cookedG}g total = ${data.kcal} kcal, ${data.protein.toFixed(1)}g P, ${data.carbs.toFixed(1)}g C, ${data.fat.toFixed(1)}g F`;
+
+    // Frame 5 fields
+    document.getElementById("inv-stock-g").textContent = `${cookedG} g`;
+    document.getElementById("inv-per-kcal").textContent = kcalPer100;
+    document.getElementById("inv-per-prot").textContent = `${protPer100}g`;
+  }
+
+  function loadDishPreset(key) {
+    activePresetKey = key;
+    document.querySelectorAll(".chip[id^='chip-']").forEach(c => c.classList.remove("on"));
+    const activeChip = document.getElementById("chip-" + key);
+    if (activeChip) activeChip.classList.add("on");
+    renderDish(presets[key]);
+  }
+
+  function triggerAiParse() {
+    const btn = document.getElementById("parse-ai-btn");
+    btn.textContent = "⏳ Parsing raw ingredients...";
+    setTimeout(() => {
+      btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg> ✨ AI Parse Raw Ingredients`;
+      renderDish(presets[activePresetKey]);
+    }, 400);
+  }
+
+  function addOilPrompt() {
+    const cur = presets[activePresetKey];
+    if (cur.hasOil) return;
+    cur.hasOil = true;
+    cur.rawG += 14;
+    cur.kcal += 120;
+    cur.fat += 14;
+    cur.items.push({
+      amt: "~14 g",
+      name: "Cooking oil (added)",
+      note: "1 tbsp estimated · +120 kcal",
+      ok: true,
+      inPantry: true
+    });
+    renderDish(cur);
+  }
+
+  // Theme toggle
+  const themeToggle = document.getElementById("theme-toggle");
+  themeToggle.onclick = () => {
+    const isLight = document.documentElement.dataset.theme === "light";
+    const next = isLight ? "dark" : "light";
+    document.documentElement.dataset.theme = next;
+    themeToggle.textContent = next === "light" ? "Switch to dark" : "Switch to light";
+  };
+
+  // Initial setup
+  loadDishPreset("adobo");
+</script>
+<script src="../proto-nav.js"></script>
+</body>
+</html>

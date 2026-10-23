@@ -200,33 +200,37 @@
 
   <div class="screen-tabs" id="screen-tabs"></div>
 
+    <div class="diff-card" data-screen="cooking.html#frame-2">
+      <b>🍳 Cooking &amp; Cooked Batches (Current vs Draft)</b>
+      <p><b>Current App:</b> Standard Recipes &amp; Batches (<code>recipes.html</code>).<br><b>Draft:</b> New 6-Step Cooking flow with AI Raw Ingredients Parse, Active Timer (Start/Pause/Resume/Finish), Digital Scale cooked weight encoding, &amp; Fridge Inventory save.</p>
+    </div>
     <div class="diff-card" data-screen="meal-prep.html#frame-2">
       <b>🍱 Meal Prep &amp; Tupperwares (Current vs Draft)</b>
-      <p>Partition cooked fridge inventory (500g chicken, 250g okra, 500g eggs, 1kg rice) across tupperwares with AI prompt → per-box macros → 1-tap eat box log.</p>
+      <p><b>Current App:</b> Not yet implemented in mobile app.<br><b>Draft:</b> Partition cooked fridge food across tupperwares with ÷ N equal division, manual grams, or AI prompt → per-box macros → 1-tap decrement logging.</p>
     </div>
-    <div class="diff-card" data-screen="recipes.html#frame-3">
-      <b>🍳 Cooking: 6-Step Flow &amp; Active Timer (Current vs Draft)</b>
-      <p>Raw ingredients AI parse → Active cooking timer (Start, Pause, Resume, Finish like workout) → Encode cooked weight on scale → Live macros per-100g → Save to fridge inventory.</p>
-    </div>
-    <div class="diff-card" data-screen="supplements.html">
-      <b>💊 Supplements (Current vs Draft)</b>
-      <p>Added AI Supplement Quick-Fill (multi-item batch parse), Barcode Scan + Open Food Facts auto-fill, Powder/Tabs/Caps chips, &amp; Edit Supplement stock correction.</p>
-    </div>
-    <div class="diff-card" data-screen="products.html">
-      <b>📦 Products &amp; Scan (Current vs Draft)</b>
-      <p>Added AI Grocery Quick-Fill (multi-item batch save), Barcode Scan modal with Open Food Facts auto-fill on ProductForm, and Eaten Drained reference presets.</p>
+    <div class="diff-card" data-screen="recipes.html#frame-1">
+      <b>📖 Recipes &amp; Batches (Current App)</b>
+      <p>Current mobile app recipes library, active fridge batches ("In the fridge now"), and batch weight settlement calculator.</p>
     </div>
     <div class="diff-card" data-screen="text-log.html#frame-3">
-      <b>✨ AI Breakdown &amp; Edit Meal List (Current vs Draft)</b>
-      <p>Added AI Breakdown screen (AiMealPreview) with grand total kcal + P/C/F pills, per-meal AI macro breakdown, item removal, &amp; Pantry stock auto-deduction.</p>
+      <b>✨ Edit Meal List &amp; AI Breakdown (Current vs Draft)</b>
+      <p><b>Current App:</b> Edit today's meal list + AI Breakdown (AiMealPreview with kcal/P/C/F pills, item removal).<br><b>Draft:</b> Adds Tupperware Meal Prep quick logging and Supplements parsing with pantry stock deduction.</p>
     </div>
     <div class="diff-card" data-screen="log.html">
-      <b>📋 Food Log &amp; Meal Macro Breakdown (Current vs Draft)</b>
-      <p>Added collapsible Meal macro breakdown table (kcal · P · C · F per meal), color-coded entry macros, and Supplement inventory sync.</p>
+      <b>📋 Food Log (Current vs Draft)</b>
+      <p><b>Current App:</b> Day Total Card macro breakdown, Edit meal list button, &amp; P/C/F macros on Breakfast, Lunch, Dinner, Snacks.<br><b>Draft:</b> Adds Supplements sync card with live inventory deduction.</p>
+    </div>
+    <div class="diff-card" data-screen="supplements.html">
+      <b>💊 Supplements (Shipped in Mobile App)</b>
+      <p>AI Supplement Quick-Fill (multi-item batch parse), Barcode Scan + Open Food Facts auto-fill, Powder/Tabs/Caps chips, &amp; Edit Supplement stock correction.</p>
+    </div>
+    <div class="diff-card" data-screen="products.html">
+      <b>📦 Products &amp; Scan (Shipped in Mobile App)</b>
+      <p>AI Grocery Quick-Fill (multi-item batch save), Barcode Scan modal with Open Food Facts auto-fill on ProductForm, and Eaten Drained reference presets.</p>
     </div>
     <div class="diff-card" data-screen="settings.html">
-      <b>⚙️ More Hub &amp; AI Settings (Current vs Draft)</b>
-      <p>Added More Hub tab (Workouts, Cooking, Products, Measurements, Calorie Stats) and Multi-Provider AI config (Gemini, OpenAI, Groq, Meta, Custom) with independent saved keys.</p>
+      <b>⚙️ More Hub &amp; AI Settings (Shipped in Mobile App)</b>
+      <p>More Hub tab (Workouts, Recipes, Products, Measurements, Calorie Stats) and Multi-Provider AI config (Gemini, OpenAI, Groq, Meta, Custom) with independent saved keys.</p>
     </div>
   </div>
 </header>
@@ -235,38 +239,38 @@
   <section class="pane">
     <div class="pane-head">
       <span class="pane-badge current">● Current Mobile App (prototypes/current/)</span>
-      <a class="btn" id="pane-current-link" href="current/recipes.html#frame-2">Open Current Page ↗</a>
+      <a class="btn" id="pane-current-link" href="current/recipes.html">Open Current Page ↗</a>
     </div>
-    <iframe id="frame-current" src="current/recipes.html#frame-2" title="Current Mobile App Prototype"></iframe>
+    <iframe id="frame-current" src="current/recipes.html" title="Current Mobile App Prototype"></iframe>
   </section>
 
   <section class="pane">
     <div class="pane-head">
-      <span class="pane-badge draft">○ Original Draft (prototypes/draft/)</span>
-      <a class="btn" id="pane-draft-link" href="draft/recipes.html">Open Draft Page ↗</a>
+      <span class="pane-badge draft">○ Draft Prototypes (prototypes/draft/)</span>
+      <a class="btn" id="pane-draft-link" href="draft/cooking.html#frame-2">Open Draft Page ↗</a>
     </div>
-    <iframe id="frame-draft" src="draft/recipes.html" title="Original Draft Prototype"></iframe>
+    <iframe id="frame-draft" src="draft/cooking.html#frame-2" title="Draft Prototypes"></iframe>
   </section>
 </main>
 
 <script>
   const screens = [
-    { file: "recipes.html#frame-2", label: "🍳 Cooking & AI Parse ★" },
-    { file: "recipes.html", label: "Cooking Hub ★" },
-    { file: "meal-prep.html", label: "🍱 Meal Prep ★" },
+    { file: "cooking.html#frame-2", label: "🍳 Cooking (Draft) ★" },
+    { file: "meal-prep.html#frame-2", label: "🍱 Meal Prep (Draft) ★" },
+    { file: "recipes.html", label: "Recipes (Current App) ★" },
     { file: "text-log.html#frame-3", label: "✨ AI Breakdown ★" },
     { file: "text-log.html", label: "Edit Meal List ★" },
     { file: "log.html", label: "Log ★" },
     { file: "supplements.html", label: "Supplements ★" },
     { file: "products.html", label: "Products & Scan ★" },
     { file: "pantry.html", label: "Pantry ★" },
+    { file: "workouts.html", label: "Workouts ★" },
     { file: "settings.html", label: "More & Settings ★" },
     { file: "today.html", label: "Today ★" },
     { file: "entry-edit.html", label: "Entry Edit" },
     { file: "search.html", label: "Add Food" },
     { file: "progress.html", label: "Progress" },
     { file: "measure.html", label: "Measurements" },
-    { file: "workouts.html", label: "Workouts" },
     { file: "onboarding.html", label: "Setup" },
   ];
 
@@ -279,9 +283,8 @@
   const paneDraftLink = document.getElementById("pane-draft-link");
 
   function setScreen(file) {
-    const baseFile = file.split("#")[0];
     const curUrl = "current/" + file;
-    const drfUrl = "draft/" + baseFile;
+    const drfUrl = "draft/" + file;
     frameCurrent.src = curUrl;
     frameDraft.src = drfUrl;
     openCurrentBtn.href = curUrl;
