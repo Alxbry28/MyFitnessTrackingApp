@@ -40,7 +40,7 @@ export function AddStockSheet({ visible, onClose }: Props) {
             <OptionRow
               icon="medication"
               title="New Supplement"
-              subtitle="Powders (grams) or pills (tabs, caps)"
+              subtitle="AI Quick Fill, barcode scan, or manual entry"
               primary
               onPress={() => go(() => router.push("/pantry/new-supplement"))}
               styles={styles}
@@ -59,7 +59,7 @@ export function AddStockSheet({ visible, onClose }: Props) {
             <OptionRow
               icon="kitchen"
               title="New Grocery Item"
-              subtitle="Packaged food, canned units, or drained items"
+              subtitle="AI Quick Fill, barcode scan, or manual entry"
               onPress={() =>
                 go(() =>
                   router.push({

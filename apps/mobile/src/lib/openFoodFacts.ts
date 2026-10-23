@@ -8,7 +8,8 @@ import {
 export type OffLookup = OffResult | { kind: "offline" };
 export type OffSearch = OffSearchResult | { kind: "offline" };
 
-const FIELDS = "code,product_name,brands,nutriments,serving_size,serving_quantity,product_quantity";
+const FIELDS =
+  "code,product_name,product_name_en,generic_name,brands,nutriments,serving_size,serving_quantity,product_quantity,quantity";
 const USER_AGENT = "MyFitnessTrackingApp/1.0 (Android; github.com/Alxbry28/MyFitnessTrackingApp)";
 const TIMEOUT_MS = 8000;
 

@@ -55,6 +55,7 @@ export default function ProductScreen() {
         defaultValues={state.product ? productToForm(state.product) : newProductForm(barcode ?? null, name ?? "")}
         submitLabel={isNew ? "Save product" : "Save changes"}
         onSubmit={save}
+        isPantry={then === "pantry"}
         onSaved={(savedId) =>
           then === "log"
             ? router.replace({

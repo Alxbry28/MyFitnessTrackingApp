@@ -71,7 +71,7 @@ TASK:
 
 No extra text, no markdown backticks, only valid JSON.`;
 
-function resolveEndpointUrl(provider: AiProvider, model: string, baseUrl?: string): string {
+export function resolveEndpointUrl(provider: AiProvider, model: string, baseUrl?: string): string {
   if (provider === "gemini") {
     const cleanModel = model.replace(/^models\//, "");
     return `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cleanModel)}:generateContent`;
@@ -92,7 +92,7 @@ function resolveEndpointUrl(provider: AiProvider, model: string, baseUrl?: strin
   return root.endsWith("/chat/completions") ? root : `${root}/chat/completions`;
 }
 
-function stripJsonFence(raw: string): string {
+export function stripJsonFence(raw: string): string {
   const trimmed = raw.trim();
   const match = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(trimmed);
   return match ? match[1].trim() : trimmed;

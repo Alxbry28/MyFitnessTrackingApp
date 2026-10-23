@@ -4,11 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import * as foodLogRepo from "../repositories/foodLogRepo";
 import { sumTotals } from "../services/nutritionCalc";
-import { MEAL_TYPES, type FoodLogEntry, type MealType } from "../types/foodLog";
+import { MEAL_TYPES, type FoodLogEntry, type MealType, type Nutrients } from "../types/foodLog";
 
 type Status = "loading" | "ready" | "error";
 
-export type MealGroup = { mealType: MealType; entries: FoodLogEntry[]; kcal: number };
+export type MealGroup = { mealType: MealType; entries: FoodLogEntry[]; kcal: number; totals: Nutrients };
 
 export type UndoState = { entryId: string; name: string } | null;
 
@@ -83,7 +83,8 @@ export function useDayLog(day: string) {
     () =>
       MEAL_TYPES.map((mealType) => {
         const mealEntries = entries.filter((e) => e.mealType === mealType);
-        return { mealType, entries: mealEntries, kcal: sumTotals(mealEntries).kcal };
+        const mealTotals = sumTotals(mealEntries);
+        return { mealType, entries: mealEntries, kcal: mealTotals.kcal, totals: mealTotals };
       }),
     [entries],
   );

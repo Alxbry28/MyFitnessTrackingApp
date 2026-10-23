@@ -1,8 +1,8 @@
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { router, useLocalSearchParams } from "expo-router";
-import { useSQLiteContext } from "expo-sqlite";
+import { useSQLiteContext, type SQLiteDatabase } from "expo-sqlite";
 import { SymbolView } from "expo-symbols";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -14,12 +14,18 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { fetchOffProduct } from "@/lib/openFoodFacts";
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import { BarcodeScanModal } from "@/modules/nutrition/components/BarcodeScanModal";
 import * as productRepo from "@/modules/nutrition/repositories/productRepo";
+import { getAiConfig } from "@/modules/nutrition/repositories/settingsRepo";
 import { dayFromKey, dayKey, formatDayShort } from "@/modules/nutrition/services/mealTime";
-import type { ProductInput } from "@/modules/nutrition/types/product";
+import type { ProductInput, ProductSource } from "@/modules/nutrition/types/product";
 import * as pantryRepo from "@/modules/pantry/repositories/pantryRepo";
+import {
+  parseSupplementsWithAi,
+  type ParsedSupplementItem,
+} from "@/modules/pantry/services/aiSupplementParser";
 import { formatAmount } from "@/modules/pantry/services/pantryStock";
 import {
   LOCATIONS,
@@ -33,14 +39,135 @@ const UNITS: { value: SupplementUnit; label: string; icon: string }[] = [
   { value: "caps", label: "Capsules", icon: "💊" },
 ];
 
+function inferSupplementUnit(servingText: string | null | undefined): SupplementUnit | null {
+  if (!servingText) return null;
+  if (/\btab(let)?s?\b/i.test(servingText)) return "tabs";
+  if (/\b(cap(sule)?s?|softgels?)\b/i.test(servingText)) return "caps";
+  if (/\b(g|grams?|scoop)\b/i.test(servingText)) return "g";
+  return null;
+}
+
+function scalePer100ToDose(per100: number | null, doseGrams: number, unit: SupplementUnit): string {
+  if (per100 === null || !Number.isFinite(per100)) return "";
+  const raw = unit === "g" ? (per100 * doseGrams) / 100 : per100;
+  return String(Math.round(raw * 10) / 10);
+}
+
+type ResolvedBarcodeData = {
+  name?: string;
+  brand?: string;
+  unit?: SupplementUnit;
+  location?: PantryLocation;
+  containerSizeText?: string;
+  servingDoseText?: string;
+  showNutrition?: boolean;
+  kcalText?: string;
+  proteinText?: string;
+  carbsText?: string;
+  fatText?: string;
+  source?: ProductSource;
+  note: string;
+};
+
+async function resolveSupplementBarcode(
+  db: SQLiteDatabase,
+  code: string,
+): Promise<ResolvedBarcodeData> {
+  try {
+    const existing = await productRepo.findByBarcode(db, code);
+    if (existing) {
+      const existingStock = await pantryRepo.stockForProduct(db, existing.id);
+      const resolvedUnit =
+        existingStock?.unit ?? inferSupplementUnit(existing.servingSize) ?? "g";
+      const hasNutrition =
+        existing.kcalPer100g > 0 ||
+        existing.proteinPer100g !== null ||
+        existing.carbsPer100g !== null ||
+        existing.fatPer100g !== null;
+      const dose = existing.servingGrams && existing.servingGrams > 0 ? existing.servingGrams : 100;
+      const servingDoseText =
+        existing.servingGrams !== null
+          ? String(existing.servingGrams)
+          : hasNutrition && resolvedUnit === "g"
+            ? "100"
+            : undefined;
+
+      return {
+        name: existing.name,
+        brand: existing.brand ?? "",
+        unit: resolvedUnit,
+        location: existingStock?.location,
+        containerSizeText: existing.netWeightG !== null ? String(existing.netWeightG) : undefined,
+        servingDoseText,
+        showNutrition: hasNutrition || undefined,
+        kcalText: hasNutrition ? scalePer100ToDose(existing.kcalPer100g, dose, resolvedUnit) : undefined,
+        proteinText: hasNutrition ? scalePer100ToDose(existing.proteinPer100g, dose, resolvedUnit) : undefined,
+        carbsText: hasNutrition ? scalePer100ToDose(existing.carbsPer100g, dose, resolvedUnit) : undefined,
+        fatText: hasNutrition ? scalePer100ToDose(existing.fatPer100g, dose, resolvedUnit) : undefined,
+        source: existing.source,
+        note: "Found in your product library. Details filled in.",
+      };
+    }
+
+    const off = await fetchOffProduct(code);
+    if (
+      off.kind === "found" ||
+      (off.kind === "not_found" &&
+        Boolean(off.draft.name || off.draft.brand || off.draft.netWeightG || off.draft.servingGrams))
+    ) {
+      const resolvedUnit = inferSupplementUnit(off.draft.servingSize) ?? "g";
+      const hasMacros = off.kind === "found" && off.draft.kcalPer100g !== "";
+      const parsedDose = Number(off.draft.servingGrams);
+      const dose = Number.isFinite(parsedDose) && parsedDose > 0 ? parsedDose : 100;
+      const servingDoseText =
+        off.draft.servingGrams || (hasMacros && resolvedUnit === "g" ? "100" : undefined);
+
+      const kcal100 = hasMacros ? Number(off.draft.kcalPer100g) : null;
+      const p100 = hasMacros && off.draft.proteinPer100g ? Number(off.draft.proteinPer100g) : null;
+      const c100 = hasMacros && off.draft.carbsPer100g ? Number(off.draft.carbsPer100g) : null;
+      const f100 = hasMacros && off.draft.fatPer100g ? Number(off.draft.fatPer100g) : null;
+
+      return {
+        name: off.draft.name || undefined,
+        brand: off.draft.brand || undefined,
+        unit: resolvedUnit,
+        containerSizeText: off.draft.netWeightG || undefined,
+        servingDoseText,
+        showNutrition: hasMacros || undefined,
+        kcalText: hasMacros ? scalePer100ToDose(kcal100, dose, resolvedUnit) : undefined,
+        proteinText: hasMacros ? scalePer100ToDose(p100, dose, resolvedUnit) : undefined,
+        carbsText: hasMacros ? scalePer100ToDose(c100, dose, resolvedUnit) : undefined,
+        fatText: hasMacros ? scalePer100ToDose(f100, dose, resolvedUnit) : undefined,
+        source: "open_food_facts",
+        note: "Found on Open Food Facts. Check the values against the label before saving.",
+      };
+    }
+
+    if (off.kind === "not_found") {
+      return {
+        note: "This barcode isn't on Open Food Facts yet. Enter the details from the label.",
+      };
+    }
+
+    return {
+      note: "Couldn't reach Open Food Facts. Enter the details from the label.",
+    };
+  } catch {
+    return {
+      note: "Couldn't look up this barcode. Enter the details manually.",
+    };
+  }
+}
+
 export default function NewSupplementScreen() {
   const params = useLocalSearchParams<{ barcode?: string }>();
+  const initialBarcode = params.barcode?.trim() ?? "";
   const theme = useTheme();
   const styles = makeStyles(theme);
   const insets = useSafeAreaInsets();
   const db = useSQLiteContext();
 
-  const [barcode, setBarcode] = useState(params.barcode ?? "");
+  const [barcode, setBarcode] = useState(initialBarcode);
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
   const [unit, setUnit] = useState<SupplementUnit>("g");
@@ -49,6 +176,7 @@ export default function NewSupplementScreen() {
   const [unitsBought, setUnitsBought] = useState(1);
   const [location, setLocation] = useState<PantryLocation>("cupboard");
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [source, setSource] = useState<ProductSource>("manual");
 
   // Optional nutrition per serving
   const [showNutrition, setShowNutrition] = useState(false);
@@ -58,13 +186,210 @@ export default function NewSupplementScreen() {
   const [fatText, setFatText] = useState("");
 
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [lookingUp, setLookingUp] = useState(Boolean(initialBarcode));
+  const [lookupNote, setLookupNote] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // AI Quick Fill state
+  const [aiInput, setAiInput] = useState("");
+  const [aiParsing, setAiParsing] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiSuccessNote, setAiSuccessNote] = useState<string | null>(null);
+  const [aiParsedItems, setAiParsedItems] = useState<ParsedSupplementItem[]>([]);
+  const [savingAll, setSavingAll] = useState(false);
 
   const containerSize = Number(containerSizeText.trim().replace(",", "."));
   const servingDose = Number(servingDoseText.trim().replace(",", "."));
   const hasValidName = name.trim().length > 0;
   const hasValidContainer = containerSizeText.trim() !== "" && Number.isFinite(containerSize) && containerSize > 0;
+
+  useEffect(() => {
+    if (!initialBarcode) return;
+    let active = true;
+    void resolveSupplementBarcode(db, initialBarcode).then((res) => {
+      if (!active) return;
+      if (res.name !== undefined) setName(res.name);
+      if (res.brand !== undefined) setBrand(res.brand);
+      if (res.unit !== undefined) setUnit(res.unit);
+      if (res.location !== undefined) setLocation(res.location);
+      if (res.containerSizeText !== undefined) setContainerSizeText(res.containerSizeText);
+      if (res.servingDoseText !== undefined) setServingDoseText(res.servingDoseText);
+      if (res.showNutrition !== undefined) setShowNutrition(res.showNutrition);
+      if (res.kcalText !== undefined) setKcalText(res.kcalText);
+      if (res.proteinText !== undefined) setProteinText(res.proteinText);
+      if (res.carbsText !== undefined) setCarbsText(res.carbsText);
+      if (res.fatText !== undefined) setFatText(res.fatText);
+      if (res.source !== undefined) setSource(res.source);
+      setLookupNote(res.note);
+      setLookingUp(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [db, initialBarcode]);
+
+  const handleBarcodeLookup = (rawCode: string) => {
+    const code = rawCode.trim();
+    setBarcode(code);
+    if (!code) return;
+    setLookingUp(true);
+    setLookupNote(null);
+    setError(null);
+    void resolveSupplementBarcode(db, code).then((res) => {
+      if (res.name !== undefined) setName(res.name);
+      if (res.brand !== undefined) setBrand(res.brand);
+      if (res.unit !== undefined) setUnit(res.unit);
+      if (res.location !== undefined) setLocation(res.location);
+      if (res.containerSizeText !== undefined) setContainerSizeText(res.containerSizeText);
+      if (res.servingDoseText !== undefined) setServingDoseText(res.servingDoseText);
+      if (res.showNutrition !== undefined) setShowNutrition(res.showNutrition);
+      if (res.kcalText !== undefined) setKcalText(res.kcalText);
+      if (res.proteinText !== undefined) setProteinText(res.proteinText);
+      if (res.carbsText !== undefined) setCarbsText(res.carbsText);
+      if (res.fatText !== undefined) setFatText(res.fatText);
+      if (res.source !== undefined) setSource(res.source);
+      setLookupNote(res.note);
+      setLookingUp(false);
+    });
+  };
+
+  const applyParsedItemToForm = (item: ParsedSupplementItem) => {
+    setName(item.name);
+    setBrand(item.brand ?? "");
+    setUnit(item.unit);
+    setContainerSizeText(String(item.containerSize));
+    setServingDoseText(String(item.servingDose));
+    setSource("ai_estimate");
+
+    const hasMacros =
+      (item.calories !== null && item.calories !== undefined && item.calories > 0) ||
+      (item.protein !== null && item.protein !== undefined && item.protein > 0) ||
+      (item.carbs !== null && item.carbs !== undefined && item.carbs > 0) ||
+      (item.fat !== null && item.fat !== undefined && item.fat > 0);
+
+    if (hasMacros) {
+      setShowNutrition(true);
+      setKcalText(item.calories !== null && item.calories !== undefined ? String(item.calories) : "");
+      setProteinText(item.protein !== null && item.protein !== undefined ? String(item.protein) : "");
+      setCarbsText(item.carbs !== null && item.carbs !== undefined ? String(item.carbs) : "");
+      setFatText(item.fat !== null && item.fat !== undefined ? String(item.fat) : "");
+    }
+
+    const brandPrefix = item.brand ? `${item.brand} ` : "";
+    setAiSuccessNote(`✨ Filled: ${brandPrefix}${item.name} (${item.containerSize} ${item.unit})`);
+    setAiError(null);
+  };
+
+  const handleParseAi = async () => {
+    const trimmed = aiInput.trim();
+    if (!trimmed) {
+      setAiError("Please type or paste supplement text first.");
+      return;
+    }
+    setAiParsing(true);
+    setAiError(null);
+    setAiSuccessNote(null);
+    try {
+      const config = await getAiConfig(db);
+      if (!config.apiKey) {
+        setAiError("No AI API key found. Please add your API key in Settings.");
+        setAiParsing(false);
+        return;
+      }
+      const results = await parseSupplementsWithAi({
+        text: trimmed,
+        apiKey: config.apiKey,
+        provider: config.provider,
+        model: config.model,
+        baseUrl: config.baseUrl,
+      });
+
+      if (results.length === 1) {
+        applyParsedItemToForm(results[0]);
+        setAiParsedItems([]);
+      } else {
+        setAiParsedItems(results);
+        setAiSuccessNote(
+          `✨ Found ${results.length} supplements. Tap one to fill the form, or save all below.`
+        );
+      }
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : "Couldn't parse with AI.");
+    } finally {
+      setAiParsing(false);
+    }
+  };
+
+  const handleSaveAllParsedToPantry = async () => {
+    if (aiParsedItems.length === 0) return;
+    setSavingAll(true);
+    setAiError(null);
+    try {
+      for (const item of aiParsedItems) {
+        const dose = item.servingDose || (item.unit === "g" ? 5 : 1);
+        const baseDose = item.unit === "g" ? dose : 1;
+        let kcalPer100 = 0;
+        let p100: number | null = null;
+        let c100: number | null = null;
+        let f100: number | null = null;
+
+        if (item.calories !== null && item.calories !== undefined) {
+          kcalPer100 = item.unit === "g" ? Math.round((item.calories / baseDose) * 100) : item.calories;
+        }
+        if (item.protein !== null && item.protein !== undefined) {
+          p100 = item.unit === "g" ? Math.round(((item.protein / baseDose) * 100) * 10) / 10 : item.protein;
+        }
+        if (item.carbs !== null && item.carbs !== undefined) {
+          c100 = item.unit === "g" ? Math.round(((item.carbs / baseDose) * 100) * 10) / 10 : item.carbs;
+        }
+        if (item.fat !== null && item.fat !== undefined) {
+          f100 = item.unit === "g" ? Math.round(((item.fat / baseDose) * 100) * 10) / 10 : item.fat;
+        }
+
+        const servingLabel =
+          item.unit === "g"
+            ? `${dose} g scoop`
+            : `${dose} ${item.unit}`;
+
+        const productInput: ProductInput = {
+          name: item.name,
+          brand: item.brand,
+          barcode: null,
+          servingSize: servingLabel,
+          servingGrams: item.unit === "g" ? dose : null,
+          kcalPer100g: kcalPer100,
+          proteinPer100g: p100,
+          carbsPer100g: c100,
+          fatPer100g: f100,
+          netWeightG: item.containerSize,
+          eatenDrained: false,
+          drainedKcalPer100g: null,
+          drainedProteinPer100g: null,
+          drainedCarbsPer100g: null,
+          drainedFatPer100g: null,
+          usualDrainedG: null,
+        };
+
+        const res = await productRepo.create(db, productInput, "ai_estimate");
+        if (res.ok) {
+          await pantryRepo.addStock(db, {
+            productId: res.id,
+            kind: "supplement",
+            units: 1,
+            netWeightG: item.containerSize,
+            location: "cupboard",
+            expiresAt: null,
+            unit: item.unit,
+          });
+        }
+      }
+      router.dismissTo("/pantry");
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : "Couldn't save supplements to pantry.");
+      setSavingAll(false);
+    }
+  };
 
   const pickExpiry = () => {
     DateTimePickerAndroid.open({
@@ -126,10 +451,11 @@ export default function NewSupplementScreen() {
           ? validServing ? `${validServing} g scoop` : "1 scoop"
           : validServing ? `${validServing} ${unit}` : `1 ${unit}`;
 
+      const cleanBarcode = barcode.trim() || null;
       const productInput: ProductInput = {
         name: name.trim(),
         brand: brand.trim() || null,
-        barcode: barcode.trim() || null,
+        barcode: cleanBarcode,
         servingSize: servingLabel,
         servingGrams: validServing,
         kcalPer100g: kcalPer100,
@@ -145,7 +471,11 @@ export default function NewSupplementScreen() {
         usualDrainedG: null,
       };
 
-      const result = await productRepo.create(db, productInput, "manual");
+      const existing = cleanBarcode ? await productRepo.findByBarcode(db, cleanBarcode) : null;
+      const result = existing
+        ? await productRepo.update(db, existing.id, productInput)
+        : await productRepo.create(db, productInput, source);
+
       if (!result.ok) {
         if (result.error === "duplicate_barcode") {
           setError("Another product already uses this barcode.");
@@ -201,6 +531,155 @@ export default function NewSupplementScreen() {
       </View>
 
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + theme.space[6] }]} keyboardShouldPersistTaps="handled">
+        {/* AI Quick Fill Card */}
+        <View style={styles.aiCard}>
+          <View style={styles.aiHeader}>
+            <View style={styles.aiTitleRow}>
+              <SymbolView
+                name={{ android: "auto_awesome", web: "auto_awesome" }}
+                tintColor={theme.colors.accent}
+                size={18}
+              />
+              <Text style={styles.aiTitle}>AI Quick Fill</Text>
+            </View>
+            <Text style={styles.aiBadge}>AI Assistant</Text>
+          </View>
+          <Text style={styles.aiSub}>
+            Type or paste product text or a list to autofill.
+          </Text>
+
+          <TextInput
+            value={aiInput}
+            onChangeText={(t) => {
+              setAiInput(t);
+              if (aiError) setAiError(null);
+            }}
+            placeholder={"e.g. Krea by Wheyl 300g\n324g Wake pre-workout by Wheyl"}
+            placeholderTextColor={theme.colors.faint}
+            multiline
+            numberOfLines={2}
+            style={styles.aiInput}
+          />
+
+          <View style={styles.aiActionsRow}>
+            <Pressable
+              onPress={handleParseAi}
+              disabled={aiParsing || !aiInput.trim()}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.aiParseBtn,
+                (!aiInput.trim() || aiParsing) && styles.aiParseBtnDisabled,
+                pressed && styles.aiParseBtnPressed,
+              ]}
+            >
+              {aiParsing ? (
+                <ActivityIndicator size="small" color={theme.colors.accentInk} />
+              ) : (
+                <>
+                  <SymbolView
+                    name={{ android: "auto_awesome", web: "auto_awesome" }}
+                    tintColor={theme.colors.accentInk}
+                    size={16}
+                  />
+                  <Text style={styles.aiParseBtnText}>Parse with AI</Text>
+                </>
+              )}
+            </Pressable>
+
+            {aiInput.trim().length > 0 && !aiParsing && (
+              <Pressable
+                onPress={() => {
+                  setAiInput("");
+                  setAiParsedItems([]);
+                  setAiSuccessNote(null);
+                  setAiError(null);
+                }}
+                accessibilityRole="button"
+                style={styles.aiClearBtn}
+              >
+                <Text style={styles.aiClearBtnText}>Clear</Text>
+              </Pressable>
+            )}
+          </View>
+
+          {aiError && (
+            <View style={styles.aiErrorRow}>
+              <Text style={styles.aiErrorText}>{aiError}</Text>
+              {aiError.includes("Settings") && (
+                <Pressable onPress={() => router.push("/settings")}>
+                  <Text style={styles.aiSettingsLink}>Go to Settings →</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+
+          {aiSuccessNote && (
+            <Text style={styles.aiSuccessText} accessibilityLiveRegion="polite">
+              {aiSuccessNote}
+            </Text>
+          )}
+
+          {/* If multiple items were parsed, show preview cards */}
+          {aiParsedItems.length > 0 && (
+            <View style={styles.multiPreviewBox}>
+              <Text style={styles.multiPreviewTitle}>
+                Parsed Items ({aiParsedItems.length}):
+              </Text>
+              {aiParsedItems.map((item, idx) => {
+                const brandStr = item.brand ? `${item.brand} • ` : "";
+                const doseStr = `${item.containerSize} ${item.unit} (${item.servingDose} ${item.unit}/dose)`;
+                return (
+                  <View key={`${item.name}-${idx}`} style={styles.multiPreviewCard}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.multiItemName}>
+                        {brandStr}
+                        {item.name}
+                      </Text>
+                      <Text style={styles.multiItemMeta}>{doseStr}</Text>
+                      {item.notes ? (
+                        <Text style={styles.multiItemNotes}>{item.notes}</Text>
+                      ) : null}
+                    </View>
+                    <Pressable
+                      onPress={() => applyParsedItemToForm(item)}
+                      style={styles.multiItemFillBtn}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.multiItemFillText}>Use in form</Text>
+                    </Pressable>
+                  </View>
+                );
+              })}
+
+              <Pressable
+                onPress={handleSaveAllParsedToPantry}
+                disabled={savingAll}
+                style={({ pressed }) => [
+                  styles.saveAllBtn,
+                  savingAll && styles.saveAllBtnDisabled,
+                  pressed && styles.saveAllBtnPressed,
+                ]}
+                accessibilityRole="button"
+              >
+                {savingAll ? (
+                  <ActivityIndicator size="small" color={theme.colors.accentInk} />
+                ) : (
+                  <>
+                    <SymbolView
+                      name={{ android: "check", web: "check" }}
+                      tintColor={theme.colors.accentInk}
+                      size={18}
+                    />
+                    <Text style={styles.saveAllBtnText}>
+                      Save All ({aiParsedItems.length}) to Pantry
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          )}
+        </View>
+
         {/* Barcode row with scan button */}
         <View style={styles.field}>
           <Text style={styles.label}>Barcode (optional)</Text>
@@ -208,9 +687,11 @@ export default function NewSupplementScreen() {
             <TextInput
               value={barcode}
               onChangeText={setBarcode}
+              onSubmitEditing={() => handleBarcodeLookup(barcode)}
               placeholder="e.g. 074892702410"
               placeholderTextColor={theme.colors.faint}
               keyboardType="number-pad"
+              returnKeyType="search"
               style={[styles.input, { flex: 1 }]}
             />
             <Pressable
@@ -227,6 +708,17 @@ export default function NewSupplementScreen() {
               <Text style={styles.scanBtnText}>Scan</Text>
             </Pressable>
           </View>
+          {lookingUp && (
+            <View style={styles.lookupRow}>
+              <ActivityIndicator size="small" color={theme.colors.accent} />
+              <Text style={styles.lookupText}>Looking up barcode on Open Food Facts...</Text>
+            </View>
+          )}
+          {!lookingUp && lookupNote && (
+            <Text style={styles.lookupNote} accessibilityLiveRegion="polite">
+              {lookupNote}
+            </Text>
+          )}
         </View>
 
         {/* Basic Info */}
@@ -452,7 +944,7 @@ export default function NewSupplementScreen() {
       <BarcodeScanModal
         visible={scannerOpen}
         onClose={() => setScannerOpen(false)}
-        onScanned={(code) => setBarcode(code)}
+        onScanned={handleBarcodeLookup}
       />
     </View>
   );
@@ -538,6 +1030,21 @@ function makeStyles(theme: Theme) {
     barcodeRow: {
       flexDirection: "row",
       gap: space[2],
+    },
+    lookupRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: space[2],
+      marginTop: space[1],
+    },
+    lookupText: {
+      color: colors.muted,
+      fontSize: fontSize.xs,
+    },
+    lookupNote: {
+      color: colors.accentText,
+      fontSize: fontSize.xs,
+      marginTop: space[1],
     },
     scanBtn: {
       height: tap,
@@ -701,6 +1208,191 @@ function makeStyles(theme: Theme) {
     submitBtnText: {
       color: colors.accentInk,
       fontSize: fontSize.md,
+      fontWeight: "700",
+    },
+    aiCard: {
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      padding: space[4],
+      gap: space[2],
+      marginBottom: space[2],
+    },
+    aiHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    aiTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: space[2],
+    },
+    aiTitle: {
+      color: colors.text,
+      fontSize: fontSize.md,
+      fontWeight: "700",
+    },
+    aiBadge: {
+      color: colors.accentText,
+      backgroundColor: colors.accentSoft,
+      paddingHorizontal: space[2],
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+      fontSize: fontSize.xs,
+      fontWeight: "600",
+    },
+    aiSub: {
+      color: colors.muted,
+      fontSize: fontSize.xs,
+      lineHeight: 18,
+    },
+    aiInput: {
+      minHeight: 56,
+      maxHeight: 120,
+      backgroundColor: colors.surface2,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      paddingHorizontal: space[3],
+      paddingVertical: space[2],
+      color: colors.text,
+      fontSize: fontSize.sm,
+      textAlignVertical: "top",
+    },
+    aiActionsRow: {
+      flexDirection: "row",
+      gap: space[2],
+      alignItems: "center",
+      marginTop: space[1],
+    },
+    aiParseBtn: {
+      height: 38,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: space[2],
+      paddingHorizontal: space[4],
+      borderRadius: radius.sm,
+      backgroundColor: colors.accent,
+    },
+    aiParseBtnDisabled: {
+      opacity: 0.5,
+    },
+    aiParseBtnPressed: {
+      opacity: 0.85,
+    },
+    aiParseBtnText: {
+      color: colors.accentInk,
+      fontSize: fontSize.sm,
+      fontWeight: "700",
+    },
+    aiClearBtn: {
+      height: 38,
+      paddingHorizontal: space[3],
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: radius.sm,
+      backgroundColor: colors.surface2,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    aiClearBtnText: {
+      color: colors.muted,
+      fontSize: fontSize.xs,
+      fontWeight: "500",
+    },
+    aiErrorRow: {
+      marginTop: space[1],
+      gap: 4,
+    },
+    aiErrorText: {
+      color: colors.over,
+      fontSize: fontSize.xs,
+    },
+    aiSettingsLink: {
+      color: colors.accentText,
+      fontSize: fontSize.xs,
+      fontWeight: "600",
+      textDecorationLine: "underline",
+    },
+    aiSuccessText: {
+      color: colors.accentText,
+      fontSize: fontSize.xs,
+      fontWeight: "600",
+      marginTop: space[1],
+    },
+    multiPreviewBox: {
+      marginTop: space[2],
+      paddingTop: space[3],
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      gap: space[2],
+    },
+    multiPreviewTitle: {
+      color: colors.text,
+      fontSize: fontSize.sm,
+      fontWeight: "700",
+    },
+    multiPreviewCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: colors.surface2,
+      padding: space[3],
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: space[2],
+    },
+    multiItemName: {
+      color: colors.text,
+      fontSize: fontSize.sm,
+      fontWeight: "600",
+    },
+    multiItemMeta: {
+      color: colors.muted,
+      fontSize: fontSize.xs,
+      marginTop: 2,
+    },
+    multiItemNotes: {
+      color: colors.accentText,
+      fontSize: fontSize.xs,
+      marginTop: 2,
+    },
+    multiItemFillBtn: {
+      backgroundColor: colors.accentSoft,
+      paddingHorizontal: space[3],
+      paddingVertical: space[2],
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: colors.accent,
+    },
+    multiItemFillText: {
+      color: colors.accentText,
+      fontSize: fontSize.xs,
+      fontWeight: "700",
+    },
+    saveAllBtn: {
+      minHeight: tap,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: space[2],
+      borderRadius: radius.sm,
+      backgroundColor: colors.accent,
+      marginTop: space[2],
+    },
+    saveAllBtnDisabled: {
+      opacity: 0.5,
+    },
+    saveAllBtnPressed: {
+      opacity: 0.85,
+    },
+    saveAllBtnText: {
+      color: colors.accentInk,
+      fontSize: fontSize.sm,
       fontWeight: "700",
     },
   });

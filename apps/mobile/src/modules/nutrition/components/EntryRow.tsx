@@ -3,7 +3,7 @@ import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeabl
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 
-import { formatGrams, formatKcal } from "../services/nutritionCalc";
+import { formatGrams, formatKcal, formatMacro } from "../services/nutritionCalc";
 import type { FoodLogEntry } from "../types/foodLog";
 
 type Props = {
@@ -15,11 +15,18 @@ type Props = {
 const DELETE_WIDTH = 88;
 
 // A log row from prototypes/log.html; swipe left to reveal Delete. Long press and the
-// accessibility action still delete for anyone who can't swipe.
+// accessibility action still delete for anyone who can't swipe. Shows grams and consumed macros.
 export function EntryRow({ entry, onPress, onDelete }: Props) {
   const styles = makeStyles(useTheme());
   const grams = formatGrams(entry.grams);
   const kcal = formatKcal(entry.kcal);
+  const hasMacros = entry.proteinG !== null || entry.carbsG !== null || entry.fatG !== null;
+  const macroText = hasMacros
+    ? ` · P ${formatMacro(entry.proteinG)} · C ${formatMacro(entry.carbsG)} · F ${formatMacro(entry.fatG)}`
+    : "";
+  const macroAccessibility = hasMacros
+    ? `, protein ${formatMacro(entry.proteinG)}g, carbs ${formatMacro(entry.carbsG)}g, fat ${formatMacro(entry.fatG)}g`
+    : "";
 
   return (
     <ReanimatedSwipeable
@@ -44,7 +51,7 @@ export function EntryRow({ entry, onPress, onDelete }: Props) {
         onPress={() => onPress(entry)}
         onLongPress={() => onDelete(entry)}
         accessibilityRole="button"
-        accessibilityLabel={`${entry.productName}, ${grams}, ${kcal} kcal. Edit`}
+        accessibilityLabel={`${entry.productName}, ${grams}, ${kcal} kcal${macroAccessibility}. Edit`}
         accessibilityHint="Swipe left or long-press to delete"
         accessibilityActions={[{ name: "delete", label: "Delete" }]}
         onAccessibilityAction={(e) => {
@@ -56,7 +63,10 @@ export function EntryRow({ entry, onPress, onDelete }: Props) {
           <Text style={styles.name} numberOfLines={1}>
             {entry.productName}
           </Text>
-          <Text style={styles.qty}>{grams}</Text>
+          <Text style={styles.qty} numberOfLines={1}>
+            {grams}
+            {macroText}
+          </Text>
         </View>
         <Text style={styles.kcal}>{kcal}</Text>
       </Pressable>

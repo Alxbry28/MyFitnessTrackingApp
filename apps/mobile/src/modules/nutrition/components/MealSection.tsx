@@ -23,9 +23,17 @@ export function MealSection({ group, onAdd, onEdit, onDelete }: Props) {
   return (
     <View style={styles.card}>
       <View style={styles.head}>
-        <Text style={styles.title} accessibilityRole="header">
-          {label}
-        </Text>
+        <View style={styles.headLeft}>
+          <Text style={styles.title} accessibilityRole="header">
+            {label}
+          </Text>
+          {group.entries.length > 0 && (
+            <Text style={styles.macros}>
+              P {Math.round(group.totals.proteinG ?? 0)} · C {Math.round(group.totals.carbsG ?? 0)} · F{" "}
+              {Math.round(group.totals.fatG ?? 0)}
+            </Text>
+          )}
+        </View>
         <View style={styles.headRight}>
           <Text style={styles.subtotal}>{formatKcal(group.kcal)} kcal</Text>
           <Pressable
@@ -61,13 +69,15 @@ function makeStyles(theme: Theme) {
     head: {
       flexDirection: "row",
       justifyContent: "space-between",
-      alignItems: "baseline",
+      alignItems: "flex-start",
       paddingTop: space[3],
       paddingHorizontal: space[4],
-      paddingBottom: space[1],
+      paddingBottom: space[2],
     },
+    headLeft: { flex: 1, minWidth: 0, gap: 2 },
     headRight: { flexDirection: "row", alignItems: "baseline", gap: space[3] },
     title: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
+    macros: { color: colors.muted, fontSize: fontSize.xs, fontVariant: ["tabular-nums"] },
     subtotal: { color: colors.muted, fontSize: fontSize.sm, fontVariant: ["tabular-nums"] },
     add: { color: colors.accentText, fontSize: fontSize.sm, fontWeight: "600" },
     divided: { borderTopWidth: 1, borderTopColor: colors.border },

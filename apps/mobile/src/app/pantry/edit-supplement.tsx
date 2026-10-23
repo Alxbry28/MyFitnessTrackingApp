@@ -2,7 +2,7 @@ import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { SymbolView } from "expo-symbols";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { fetchOffProduct } from "@/lib/openFoodFacts";
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import { BarcodeScanModal } from "@/modules/nutrition/components/BarcodeScanModal";
 import * as productRepo from "@/modules/nutrition/repositories/productRepo";
@@ -53,6 +54,8 @@ export default function EditSupplementScreen() {
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
 
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [lookupNote, setLookupNote] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +97,54 @@ export default function EditSupplementScreen() {
       active = false;
     };
   }, [db, itemId]);
+
+  const lookupBarcode = useCallback(
+    async (rawCode: string) => {
+      const code = rawCode.trim();
+      setBarcode(code);
+      if (!code) return;
+
+      setLookingUp(true);
+      setLookupNote(null);
+      setError(null);
+
+      try {
+        const existing = await productRepo.findByBarcode(db, code);
+        if (existing && existing.id !== productId) {
+          setName(existing.name);
+          setBrand(existing.brand ?? "");
+          if (existing.netWeightG !== null) setContainerSizeText(String(existing.netWeightG));
+          if (existing.servingGrams !== null) setServingDoseText(String(existing.servingGrams));
+          setLookupNote("Found in your product library. Details filled in.");
+          return;
+        }
+
+        const off = await fetchOffProduct(code);
+        if (
+          off.kind === "found" ||
+          (off.kind === "not_found" &&
+            Boolean(off.draft.name || off.draft.brand || off.draft.netWeightG || off.draft.servingGrams))
+        ) {
+          if (off.draft.name) setName(off.draft.name);
+          if (off.draft.brand) setBrand(off.draft.brand);
+          if (off.draft.netWeightG) setContainerSizeText(off.draft.netWeightG);
+          if (off.draft.servingGrams) setServingDoseText(off.draft.servingGrams);
+          setLookupNote(
+            "Found on Open Food Facts. Check the values against the label before saving.",
+          );
+        } else if (off.kind === "not_found") {
+          setLookupNote("Barcode not found on Open Food Facts.");
+        } else {
+          setLookupNote("Couldn't reach Open Food Facts.");
+        }
+      } catch {
+        setLookupNote("Couldn't look up this barcode.");
+      } finally {
+        setLookingUp(false);
+      }
+    },
+    [db, productId],
+  );
 
   const pickExpiry = () => {
     DateTimePickerAndroid.open({
@@ -222,9 +273,11 @@ export default function EditSupplementScreen() {
             <TextInput
               value={barcode}
               onChangeText={setBarcode}
+              onSubmitEditing={() => void lookupBarcode(barcode)}
               placeholder="e.g. 074892702410"
               placeholderTextColor={theme.colors.faint}
               keyboardType="number-pad"
+              returnKeyType="search"
               style={[styles.input, { flex: 1 }]}
             />
             <Pressable
@@ -241,6 +294,17 @@ export default function EditSupplementScreen() {
               <Text style={styles.scanBtnText}>Scan</Text>
             </Pressable>
           </View>
+          {lookingUp && (
+            <View style={styles.lookupRow}>
+              <ActivityIndicator size="small" color={theme.colors.accent} />
+              <Text style={styles.lookupText}>Looking up barcode on Open Food Facts...</Text>
+            </View>
+          )}
+          {!lookingUp && lookupNote && (
+            <Text style={styles.lookupNote} accessibilityLiveRegion="polite">
+              {lookupNote}
+            </Text>
+          )}
         </View>
 
         {/* Basic Info */}
@@ -390,7 +454,7 @@ export default function EditSupplementScreen() {
       <BarcodeScanModal
         visible={scannerOpen}
         onClose={() => setScannerOpen(false)}
-        onScanned={(code) => setBarcode(code)}
+        onScanned={(code) => void lookupBarcode(code)}
       />
     </View>
   );
@@ -480,6 +544,21 @@ function makeStyles(theme: Theme) {
     barcodeRow: {
       flexDirection: "row",
       gap: space[2],
+    },
+    lookupRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: space[2],
+      marginTop: space[1],
+    },
+    lookupText: {
+      color: colors.muted,
+      fontSize: fontSize.xs,
+    },
+    lookupNote: {
+      color: colors.accentText,
+      fontSize: fontSize.xs,
+      marginTop: space[1],
     },
     scanBtn: {
       height: tap,

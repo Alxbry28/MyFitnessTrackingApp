@@ -48,7 +48,7 @@ export default function LogScreen() {
     const empty = groups.filter((g) => g.entries.length === 0);
     body = (
       <ScrollView contentContainerStyle={styles.content}>
-        <DayTotalCard eaten={totals.kcal} goal={goal.state.status === "ready" ? goal.state.goal : null} />
+        <DayTotalCard totals={totals} goal={goal.state.status === "ready" ? goal.state.goal : null} />
         {isEmpty && (
           <Text style={styles.message}>{day === today ? "No food logged today" : "Nothing logged this day"}</Text>
         )}

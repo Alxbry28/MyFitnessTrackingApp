@@ -21,10 +21,13 @@ export type OffSearchResult = { kind: "results"; items: OffSearchItem[] } | { ki
 const offProduct = z.object({
   code: z.unknown().optional(),
   product_name: z.unknown().optional(),
+  product_name_en: z.unknown().optional(),
+  generic_name: z.unknown().optional(),
   brands: z.unknown().optional(),
   serving_size: z.unknown().optional(),
   serving_quantity: z.unknown().optional(),
   product_quantity: z.unknown().optional(),
+  quantity: z.unknown().optional(),
   nutriments: z.record(z.string(), z.unknown()).nullish().catch(null),
 });
 
@@ -62,6 +65,17 @@ function positive(value: number | null): number | null {
 
 function asField(value: number | null): string {
   return value === null ? "" : String(Math.round(value * 100) / 100);
+}
+
+// Extracts grams/ml from a free-text quantity string like "400 g", "1 kg", or "1 scoop (30g)".
+function parseQuantityGrams(text: unknown): number | null {
+  if (typeof text !== "string") return null;
+  const match = /(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l)\b/i.exec(text);
+  if (!match) return null;
+  const num = Number(match[1].replace(",", "."));
+  if (!Number.isFinite(num) || num <= 0) return null;
+  const unit = match[2].toLowerCase();
+  return unit === "kg" || unit === "l" ? num * 1000 : num;
 }
 
 // Prefers the _100g value; falls back to per-serving scaled by serving grams (DATABASE.md §6).
@@ -106,25 +120,39 @@ export function parseOffSearch(httpStatus: number, body: unknown): OffSearchResu
 
 function draftFromProduct(product: OffProduct, barcode: string): Exclude<OffResult, { kind: "error" }> {
   const empty = newProductForm(barcode);
-  const servingGrams = positive(toNumber(product.serving_quantity));
+  const servingGrams =
+    positive(toNumber(product.serving_quantity)) ?? parseQuantityGrams(product.serving_size);
+  const netWeightG =
+    positive(toNumber(product.product_quantity)) ?? parseQuantityGrams(product.quantity);
   const nutriments = product.nutriments ?? {};
-  const kcal = inRange(per100(nutriments, "energy-kcal", servingGrams), 0, 900);
+  const rawKcal =
+    per100(nutriments, "energy-kcal", servingGrams) ??
+    (() => {
+      const kj = per100(nutriments, "energy-kj", servingGrams);
+      return kj !== null ? Math.round(kj / 4.184) : null;
+    })();
+  const kcal = inRange(rawKcal, 0, 900);
+  const resolvedName =
+    cleanText(product.product_name) ||
+    cleanText(product.product_name_en) ||
+    cleanText(product.generic_name);
+
   const named: ProductFormValues = {
     ...empty,
-    name: cleanText(product.product_name),
+    name: resolvedName,
     brand: cleanText(typeof product.brands === "string" ? product.brands.split(",")[0] : null),
+    servingSize: cleanText(product.serving_size),
+    servingGrams: asField(servingGrams),
+    netWeightG: asField(netWeightG),
   };
 
-  // Found but no usable kcal counts as not found: prefill name and brand only (UX_FLOWS §3).
+  // Found but no usable kcal counts as not found: prefill name, brand, serving, and weight (UX_FLOWS §3).
   if (kcal === null) return { kind: "not_found", draft: named };
 
   return {
     kind: "found",
     draft: {
       ...named,
-      servingSize: cleanText(product.serving_size),
-      servingGrams: asField(servingGrams),
-      netWeightG: asField(positive(toNumber(product.product_quantity))),
       kcalPer100g: asField(kcal),
       proteinPer100g: asField(inRange(per100(nutriments, "proteins", servingGrams), 0, 100)),
       carbsPer100g: asField(inRange(per100(nutriments, "carbohydrates", servingGrams), 0, 100)),
