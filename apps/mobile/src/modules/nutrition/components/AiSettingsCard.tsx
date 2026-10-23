@@ -534,7 +534,7 @@ export function AiSettingsCard() {
 
               {displayModelsList.length === 0 && (
                 <View style={styles.emptyBox}>
-                  <Text style={styles.emptyText}>No models match "{searchFilter}"</Text>
+                  <Text style={styles.emptyText}>No models match &ldquo;{searchFilter}&rdquo;</Text>
                 </View>
               )}
 

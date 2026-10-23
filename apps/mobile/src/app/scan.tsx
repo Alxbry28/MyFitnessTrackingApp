@@ -6,7 +6,12 @@ import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, Vibration, Vie
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 import * as productRepo from "@/modules/nutrition/repositories/productRepo";
-import { normalizeBarcode } from "@/modules/nutrition/services/barcode";
+import {
+  isBarcodeInFrame,
+  normalizeBarcode,
+  SUPPORTED_BARCODE_TYPES,
+  type Rect,
+} from "@/modules/nutrition/services/barcode";
 
 const PAUSE_AFTER_READ_MS = 2000;
 
@@ -26,10 +31,12 @@ export default function ScanScreen() {
   const [error, setError] = useState<string | null>(null);
   // Blocks repeat reads of the same code while a lookup runs and briefly after it.
   const busy = useRef(false);
+  const frameRectRef = useRef<Rect | null>(null);
 
-  const onScanned = async ({ data }: BarcodeScanningResult) => {
+  const onScanned = async (result: BarcodeScanningResult) => {
     if (busy.current) return;
-    const barcode = normalizeBarcode(data);
+    if (!isBarcodeInFrame(result, frameRectRef.current)) return;
+    const barcode = normalizeBarcode(result.data);
     if (!barcode) return;
     busy.current = true;
     Vibration.vibrate(50);
@@ -106,12 +113,19 @@ export default function ScanScreen() {
         style={StyleSheet.absoluteFill}
         facing="back"
         enableTorch={torch}
-        barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"] }}
+        barcodeScannerSettings={{ barcodeTypes: SUPPORTED_BARCODE_TYPES }}
         onBarcodeScanned={(result) => void onScanned(result)}
       />
       <View style={styles.overlay} pointerEvents="box-none">
         <Text style={styles.hint}>Point at a barcode</Text>
-        <View style={styles.frame} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+        <View
+          style={styles.frame}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          onLayout={(e) => {
+            frameRectRef.current = e.nativeEvent.layout;
+          }}
+        />
         {error && (
           <Text style={styles.error} accessibilityLiveRegion="polite">
             {error}

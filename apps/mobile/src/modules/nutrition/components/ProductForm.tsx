@@ -91,7 +91,7 @@ export function ProductForm({ defaultValues, submitLabel, onSubmit, onSaved }: P
               control={control}
               name="barcode"
               label="Barcode (optional)"
-              keyboardType="number-pad"
+              keyboardType="default"
               styles={styles}
               theme={theme}
             />

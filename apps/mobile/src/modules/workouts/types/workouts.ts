@@ -93,6 +93,9 @@ export type SessionExercise = {
   exercise: Exercise;
   previousText?: string | null;
   sets: WorkoutSet[];
+  bestSetText?: string | null;
+  hasPR?: boolean;
+  est1RM?: number | null;
 };
 
 export type WorkoutSession = {
@@ -101,10 +104,59 @@ export type WorkoutSession = {
   startedAt: string;
   endedAt?: string | null;
   notes?: string | null;
+  isPaused?: boolean;
+  elapsedSec?: number;
+  lastResumedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   exercises?: SessionExercise[];
   durationMinutes?: number;
   totalVolumeKg?: number;
   totalSets?: number;
+  prCount?: number;
 };
+
+export type RoutineSetTarget = {
+  setNumber: number;
+  weightKg?: number | null;
+  reps?: number | null;
+  isWarmup?: boolean;
+};
+
+export type WorkoutRoutineExercise = {
+  id: string;
+  routineId: string;
+  exerciseId: string;
+  orderIndex: number;
+  targetSets: number;
+  targetReps?: number | null;
+  targetWeightKg?: number | null;
+  setsData?: RoutineSetTarget[] | null;
+  exercise: Exercise;
+};
+
+export type WorkoutRoutine = {
+  id: string;
+  name: string;
+  folder?: string | null;
+  exercises: WorkoutRoutineExercise[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RoutineExerciseInput = {
+  exerciseId: string;
+  targetSets?: number;
+  targetReps?: number;
+  targetWeightKg?: number;
+  setsData?: RoutineSetTarget[];
+};
+
+export type RoutineInput = {
+  name: string;
+  folder?: string | null;
+  exerciseIds?: string[];
+  exercises?: RoutineExerciseInput[];
+};
+
+

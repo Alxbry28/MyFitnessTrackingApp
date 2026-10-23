@@ -1,6 +1,6 @@
-import { router, useLocalSearchParams } from "expo-router";
-import { SymbolView } from "expo-symbols";
-import { useState } from "react";
+import { router, Stack, useLocalSearchParams } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,7 +16,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
+import { ExerciseArtThumb } from "@/modules/workouts/components/ExerciseArtThumb";
+import { ExerciseGuideModal } from "@/modules/workouts/components/ExerciseGuideModal";
 import { useExerciseLibrary } from "@/modules/workouts/hooks/useExerciseLibrary";
+import { exerciseRepo } from "@/modules/workouts/repositories/exerciseRepo";
 import {
   EQUIPMENT_LABELS,
   MUSCLE_GROUPS,
@@ -32,6 +35,7 @@ export default function ExercisesScreen() {
   const theme = useTheme();
   const styles = makeStyles(theme);
   const insets = useSafeAreaInsets();
+  const db = useSQLiteContext();
 
   const {
     search,
@@ -50,6 +54,41 @@ export default function ExercisesScreen() {
   const [customEquipment, setCustomEquipment] = useState<Equipment>("barbell");
   const [customIsBodyweight, setCustomIsBodyweight] = useState(false);
   const [creating, setCreating] = useState(false);
+
+  // Exercise Form Guide modal state
+  const [selectedForGuide, setSelectedForGuide] = useState<Exercise | null>(null);
+
+  // Last performance map: exerciseId -> text
+  const [lastPerfMap, setLastPerfMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadLastPerf() {
+      const map: Record<string, string> = {};
+      await Promise.all(
+        exercises.map(async (ex) => {
+          try {
+            const prev = await exerciseRepo.getPreviousPerformance(db, ex.id);
+            if (prev.text && !prev.text.includes("First time")) {
+              map[ex.id] = prev.text;
+            }
+          } catch {
+            // ignore
+          }
+        }),
+      );
+      if (!cancelled) setLastPerfMap(map);
+    }
+    if (exercises.length > 0) {
+      void loadLastPerf();
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [exercises, db]);
+
+  const builtInCount = exercises.filter((e) => e.guideId || e.id.startsWith("ex_")).length;
+  const customCount = exercises.length - builtInCount;
 
   const handleSelectExercise = (exercise: Exercise) => {
     if (isPicker && sessionId) {
@@ -88,50 +127,68 @@ export default function ExercisesScreen() {
     }
   };
 
+  const getMuscleBadgeColor = (mg: MuscleGroup) => {
+    if (mg === "chest" || mg === "back") return { bg: theme.colors.accentSoft, text: theme.colors.accentText };
+    if (mg === "legs") return { bg: theme.colors.okSoft, text: theme.colors.ok };
+    if (mg === "shoulders" || mg === "core") return { bg: theme.colors.rpeSoft, text: theme.colors.rpe };
+    return { bg: theme.colors.surface2, text: theme.colors.muted };
+  };
+
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <View style={styles.appbar}>
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
+        {/* Top Back & Custom Row (Frame 3) */}
+      <View style={styles.topNavRow}>
         <Pressable
           onPress={() => router.back()}
           accessibilityRole="button"
           hitSlop={8}
           style={styles.backBtn}
         >
-          <Text style={styles.backText}>{isPicker ? "Cancel" : "‹ Back"}</Text>
+          <Text style={styles.backText}>
+            {isPicker ? "‹ Active Workout" : "‹ Workouts"}
+          </Text>
         </Pressable>
-        <Text style={styles.appbarTitle}>{isPicker ? "Choose exercise" : "Exercises"}</Text>
         <Pressable
           onPress={() => setModalVisible(true)}
           accessibilityRole="button"
-          style={styles.addBtn}
+          hitSlop={8}
         >
-          <Text style={styles.addBtnText}>+ Custom</Text>
+          <Text style={styles.customLink}>+ Custom</Text>
         </Pressable>
       </View>
 
-      <View style={styles.searchbarWrap}>
+      {/* App Bar */}
+      <View style={styles.appbar}>
+        <Text style={styles.appbarTitle}>
+          {isPicker ? "Add Exercise" : "Exercises"}
+        </Text>
+        <Text style={styles.appbarSub}>
+          {builtInCount} built-in · {customCount} custom
+        </Text>
+      </View>
+
+      {/* Search Bar */}
+      <View style={styles.searchWrap}>
         <View style={styles.searchBox}>
-          <SymbolView
-            name={{ android: "search", web: "search" }}
-            tintColor={theme.colors.muted}
-            size={20}
-          />
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search exercises"
+            placeholder="Search exercises..."
             placeholderTextColor={theme.colors.faint}
             style={styles.searchInput}
             autoCorrect={false}
           />
           {search !== "" && (
             <Pressable onPress={() => setSearch("")} hitSlop={8}>
-              <Text style={styles.clearText}>✕</Text>
+              <Text style={styles.clearText}>✕ Clear</Text>
             </Pressable>
           )}
         </View>
       </View>
 
+      {/* Muscle Group Chips */}
       <View style={styles.chipsWrap}>
         <ScrollView
           horizontal
@@ -167,6 +224,7 @@ export default function ExercisesScreen() {
         </ScrollView>
       </View>
 
+      {/* Content List */}
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator color={theme.colors.accent} size="large" />
@@ -186,37 +244,71 @@ export default function ExercisesScreen() {
         <FlatList
           data={exercises}
           keyExtractor={(item) => item.id}
-          renderItem={({ item, index }) => (
-            <Pressable
-              onPress={() => handleSelectExercise(item)}
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.row,
-                index > 0 && styles.divided,
-                pressed && styles.pressed,
-              ]}
-            >
-              <View style={styles.info}>
-                <Text style={styles.name}>{item.name}</Text>
-                <View style={styles.badges}>
-                  <View style={styles.badgeMuscle}>
-                    <Text style={styles.badgeTextMuscle}>{MUSCLE_LABELS[item.muscleGroup]}</Text>
+          renderItem={({ item }) => {
+            const isCustom = !item.guideId && !item.id.startsWith("ex_");
+            const badgeColors = getMuscleBadgeColor(item.muscleGroup);
+            const lastText = lastPerfMap[item.id];
+
+            return (
+              <Pressable
+                onPress={() => setSelectedForGuide(item)}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.libRow, pressed && styles.rowPressed]}
+              >
+                <ExerciseArtThumb
+                  muscleGroup={item.muscleGroup}
+                  equipment={item.equipment}
+                  guideId={item.guideId}
+                  name={item.name}
+                  size="md"
+                  isCustom={isCustom}
+                />
+
+                <View style={styles.infoCol}>
+                  <Text style={styles.exerciseName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <View style={styles.metaRow}>
+                    <View style={[styles.badge, { backgroundColor: isCustom ? theme.colors.estimateSoft : badgeColors.bg }]}>
+                      <Text style={[styles.badgeText, { color: isCustom ? theme.colors.estimate : badgeColors.text }]}>
+                        {isCustom ? "Custom" : MUSCLE_LABELS[item.muscleGroup]}
+                      </Text>
+                    </View>
+                    <Text style={styles.metaText} numberOfLines={1}>
+                      {EQUIPMENT_LABELS[item.equipment]}
+                      {lastText ? ` · ${lastText}` : ""}
+                    </Text>
                   </View>
-                  <Text style={styles.equipText}>{EQUIPMENT_LABELS[item.equipment]}</Text>
-                  {item.isBodyweight && (
-                    <Text style={styles.bwText}>· Bodyweight</Text>
-                  )}
                 </View>
-              </View>
-              {isPicker && (
-                <Text style={styles.pickChevron}>›</Text>
-              )}
-            </Pressable>
-          )}
+
+                {isPicker ? (
+                  <Pressable
+                    onPress={() => handleSelectExercise(item)}
+                    hitSlop={8}
+                    style={styles.addPlusBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Add ${item.name}`}
+                  >
+                    <Text style={styles.addPlusText}>+ Add</Text>
+                  </Pressable>
+                ) : (
+                  <Text style={styles.chevronText}>›</Text>
+                )}
+              </Pressable>
+            );
+          }}
           contentContainerStyle={[
-            styles.listContent,
-            { paddingBottom: theme.space[6] + insets.bottom },
+            styles.listContainer,
+            { paddingBottom: theme.space[6] + insets.bottom + 20 },
           ]}
+          ListFooterComponent={
+            <View style={styles.ccNote}>
+              <Text style={styles.ccNoteText}>
+                <Text style={styles.ccNoteBold}>Exercise demonstrations:</Text>{" "}
+                <Text style={styles.ccCode}>free-exercise-db</Text> (Public Domain / Unlicense).
+              </Text>
+            </View>
+          }
         />
       )}
 
@@ -230,7 +322,7 @@ export default function ExercisesScreen() {
             ]}
           >
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>New custom exercise</Text>
+              <Text style={styles.modalTitle}>New Custom Exercise</Text>
               <Pressable
                 onPress={() => setModalVisible(false)}
                 accessibilityRole="button"
@@ -244,224 +336,394 @@ export default function ExercisesScreen() {
             <TextInput
               value={customName}
               onChangeText={setCustomName}
-              placeholder="e.g. Bulgarian Split Squat"
+              placeholder="e.g. Cable Chest Press"
               placeholderTextColor={theme.colors.faint}
               style={styles.textInput}
             />
 
             <Text style={styles.inputLabel}>Muscle group</Text>
-            <View style={styles.optionsWrap}>
-              {MUSCLE_GROUPS.map((mg) => {
-                const on = customMuscle === mg;
-                return (
-                  <Pressable
-                    key={mg}
-                    onPress={() => setCustomMuscle(mg)}
-                    style={[styles.optionChip, on && styles.optionChipOn]}
+            <View style={styles.optionWrap}>
+              {MUSCLE_GROUPS.map((mg) => (
+                <Pressable
+                  key={mg}
+                  onPress={() => setCustomMuscle(mg)}
+                  style={[
+                    styles.optionChip,
+                    customMuscle === mg && styles.optionChipOn,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.optionChipText,
+                      customMuscle === mg && styles.optionChipTextOn,
+                    ]}
                   >
-                    <Text style={[styles.optionText, on && styles.optionTextOn]}>
-                      {MUSCLE_LABELS[mg]}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+                    {MUSCLE_LABELS[mg]}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
 
             <Text style={styles.inputLabel}>Equipment</Text>
-            <View style={styles.optionsWrap}>
-              {(["barbell", "dumbbell", "machine", "cable", "bodyweight", "other"] as Equipment[]).map((eq) => {
-                const on = customEquipment === eq;
-                return (
-                  <Pressable
-                    key={eq}
-                    onPress={() => {
-                      setCustomEquipment(eq);
-                      if (eq === "bodyweight") setCustomIsBodyweight(true);
-                    }}
-                    style={[styles.optionChip, on && styles.optionChipOn]}
+            <View style={styles.optionWrap}>
+              {(Object.keys(EQUIPMENT_LABELS) as Equipment[]).map((eq) => (
+                <Pressable
+                  key={eq}
+                  onPress={() => {
+                    setCustomEquipment(eq);
+                    if (eq === "bodyweight") setCustomIsBodyweight(true);
+                  }}
+                  style={[
+                    styles.optionChip,
+                    customEquipment === eq && styles.optionChipOn,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.optionChipText,
+                      customEquipment === eq && styles.optionChipTextOn,
+                    ]}
                   >
-                    <Text style={[styles.optionText, on && styles.optionTextOn]}>
-                      {EQUIPMENT_LABELS[eq]}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+                    {EQUIPMENT_LABELS[eq]}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
 
-            <Pressable
-              onPress={() => setCustomIsBodyweight((prev) => !prev)}
-              style={styles.checkboxRow}
-            >
-              <View style={[styles.box, customIsBodyweight && styles.boxChecked]}>
-                {customIsBodyweight && <Text style={styles.checkMark}>✓</Text>}
-              </View>
-              <Text style={styles.checkboxLabel}>Bodyweight movement (reps-focused)</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={handleCreateExercise}
-              disabled={creating}
-              accessibilityRole="button"
-              style={[styles.submitBtn, creating && styles.disabled]}
-            >
-              {creating ? (
-                <ActivityIndicator color={theme.colors.accentInk} />
-              ) : (
-                <Text style={styles.submitBtnText}>Save exercise</Text>
-              )}
-            </Pressable>
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => setModalVisible(false)}
+                style={[styles.modalActionBtn, styles.modalCancelBtn]}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleCreateExercise}
+                disabled={creating}
+                style={[styles.modalActionBtn, styles.modalSaveBtn]}
+              >
+                <Text style={styles.modalSaveText}>
+                  {creating ? "Saving..." : "Create"}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
+
+      {/* Exercise Form Guide Modal */}
+      <ExerciseGuideModal
+        visible={selectedForGuide !== null}
+        exercise={selectedForGuide}
+        onClose={() => setSelectedForGuide(null)}
+        onSelect={handleSelectExercise}
+        isPicker={isPicker}
+      />
     </View>
+    </>
   );
 }
 
 function makeStyles(theme: Theme) {
-  const { colors, space, fontSize, radius, tap } = theme;
   return StyleSheet.create({
-    screen: { flex: 1, backgroundColor: colors.bg },
-    center: { flex: 1, justifyContent: "center", alignItems: "center", padding: space[4] },
+    screen: {
+      flex: 1,
+      backgroundColor: theme.colors.bg,
+    },
+    topNavRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.space[4],
+      paddingTop: theme.space[1],
+    },
+    backBtn: {
+      paddingVertical: 2,
+    },
+    backText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.accentText,
+      fontWeight: "500",
+    },
+    customLink: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.accentText,
+      fontWeight: "600",
+    },
     appbar: {
+      paddingHorizontal: theme.space[4],
+      paddingTop: theme.space[2],
+      paddingBottom: theme.space[2],
       flexDirection: "row",
-      alignItems: "center",
+      alignItems: "baseline",
       justifyContent: "space-between",
-      paddingHorizontal: space[4],
-      paddingVertical: space[2],
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
     },
-    backBtn: { minHeight: tap, justifyContent: "center" },
-    backText: { color: colors.accentText, fontSize: fontSize.md, fontWeight: "500" },
-    appbarTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
-    addBtn: { minHeight: tap, justifyContent: "center" },
-    addBtnText: { color: colors.accentText, fontSize: fontSize.sm, fontWeight: "600" },
-    searchbarWrap: { paddingHorizontal: space[4], paddingTop: space[3], paddingBottom: space[2] },
+    appbarTitle: {
+      fontSize: theme.fontSize.lg,
+      fontWeight: "700",
+      color: theme.colors.text,
+      letterSpacing: -0.3,
+    },
+    appbarSub: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.muted,
+    },
+    searchWrap: {
+      paddingHorizontal: theme.space[4],
+      marginBottom: theme.space[2],
+    },
     searchBox: {
+      height: 42,
+      backgroundColor: theme.colors.surface2,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.md,
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: colors.surface2,
-      borderRadius: radius.md,
-      paddingHorizontal: space[3],
-      height: 44,
-      gap: space[2],
-      borderWidth: 1,
-      borderColor: colors.border,
+      paddingHorizontal: theme.space[3],
     },
-    searchInput: { flex: 1, fontSize: fontSize.sm, color: colors.text },
-    clearText: { color: colors.muted, fontSize: fontSize.sm, paddingHorizontal: space[1] },
-    chipsWrap: { paddingBottom: space[2] },
-    chipsContent: { paddingHorizontal: space[4], gap: space[2] },
+    searchInput: {
+      flex: 1,
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.text,
+      padding: 0,
+    },
+    clearText: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.muted,
+      fontWeight: "600",
+    },
+    chipsWrap: {
+      marginBottom: theme.space[3],
+    },
+    chipsContent: {
+      paddingHorizontal: theme.space[4],
+      gap: theme.space[2],
+    },
     chip: {
-      paddingHorizontal: space[3],
       height: 32,
-      borderRadius: radius.pill,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      justifyContent: "center",
+      paddingHorizontal: theme.space[3],
+      borderRadius: theme.radius.pill,
+      backgroundColor: theme.colors.surface2,
       alignItems: "center",
+      justifyContent: "center",
     },
-    chipOn: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
-    chipText: { fontSize: fontSize.xs, color: colors.muted, fontWeight: "500" },
-    chipTextOn: { color: colors.accentText, fontWeight: "600" },
-    emptyText: { color: colors.muted, fontSize: fontSize.md, marginBottom: space[3] },
+    chipOn: {
+      backgroundColor: theme.colors.accentSoft,
+    },
+    chipText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.muted,
+      fontWeight: "500",
+    },
+    chipTextOn: {
+      color: theme.colors.accentText,
+      fontWeight: "600",
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: theme.space[5],
+    },
+    emptyText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.muted,
+      marginBottom: theme.space[3],
+    },
     createFirstBtn: {
-      backgroundColor: colors.accent,
-      paddingHorizontal: space[4],
-      paddingVertical: space[2],
-      borderRadius: radius.md,
+      paddingHorizontal: theme.space[4],
+      paddingVertical: theme.space[2],
+      borderRadius: theme.radius.sm,
+      backgroundColor: theme.colors.surface2,
     },
-    createFirstText: { color: colors.accentInk, fontSize: fontSize.sm, fontWeight: "700" },
-    listContent: { paddingHorizontal: space[4] },
-    row: {
+    createFirstText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.accentText,
+      fontWeight: "600",
+    },
+
+    // List & Rows
+    listContainer: {
+      paddingHorizontal: theme.space[4],
+      gap: 0,
+    },
+    libRow: {
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "space-between",
-      paddingVertical: space[3],
-      gap: space[2],
-      minHeight: 56,
+      paddingVertical: theme.space[2] + 2,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      gap: theme.space[3],
     },
-    divided: { borderTopWidth: 1, borderTopColor: colors.border },
-    pressed: { opacity: 0.7 },
-    info: { flex: 1 },
-    name: { fontSize: fontSize.md, fontWeight: "500", color: colors.text },
-    badges: { flexDirection: "row", alignItems: "center", gap: space[2], marginTop: 3 },
-    badgeMuscle: {
-      backgroundColor: colors.surface2,
-      paddingHorizontal: 6,
-      paddingVertical: 1,
-      borderRadius: radius.pill,
+    rowPressed: {
+      backgroundColor: theme.colors.surface2,
     },
-    badgeTextMuscle: { fontSize: fontSize.xs, color: colors.muted, fontWeight: "600" },
-    equipText: { fontSize: fontSize.xs, color: colors.faint },
-    bwText: { fontSize: fontSize.xs, color: colors.faint },
-    pickChevron: { fontSize: fontSize.lg, color: colors.muted },
+    infoCol: {
+      flex: 1,
+      minWidth: 0,
+    },
+    exerciseName: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: "600",
+      color: theme.colors.text,
+    },
+    metaRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginTop: 3,
+    },
+    badge: {
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: theme.radius.pill,
+    },
+    badgeText: {
+      fontSize: 10,
+      fontWeight: "600",
+    },
+    metaText: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.muted,
+      flex: 1,
+    },
+    addPlusBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 6,
+      backgroundColor: theme.colors.accentSoft,
+    },
+    addPlusText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: theme.colors.accentText,
+    },
+    chevronText: {
+      fontSize: 20,
+      color: theme.colors.faint,
+      paddingHorizontal: 4,
+    },
+
+    // Attribution Note
+    ccNote: {
+      marginTop: theme.space[4],
+      padding: theme.space[3],
+      borderRadius: theme.radius.sm,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+    },
+    ccNoteText: {
+      fontSize: 11,
+      color: theme.colors.muted,
+      lineHeight: 16,
+    },
+    ccNoteBold: {
+      color: theme.colors.text,
+      fontWeight: "600",
+    },
+    ccCode: {
+      fontFamily: "monospace",
+      color: theme.colors.accentText,
+    },
+
+    // Modal
     modalOverlay: {
       flex: 1,
-      backgroundColor: "rgba(0,0,0,0.5)",
+      backgroundColor: theme.colors.scrim,
       justifyContent: "flex-end",
     },
     modalCard: {
-      backgroundColor: colors.surface,
-      borderTopLeftRadius: radius.lg,
-      borderTopRightRadius: radius.lg,
-      padding: space[4],
-      gap: space[3],
+      backgroundColor: theme.colors.surface,
+      borderTopLeftRadius: theme.radius.lg,
+      borderTopRightRadius: theme.radius.lg,
+      padding: theme.space[4],
+      gap: theme.space[2],
     },
     modalHeader: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      paddingBottom: space[1],
+      marginBottom: theme.space[2],
     },
-    modalTitle: { fontSize: fontSize.lg, fontWeight: "700", color: colors.text },
-    closeBtn: { fontSize: fontSize.lg, color: colors.muted, padding: space[1] },
-    inputLabel: { fontSize: fontSize.xs, color: colors.muted, fontWeight: "600", textTransform: "uppercase" },
+    modalTitle: {
+      fontSize: theme.fontSize.md,
+      fontWeight: "700",
+      color: theme.colors.text,
+    },
+    closeBtn: {
+      fontSize: 18,
+      color: theme.colors.muted,
+    },
+    inputLabel: {
+      fontSize: theme.fontSize.xs,
+      fontWeight: "600",
+      color: theme.colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      marginTop: theme.space[2],
+    },
     textInput: {
-      backgroundColor: colors.surface2,
-      borderRadius: radius.md,
-      paddingHorizontal: space[3],
-      paddingVertical: space[2],
-      fontSize: fontSize.md,
-      color: colors.text,
+      height: 42,
+      borderRadius: theme.radius.sm,
+      backgroundColor: theme.colors.surface2,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: theme.colors.border,
+      color: theme.colors.text,
+      paddingHorizontal: theme.space[3],
+      fontSize: theme.fontSize.sm,
     },
-    optionsWrap: { flexDirection: "row", flexWrap: "wrap", gap: space[2] },
+    optionWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: theme.space[2],
+    },
     optionChip: {
-      paddingHorizontal: space[3],
+      paddingHorizontal: theme.space[3],
       paddingVertical: 6,
-      borderRadius: radius.pill,
-      backgroundColor: colors.surface2,
+      borderRadius: theme.radius.pill,
+      backgroundColor: theme.colors.surface2,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: "transparent",
     },
-    optionChipOn: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
-    optionText: { fontSize: fontSize.xs, color: colors.muted },
-    optionTextOn: { color: colors.accentText, fontWeight: "600" },
-    checkboxRow: { flexDirection: "row", alignItems: "center", gap: space[2], paddingVertical: space[1] },
-    box: {
-      width: 20,
-      height: 20,
-      borderRadius: 4,
-      borderWidth: 2,
-      borderColor: colors.border,
+    optionChipOn: {
+      backgroundColor: theme.colors.accentSoft,
+      borderColor: theme.colors.accent,
+    },
+    optionChipText: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.muted,
+    },
+    optionChipTextOn: {
+      color: theme.colors.accentText,
+      fontWeight: "600",
+    },
+    modalActions: {
+      flexDirection: "row",
+      gap: theme.space[2],
+      marginTop: theme.space[4],
+    },
+    modalActionBtn: {
+      flex: 1,
+      height: 44,
+      borderRadius: theme.radius.md,
       alignItems: "center",
       justifyContent: "center",
     },
-    boxChecked: { backgroundColor: colors.accent, borderColor: colors.accent },
-    checkMark: { color: colors.accentInk, fontSize: 10, fontWeight: "700" },
-    checkboxLabel: { fontSize: fontSize.sm, color: colors.text },
-    submitBtn: {
-      backgroundColor: colors.accent,
-      borderRadius: radius.md,
-      minHeight: tap,
-      justifyContent: "center",
-      alignItems: "center",
-      marginTop: space[2],
+    modalCancelBtn: {
+      backgroundColor: theme.colors.surface2,
     },
-    submitBtnText: { color: colors.accentInk, fontSize: fontSize.md, fontWeight: "700" },
-    disabled: { opacity: 0.5 },
+    modalCancelText: {
+      color: theme.colors.muted,
+      fontWeight: "600",
+    },
+    modalSaveBtn: {
+      backgroundColor: theme.colors.accent,
+    },
+    modalSaveText: {
+      color: theme.colors.accentInk,
+      fontWeight: "700",
+    },
   });
 }

@@ -5,6 +5,9 @@ import { exerciseRepo } from "./exerciseRepo";
 import {
   calculateDurationMinutes,
   calculateTotalVolume,
+  checkSetPR,
+  estimate1RM,
+  getExerciseBestSet,
 } from "../services/workoutCalc";
 import type {
   Equipment,
@@ -22,6 +25,9 @@ type SessionRow = {
   started_at: string;
   ended_at: string | null;
   notes: string | null;
+  is_paused?: number | null;
+  elapsed_sec?: number | null;
+  last_resumed_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -55,8 +61,8 @@ export const workoutRepo = {
     const now = new Date().toISOString();
 
     await db.runAsync(
-      `INSERT INTO workout_sessions (id, name, started_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO workout_sessions (id, name, started_at, is_paused, elapsed_sec, last_resumed_at, created_at, updated_at)
+       VALUES (?, ?, ?, 1, 0, NULL, ?, ?)`,
       [id, name.trim() || "Workout", now, now, now],
     );
 
@@ -134,14 +140,34 @@ export const workoutRepo = {
       });
     }
 
-    // Attach previous performance hints
+    // Attach previous performance hints and PR analysis
+    let totalPRCount = 0;
     const exercises: SessionExercise[] = [];
     for (const item of exerciseMap.values()) {
-      const prev = await exerciseRepo.getPreviousPerformance(db, item.exercise.id, sessionId);
+      const [prev, histMax] = await Promise.all([
+        exerciseRepo.getPreviousPerformance(db, item.exercise.id, sessionId),
+        exerciseRepo.getHistoryMax(db, item.exercise.id, row.started_at),
+      ]);
+      const best = getExerciseBestSet(item.sets, item.exercise.isBodyweight, histMax);
+
+      let maxEst1RM = 0;
+      for (const s of item.sets) {
+        if (!s.isWarmup && s.isCompleted) {
+          const est = estimate1RM(s.weightKg, s.reps);
+          if (est > maxEst1RM) maxEst1RM = est;
+          const pr = checkSetPR(s, histMax);
+          if (pr.isWeightPR) totalPRCount++;
+          if (pr.isVolumePR) totalPRCount++;
+        }
+      }
+
       exercises.push({
         exercise: item.exercise,
         previousText: prev.text,
         sets: item.sets,
+        bestSetText: best?.text ?? null,
+        hasPR: best?.isPR ?? false,
+        est1RM: maxEst1RM > 0 ? maxEst1RM : null,
       });
     }
 
@@ -158,12 +184,16 @@ export const workoutRepo = {
       startedAt: row.started_at,
       endedAt: row.ended_at,
       notes: row.notes,
+      isPaused: row.is_paused === 1,
+      elapsedSec: row.elapsed_sec ?? 0,
+      lastResumedAt: row.last_resumed_at ?? row.started_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       exercises,
       durationMinutes: calculateDurationMinutes(row.started_at, row.ended_at),
       totalVolumeKg: calculateTotalVolume(allSets),
       totalSets: allSets.filter((s) => s.isCompleted).length,
+      prCount: totalPRCount,
     };
   },
 
@@ -254,11 +284,85 @@ export const workoutRepo = {
     await db.runAsync("UPDATE workout_sets SET deleted_at = ? WHERE id = ?", [now, setId]);
   },
 
-  async finishSession(db: SQLiteDatabase, sessionId: string, notes?: string): Promise<void> {
+  async deleteExerciseFromSession(db: SQLiteDatabase, sessionId: string, exerciseId: string): Promise<void> {
     const now = new Date().toISOString();
     await db.runAsync(
-      "UPDATE workout_sessions SET ended_at = ?, notes = COALESCE(?, notes), updated_at = ? WHERE id = ?",
-      [now, notes ?? null, now, sessionId],
+      "UPDATE workout_sets SET deleted_at = ? WHERE session_id = ? AND exercise_id = ?",
+      [now, sessionId, exerciseId],
+    );
+  },
+
+  async swapExerciseOrder(db: SQLiteDatabase, sessionId: string, exIdA: string, exIdB: string): Promise<void> {
+    const setsA = await db.getAllAsync<{ id: string; created_at: string }>(
+      "SELECT id, created_at FROM workout_sets WHERE session_id = ? AND exercise_id = ? AND deleted_at IS NULL ORDER BY set_number ASC",
+      [sessionId, exIdA],
+    );
+    const setsB = await db.getAllAsync<{ id: string; created_at: string }>(
+      "SELECT id, created_at FROM workout_sets WHERE session_id = ? AND exercise_id = ? AND deleted_at IS NULL ORDER BY set_number ASC",
+      [sessionId, exIdB],
+    );
+    if (setsA.length === 0 || setsB.length === 0) return;
+
+    const minA = setsA[0]!.created_at;
+    const minB = setsB[0]!.created_at;
+
+    await db.withExclusiveTransactionAsync(async (tx) => {
+      for (const s of setsA) {
+        await tx.runAsync("UPDATE workout_sets SET created_at = ? WHERE id = ?", [minB, s.id]);
+      }
+      for (const s of setsB) {
+        await tx.runAsync("UPDATE workout_sets SET created_at = ? WHERE id = ?", [minA, s.id]);
+      }
+    });
+  },
+
+  async finishSession(
+    db: SQLiteDatabase,
+    sessionId: string,
+    notes?: string,
+    finalElapsedSec?: number,
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    await db.runAsync(
+      `UPDATE workout_sessions
+       SET ended_at = ?, notes = COALESCE(?, notes), is_paused = 0,
+           elapsed_sec = COALESCE(?, elapsed_sec), updated_at = ?
+       WHERE id = ?`,
+      [now, notes ?? null, finalElapsedSec ?? null, now, sessionId],
+    );
+  },
+
+  async pauseSession(
+    db: SQLiteDatabase,
+    sessionId: string,
+    currentElapsedSec: number,
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    await db.runAsync(
+      `UPDATE workout_sessions
+       SET is_paused = 1, elapsed_sec = ?, last_resumed_at = NULL, updated_at = ?
+       WHERE id = ?`,
+      [currentElapsedSec, now, sessionId],
+    );
+  },
+
+  async resumeSession(db: SQLiteDatabase, sessionId: string): Promise<void> {
+    const now = new Date().toISOString();
+    await db.runAsync(
+      `UPDATE workout_sessions
+       SET is_paused = 0, last_resumed_at = ?, updated_at = ?
+       WHERE id = ?`,
+      [now, now, sessionId],
+    );
+  },
+
+  async restartSession(db: SQLiteDatabase, sessionId: string): Promise<void> {
+    const now = new Date().toISOString();
+    await db.runAsync(
+      `UPDATE workout_sessions
+       SET started_at = ?, elapsed_sec = 0, is_paused = 1, last_resumed_at = NULL, updated_at = ?
+       WHERE id = ?`,
+      [now, now, sessionId],
     );
   },
 
@@ -294,12 +398,10 @@ export const workoutRepo = {
       [limit],
     );
 
-    const result: WorkoutSession[] = [];
-    for (const r of rows) {
-      const session = await workoutRepo.getSession(db, r.id);
-      if (session) result.push(session);
-    }
-    return result;
+    const sessions = await Promise.all(
+      rows.map((r) => workoutRepo.getSession(db, r.id)),
+    );
+    return sessions.filter((s): s is WorkoutSession => s !== null);
   },
 
   async getTodaySession(db: SQLiteDatabase, dayIsoPrefix?: string): Promise<WorkoutSession | null> {
@@ -313,5 +415,43 @@ export const workoutRepo = {
 
     if (!row) return null;
     return workoutRepo.getSession(db, row.id);
+  },
+
+  async getThisWeekCount(db: SQLiteDatabase): Promise<number> {
+    const now = new Date();
+    const day = now.getDay();
+    const diff = (day === 0 ? -6 : 1) - day;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diff);
+    monday.setHours(0, 0, 0, 0);
+    const iso = monday.toISOString();
+
+    const row = await db.getFirstAsync<{ count: number }>(
+      `SELECT COUNT(*) as count FROM workout_sessions
+       WHERE ended_at IS NOT NULL AND started_at >= ? AND deleted_at IS NULL`,
+      [iso],
+    );
+    return row?.count ?? 0;
+  },
+
+  async repeatSession(db: SQLiteDatabase, sourceSessionId: string): Promise<string> {
+    const source = await workoutRepo.getSession(db, sourceSessionId);
+    if (!source) throw new Error("Source session not found");
+
+    const newId = await workoutRepo.startSession(db, source.name);
+    if (source.exercises && source.exercises.length > 0) {
+      for (const exGroup of source.exercises) {
+        const lastWorkingSet = exGroup.sets.find((s) => s.isCompleted && !s.isWarmup) ?? exGroup.sets[0];
+        await workoutRepo.addSet(db, {
+          sessionId: newId,
+          exerciseId: exGroup.exercise.id,
+          setNumber: 1,
+          weightKg: lastWorkingSet?.weightKg ?? (exGroup.exercise.isBodyweight ? 0 : 20),
+          reps: lastWorkingSet?.reps ?? 10,
+          isCompleted: false,
+        });
+      }
+    }
+    return newId;
   },
 };

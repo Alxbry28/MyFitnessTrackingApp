@@ -45,15 +45,20 @@ export function useActiveWorkout(specificSessionId?: string) {
   );
 
   const addSet = useCallback(
-    async (exerciseId: string) => {
+    async (
+      exerciseId: string,
+      initialWeight?: number,
+      initialReps?: number,
+      isWarmup = false,
+    ) => {
       if (!session) return;
       const exGroup = session.exercises?.find((e) => e.exercise.id === exerciseId);
       const existingSets = exGroup?.sets ?? [];
       const lastSet = existingSets[existingSets.length - 1];
 
       const nextSetNumber = existingSets.length + 1;
-      const reps = lastSet?.reps ?? (exGroup?.exercise.isBodyweight ? 10 : 8);
-      const weightKg = lastSet?.weightKg ?? (exGroup?.exercise.isBodyweight ? 0 : 20);
+      const reps = initialReps ?? lastSet?.reps ?? (exGroup?.exercise.isBodyweight ? 10 : 8);
+      const weightKg = initialWeight ?? lastSet?.weightKg ?? (exGroup?.exercise.isBodyweight ? 0 : 20);
 
       await workoutRepo.addSet(db, {
         sessionId: session.id,
@@ -61,7 +66,8 @@ export function useActiveWorkout(specificSessionId?: string) {
         setNumber: nextSetNumber,
         reps,
         weightKg,
-        isCompleted: true,
+        isWarmup,
+        isCompleted: false,
       });
 
       void load();
@@ -86,13 +92,40 @@ export function useActiveWorkout(specificSessionId?: string) {
   );
 
   const finishWorkout = useCallback(
-    async (notes?: string) => {
+    async (notes?: string, finalElapsedSec?: number) => {
       if (!session) return;
-      await workoutRepo.finishSession(db, session.id, notes);
+      await workoutRepo.finishSession(db, session.id, notes, finalElapsedSec);
       void load();
     },
     [db, session, load],
   );
+
+  const pauseWorkout = useCallback(
+    async (currentElapsedSec: number) => {
+      if (!session) return;
+      await workoutRepo.pauseSession(db, session.id, currentElapsedSec);
+      void load();
+    },
+    [db, session, load],
+  );
+
+  const resumeWorkout = useCallback(async () => {
+    if (!session) return;
+    await workoutRepo.resumeSession(db, session.id);
+    void load();
+  }, [db, session, load]);
+
+  const restartWorkout = useCallback(async () => {
+    if (!session) return;
+    await workoutRepo.restartSession(db, session.id);
+    void load();
+  }, [db, session, load]);
+
+  const discardWorkout = useCallback(async () => {
+    if (!session) return;
+    await workoutRepo.deleteSession(db, session.id);
+    void load();
+  }, [db, session, load]);
 
   const updateName = useCallback(
     async (name: string) => {
@@ -112,6 +145,31 @@ export function useActiveWorkout(specificSessionId?: string) {
     [db, session, load],
   );
 
+  const moveExercise = useCallback(
+    async (exerciseId: string, direction: "up" | "down") => {
+      if (!session || !session.exercises) return;
+      const list = session.exercises;
+      const currentIndex = list.findIndex((e) => e.exercise.id === exerciseId);
+      if (currentIndex === -1) return;
+      const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+      if (targetIndex < 0 || targetIndex >= list.length) return;
+
+      const targetExerciseId = list[targetIndex].exercise.id;
+      await workoutRepo.swapExerciseOrder(db, session.id, exerciseId, targetExerciseId);
+      void load();
+    },
+    [db, session, load],
+  );
+
+  const deleteExercise = useCallback(
+    async (exerciseId: string) => {
+      if (!session) return;
+      await workoutRepo.deleteExerciseFromSession(db, session.id, exerciseId);
+      void load();
+    },
+    [db, session, load],
+  );
+
   return {
     session,
     loading,
@@ -120,8 +178,15 @@ export function useActiveWorkout(specificSessionId?: string) {
     addSet,
     updateSet,
     deleteSet,
+    moveExercise,
+    deleteExercise,
+    pauseWorkout,
+    resumeWorkout,
+    restartWorkout,
+    discardWorkout,
     finishWorkout,
     updateName,
     updateNotes,
   };
 }
+

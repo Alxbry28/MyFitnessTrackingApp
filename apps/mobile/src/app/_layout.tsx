@@ -41,6 +41,22 @@ export default function RootLayout() {
               <Stack.Screen name="pantry/add/[productId]" options={{ title: "Add to pantry" }} />
               <Stack.Screen name="pantry/[id]" options={{ title: "Pantry item", headerShown: false }} />
               <Stack.Screen name="pantry/portion/[itemId]" options={{ title: "Log a portion" }} />
+              <Stack.Screen name="pantry/new-supplement" options={{ headerShown: false }} />
+              <Stack.Screen name="pantry/edit-supplement" options={{ headerShown: false }} />
+              <Stack.Screen name="pantry/settle/[batchId]" options={{ headerShown: false }} />
+              <Stack.Screen name="workouts/index" options={{ headerShown: false }} />
+              <Stack.Screen name="workouts/[id]" options={{ headerShown: false }} />
+              <Stack.Screen name="workouts/exercises" options={{ headerShown: false }} />
+              <Stack.Screen name="workouts/routine-editor" options={{ headerShown: false }} />
+              <Stack.Screen name="workouts/summary/[id]" options={{ headerShown: false }} />
+              <Stack.Screen name="measurements/index" options={{ headerShown: false }} />
+              <Stack.Screen name="measurements/log" options={{ headerShown: false }} />
+              <Stack.Screen name="measurements/guide" options={{ headerShown: false }} />
+              <Stack.Screen name="measurements/sites" options={{ headerShown: false }} />
+              <Stack.Screen name="recipes/index" options={{ headerShown: false }} />
+              <Stack.Screen name="recipes/[id]" options={{ headerShown: false }} />
+              <Stack.Screen name="recipes/cook/[recipeId]" options={{ headerShown: false }} />
+              <Stack.Screen name="calorie-stats" options={{ headerShown: false }} />
             </Stack>
           </SQLiteProvider>
         </Suspense>

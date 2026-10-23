@@ -1,0 +1,826 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exercise Form Guide - Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="workouts-theme.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--desk);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-5);
+    padding: var(--space-6) var(--space-4);
+  }
+
+  /* Desktop Top Bar */
+  .toolbar {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+    font-size: var(--text-sm);
+    color: var(--muted);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .toolbar a { color: var(--accent-text); text-decoration: none; }
+  .toolbar a:hover { text-decoration: underline; }
+  .nav b { color: var(--text); font-weight: 600; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .toggle {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-xs);
+    font-weight: 600;
+  }
+
+  /* Multi-Frame Grid */
+  .frames { display: flex; gap: var(--space-6); flex-wrap: wrap; justify-content: center; }
+  .frame-col { display: flex; flex-direction: column; align-items: center; }
+  .frame-label {
+    font-size: var(--text-sm);
+    color: var(--muted);
+    margin-bottom: var(--space-2);
+    text-align: center;
+    max-width: 375px;
+    font-weight: 500;
+  }
+
+  /* Phone Shell */
+  .phone {
+    width: 375px;
+    height: 800px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 32px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow);
+  }
+  .status {
+    height: 28px;
+    flex: none;
+    padding: 0 var(--space-5);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--text-xs);
+    color: var(--muted);
+  }
+  .appbar {
+    padding: var(--space-1) var(--space-4) var(--space-2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .back-link {
+    font-size: var(--text-sm);
+    color: var(--accent-text);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .appbar-title {
+    font-size: var(--text-md);
+    font-weight: 700;
+    color: var(--text);
+  }
+  .appbar-action {
+    font-size: var(--text-xs);
+    color: var(--accent-text);
+    font-weight: 700;
+    background: var(--accent-soft);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Scrollable Content */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: none;
+    padding: var(--space-3) var(--space-4) var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .content::-webkit-scrollbar { display: none; }
+
+  /* Cards & Shared Components */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  /* Exercise Hero Section */
+  .hero-card {
+    background: linear-gradient(180deg, var(--surface), var(--surface-2));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: center;
+    text-align: center;
+    position: relative;
+  }
+  .hero-badge-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .badge {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .badge.primary-muscle { background: rgba(255, 107, 74, 0.16); color: var(--art-muscle); }
+  .badge.equip { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+  .badge.diff { background: var(--timer-soft); color: var(--timer); }
+
+  .hero-name {
+    font-size: var(--text-lg);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  /* Illustration Stage */
+  .stage-box {
+    width: 100%;
+    height: 180px;
+    background: var(--art-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .stage-box svg { width: 85%; height: 85%; }
+  .phase-toggle-bar {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    display: flex;
+    background: rgba(38, 35, 32, 0.85);
+    backdrop-filter: blur(8px);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+    gap: 4px;
+  }
+  .phase-tab {
+    flex: 1;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    padding: 5px 0;
+    border-radius: 6px;
+    color: #a59d94;
+    transition: all 0.15s ease;
+  }
+  .phase-tab.active {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  /* Muscle Focus Legend */
+  .muscle-legend {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    width: 100%;
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border);
+    font-size: var(--text-xs);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .dot-target { width: 10px; height: 10px; border-radius: 50%; background: var(--art-muscle); }
+  .dot-assist { width: 10px; height: 10px; border-radius: 50%; background: var(--art-secondary); }
+
+  /* Section Titles */
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: var(--space-1);
+  }
+  .section-title {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* Step by Step Protocol */
+  .steps-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .step-row {
+    display: flex;
+    gap: var(--space-3);
+    align-items: flex-start;
+  }
+  .step-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    margin-top: 1px;
+  }
+  .step-content { flex: 1; }
+  .step-heading { font-size: var(--text-sm); font-weight: 700; color: var(--text); }
+  .step-desc { font-size: var(--text-xs); color: var(--muted); line-height: 1.45; margin-top: 2px; }
+
+  /* Form Cues: Dos & Don'ts */
+  .cues-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+  .cue-item {
+    display: flex;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    line-height: 1.45;
+  }
+  .cue-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    flex: none;
+  }
+  .cue-do .cue-icon { background: var(--ok-soft); color: var(--ok); }
+  .cue-dont .cue-icon { background: var(--over-soft); color: var(--over); }
+  .cue-text b { color: var(--text); }
+  .cue-text { color: var(--muted); }
+
+  /* Pro Tip / Breathing Box */
+  .tip-box {
+    background: var(--timer-soft);
+    border: 1px solid rgba(78, 168, 222, 0.3);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3);
+    display: flex;
+    gap: var(--space-2);
+  }
+  .tip-icon { font-size: var(--text-md); flex: none; }
+  .tip-title { font-size: var(--text-xs); font-weight: 700; color: var(--timer); text-transform: uppercase; letter-spacing: 0.04em; }
+  .tip-desc { font-size: var(--text-xs); color: var(--text); line-height: 1.45; margin-top: 2px; }
+
+  /* Personal Best Banner */
+  .pr-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface-2);
+    border-radius: var(--radius-sm);
+    padding: var(--space-2) var(--space-3);
+  }
+  .pr-strip-left { display: flex; align-items: center; gap: 8px; }
+  .pr-trophy { font-size: 16px; }
+  .pr-label { font-size: var(--text-xs); color: var(--muted); }
+  .pr-val { font-size: var(--text-sm); font-weight: 700; color: var(--text); }
+  .pr-badge { font-size: 10px; font-weight: 700; color: var(--pr); background: var(--pr-soft); padding: 2px 6px; border-radius: 999px; }
+
+  /* Action Button */
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    height: 44px;
+    border-radius: var(--radius);
+    font-weight: 700;
+    font-size: var(--text-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    margin-top: var(--space-1);
+  }
+
+  /* Exercise Selector Chips */
+  .selector-row {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .selector-row::-webkit-scrollbar { display: none; }
+  .sel-chip {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .sel-chip.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent-text);
+  }
+
+  /* Attribution Note */
+  .cc-box {
+    font-size: 10px;
+    color: var(--faint);
+    text-align: center;
+    line-height: 1.4;
+    padding: var(--space-2) var(--space-1);
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <button class="toggle" id="theme-toggle">Switch to light</button>
+  <span class="nav">Workouts Guide Prototype · <a href="workouts.html">Workouts Hub</a> · <a href="today.html">Today</a></span>
+</div>
+
+<div class="frames">
+
+  <!-- FRAME 1: Upper Body Form Guide (Bench Press) -->
+  <div class="frame-col">
+    <p class="frame-label">Frame 1: Upper Body Guide (Barbell Bench Press)</p>
+    <div class="phone">
+      <div class="status"><span>18:45</span><span>●●● 82%</span></div>
+
+      <!-- Appbar -->
+      <div class="appbar">
+        <span class="back-link">‹ Exercises</span>
+        <span class="appbar-title">Exercise Guide</span>
+        <span class="appbar-action">+ Add</span>
+      </div>
+
+      <div class="content">
+        <!-- Hero Box -->
+        <div class="hero-card">
+          <div class="hero-badge-row">
+            <span class="badge primary-muscle">Chest · Pectorals</span>
+            <span class="badge equip">Barbell</span>
+            <span class="badge diff">Compound</span>
+          </div>
+
+          <div class="hero-name">Barbell Bench Press</div>
+
+          <!-- Anatomical SVG Art Stage -->
+          <div class="stage-box">
+            <!-- Phased SVG: Start vs Chest Touch -->
+            <svg id="bench-svg" viewBox="0 0 100 70" fill="none">
+              <!-- Bench Base -->
+              <rect x="15" y="44" width="70" height="5" rx="2" fill="var(--art-ink)"/>
+              <line x1="25" y1="49" x2="25" y2="62" stroke="var(--art-ink)" stroke-width="3"/>
+              <line x1="75" y1="49" x2="75" y2="62" stroke="var(--art-ink)" stroke-width="3"/>
+              
+              <!-- Lifter Torso (Arched setup) -->
+              <ellipse cx="48" cy="38" rx="18" ry="7" fill="var(--art-muscle)"/>
+              <!-- Head -->
+              <circle cx="70" cy="36" r="5" fill="var(--art-ink)"/>
+              <!-- Shoulders & Upper Back Retracted -->
+              <circle cx="62" cy="39" r="4.5" fill="var(--art-secondary)"/>
+              
+              <!-- Legs & Planted Feet Drive -->
+              <path d="M30 42 L22 48 L20 62" stroke="var(--art-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="16" y="60" width="8" height="3" rx="1" fill="var(--art-ink)"/>
+              
+              <!-- Barbell Bar -->
+              <line x1="10" y1="22" x2="86" y2="22" stroke="var(--art-ink)" stroke-width="3.5" stroke-linecap="round"/>
+              <!-- Plates -->
+              <rect x="12" y="14" width="4" height="16" rx="1" fill="var(--art-ink)"/>
+              <rect x="80" y="14" width="4" height="16" rx="1" fill="var(--art-ink)"/>
+              
+              <!-- Arms Stacked over elbows -->
+              <path d="M62 39 L50 22" stroke="var(--art-secondary)" stroke-width="3.5" stroke-linecap="round"/>
+              <path d="M42 39 L46 22" stroke="var(--art-secondary)" stroke-width="3.5" stroke-linecap="round"/>
+            </svg>
+
+            <!-- Bottom Position Toggle -->
+            <div class="phase-toggle-bar">
+              <button class="phase-tab active" onclick="switchBenchPhase('lockout')">1. Lockout Setup</button>
+              <button class="phase-tab" onclick="switchBenchPhase('bottom')">2. Chest Touch</button>
+            </div>
+          </div>
+
+          <!-- Muscle Engagement Breakdown -->
+          <div class="muscle-legend">
+            <div class="legend-item">
+              <span class="dot-target"></span>
+              <span><b>Target:</b> Pectoralis Major</span>
+            </div>
+            <div class="legend-item">
+              <span class="dot-assist"></span>
+              <span><b>Assist:</b> Triceps · Ant. Deltoid</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PR / Performance Snapshot -->
+        <div class="pr-strip">
+          <div class="pr-strip-left">
+            <span class="pr-trophy">🏆</span>
+            <div>
+              <div class="pr-label">Your Personal Record</div>
+              <div class="pr-val">82.5 kg × 6 reps</div>
+            </div>
+          </div>
+          <span class="pr-badge">Est. 1RM 96 kg</span>
+        </div>
+
+        <!-- Setup & Step-by-Step Execution -->
+        <div class="card">
+          <div class="section-title">Execution Checklist</div>
+          <div class="steps-list">
+            <div class="step-row">
+              <span class="step-num">1</span>
+              <div class="step-content">
+                <div class="step-heading">Set the Arch & Retract Scapula</div>
+                <div class="step-desc">Pinch your shoulder blades down and back into the bench. Eyes positioned directly under the bar.</div>
+              </div>
+            </div>
+            <div class="step-row">
+              <span class="step-num">2</span>
+              <div class="step-content">
+                <div class="step-heading">Unrack & Establish Wrist Stack</div>
+                <div class="step-desc">Grip the bar slightly wider than shoulder width. Squeeze the bar tightly so wrists don't bend back.</div>
+              </div>
+            </div>
+            <div class="step-row">
+              <span class="step-num">3</span>
+              <div class="step-content">
+                <div class="step-heading">Controlled Descent (45°–70° Tuck)</div>
+                <div class="step-desc">Lower the bar in a diagonal arc to touch the lower sternum. Do not bounce off the ribcage.</div>
+              </div>
+            </div>
+            <div class="step-row">
+              <span class="step-num">4</span>
+              <div class="step-content">
+                <div class="step-heading">Leg Drive & Explosive Press</div>
+                <div class="step-desc">Drive heels through the floor while keeping glutes planted on the bench. Press up and back to lockout.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dos vs Don'ts Form Cues -->
+        <div class="card">
+          <div class="section-title">Critical Form Cues</div>
+          <div class="cues-grid">
+            <div class="cue-item cue-do">
+              <span class="cue-icon">✓</span>
+              <div class="cue-text"><b>Tuck elbows at 45°:</b> Protects rotator cuffs from dangerous 90° impingement.</div>
+            </div>
+            <div class="cue-item cue-do">
+              <span class="cue-icon">✓</span>
+              <div class="cue-text"><b>Keep glutes on the bench:</b> Arching upper spine is safe; lifting buttocks loses stability.</div>
+            </div>
+            <div class="cue-item cue-dont">
+              <span class="cue-icon">✕</span>
+              <div class="cue-text"><b>Bouncing off chest:</b> Increases sternum injury risk and robs muscle tension.</div>
+            </div>
+            <div class="cue-item cue-dont">
+              <span class="cue-icon">✕</span>
+              <div class="cue-text"><b>Bent back wrists:</b> Leads to wrist hyperextension and power leakage.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Breathing & Bracing Box -->
+        <div class="tip-box">
+          <span class="tip-icon">🫁</span>
+          <div>
+            <div class="tip-title">Breathing & Valsalva Cue</div>
+            <div class="tip-desc">Take a deep belly breath at the top and brace your core tightly. Hold your breath through the descent, then exhale forcefully past the sticking point on the press.</div>
+          </div>
+        </div>
+
+        <!-- CTA Button -->
+        <button class="btn-primary">
+          <span>+ Add to Active Workout</span>
+        </button>
+
+        <div class="cc-box">
+          Illustrations based on <b>@bryllim/workout-guide</b> (CC BY-SA 4.0, Bryl Lim & Everkinetic).
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FRAME 2: Lower Body Form Guide (Squat & Deadlift Guide) -->
+  <div class="frame-col">
+    <p class="frame-label">Frame 2: Lower Body Guide (Barbell Back Squat)</p>
+    <div class="phone">
+      <div class="status"><span>18:46</span><span>●●● 82%</span></div>
+
+      <!-- Appbar -->
+      <div class="appbar">
+        <span class="back-link">‹ Exercises</span>
+        <span class="appbar-title">Exercise Guide</span>
+        <span class="appbar-action">+ Add</span>
+      </div>
+
+      <div class="content">
+        <!-- Interactive Exercise Selector Chips -->
+        <div class="selector-row">
+          <button class="sel-chip active">Back Squat</button>
+          <button class="sel-chip">Deadlift</button>
+          <button class="sel-chip">Romanian DL</button>
+          <button class="sel-chip">Overhead Press</button>
+        </div>
+
+        <!-- Hero Box -->
+        <div class="hero-card">
+          <div class="hero-badge-row">
+            <span class="badge primary-muscle">Legs · Quads & Glutes</span>
+            <span class="badge equip">Barbell</span>
+            <span class="badge diff">King of Compounds</span>
+          </div>
+
+          <div class="hero-name">Barbell Back Squat</div>
+
+          <!-- Anatomical SVG Art Stage -->
+          <div class="stage-box">
+            <svg id="squat-svg" viewBox="0 0 100 80" fill="none">
+              <!-- Floor Ground Line -->
+              <line x1="10" y1="72" x2="90" y2="72" stroke="var(--art-ink)" stroke-width="2"/>
+              
+              <!-- Torso Incline with neutral spine -->
+              <path d="M42 28 L35 48" stroke="var(--art-ink)" stroke-width="7" stroke-linecap="round"/>
+              <ellipse cx="37" cy="42" rx="7" ry="12" transform="rotate(-20 37 42)" fill="var(--art-muscle)"/>
+              
+              <!-- Head neutral -->
+              <circle cx="48" cy="22" r="5" fill="var(--art-ink)"/>
+              
+              <!-- Barbell across traps -->
+              <circle cx="41" cy="28" r="3.5" fill="var(--art-ink)"/>
+              <line x1="39" y1="12" x2="39" y2="44" stroke="var(--art-ink)" stroke-width="3"/>
+              
+              <!-- Femur / Thigh at parallel / hip crease below knee -->
+              <path d="M35 48 L56 52" stroke="var(--art-muscle)" stroke-width="5" stroke-linecap="round"/>
+              <!-- Knee tracking over toe angle -->
+              <path d="M56 52 L52 72" stroke="var(--art-secondary)" stroke-width="4.5" stroke-linecap="round"/>
+              <!-- Planted Foot -->
+              <rect x="48" y="70" width="12" height="3" rx="1" fill="var(--art-ink)"/>
+              
+              <!-- Parallel Depth Guideline -->
+              <line x1="28" y1="52" x2="68" y2="52" stroke="var(--ok)" stroke-width="1.5" stroke-dasharray="3 2"/>
+              <text x="70" y="54" fill="var(--ok)" font-size="6" font-weight="700">PARALLEL</text>
+            </svg>
+
+            <!-- Squat Depth Toggle -->
+            <div class="phase-toggle-bar">
+              <button class="phase-tab" onclick="switchSquatDepth('top')">1. Walkout Setup</button>
+              <button class="phase-tab active" onclick="switchSquatDepth('depth')">2. Below Parallel (Depth)</button>
+            </div>
+          </div>
+
+          <!-- Muscle Engagement Breakdown -->
+          <div class="muscle-legend">
+            <div class="legend-item">
+              <span class="dot-target"></span>
+              <span><b>Target:</b> Quadriceps · Glutes</span>
+            </div>
+            <div class="legend-item">
+              <span class="dot-assist"></span>
+              <span><b>Assist:</b> Hamstrings · Adductors · Core</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PR / Performance Snapshot -->
+        <div class="pr-strip">
+          <div class="pr-strip-left">
+            <span class="pr-trophy">🏆</span>
+            <div>
+              <div class="pr-label">Your Personal Record</div>
+              <div class="pr-val">105 kg × 5 reps</div>
+            </div>
+          </div>
+          <span class="pr-badge">Est. 1RM 122 kg</span>
+        </div>
+
+        <!-- Stance & Form Checklist -->
+        <div class="card">
+          <div class="section-title">Setup & Mechanics</div>
+          <div class="steps-list">
+            <div class="step-row">
+              <span class="step-num">1</span>
+              <div class="step-content">
+                <div class="step-heading">Stance Width & Toe Flare</div>
+                <div class="step-desc">Feet shoulder-width apart, toes turned outward 15°–30° to open hip capsule for proper depth.</div>
+              </div>
+            </div>
+            <div class="step-row">
+              <span class="step-num">2</span>
+              <div class="step-content">
+                <div class="step-heading">Bar Placement & Upper Back Shelf</div>
+                <div class="step-desc">Rest bar tightly on upper trapezius (high bar) or across rear deltoids (low bar). Pull elbows down.</div>
+              </div>
+            </div>
+            <div class="step-row">
+              <span class="step-num">3</span>
+              <div class="step-content">
+                <div class="step-heading">Knee & Hip Break Together</div>
+                <div class="step-desc">Break at hips and knees simultaneously. Push knees out in line with your toes.</div>
+              </div>
+            </div>
+            <div class="step-row">
+              <span class="step-num">4</span>
+              <div class="step-content">
+                <div class="step-heading">Hit Depth & Drive from Mid-Foot</div>
+                <div class="step-desc">Descend until hip crease is below the top of the patella. Drive hips upward evenly.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Common Faults to Avoid -->
+        <div class="card">
+          <div class="section-title">Common Faults to Avoid</div>
+          <div class="cues-grid">
+            <div class="cue-item cue-dont">
+              <span class="cue-icon">✕</span>
+              <div class="cue-text"><b>Knee Valgus (Knees caving inward):</b> Puts severe stress on ACL; actively cue "spread the floor".</div>
+            </div>
+            <div class="cue-item cue-dont">
+              <span class="cue-icon">✕</span>
+              <div class="cue-text"><b>Good Morning Squat:</b> Hips shooting up before chest causes lower back shear. Keep torso angle rigid.</div>
+            </div>
+            <div class="cue-item cue-do">
+              <span class="cue-icon">✓</span>
+              <div class="cue-text"><b>Tripod Foot Pressure:</b> Distribute weight evenly across heel, big toe knuckle, and pinky toe knuckle.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Equipment & Safety Tip -->
+        <div class="tip-box" style="background:var(--ok-soft);border-color:rgba(76,195,138,0.3)">
+          <span class="tip-icon">🛡️</span>
+          <div>
+            <div class="tip-title" style="color:var(--ok)">Safety Pin Height</div>
+            <div class="tip-desc">Set rack safety pins 1–2 inches below your bottom parallel depth so you can dump the bar safely without crashing your neck if fatigue strikes.</div>
+          </div>
+        </div>
+
+        <!-- CTA Button -->
+        <button class="btn-primary">
+          <span>+ Add to Active Workout</span>
+        </button>
+
+        <div class="cc-box">
+          Illustrations based on <b>@bryllim/workout-guide</b> (CC BY-SA 4.0, Bryl Lim & Everkinetic).
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Dark / Light Theme Toggle
+  const toggleBtn = document.getElementById('theme-toggle');
+  toggleBtn.addEventListener('click', () => {
+    const isLight = document.documentElement.dataset.theme === 'light';
+    document.documentElement.dataset.theme = isLight ? '' : 'light';
+    toggleBtn.textContent = isLight ? 'Switch to light' : 'Switch to dark';
+  });
+
+  // Bench Press SVG Phase Switcher
+  function switchBenchPhase(phase) {
+    const svg = document.getElementById('bench-svg');
+    const tabs = document.querySelectorAll('.frame-col:first-child .phase-tab');
+    tabs.forEach(t => t.classList.remove('active'));
+
+    if (phase === 'bottom') {
+      tabs[1].classList.add('active');
+      svg.innerHTML = `
+        <rect x="15" y="44" width="70" height="5" rx="2" fill="var(--art-ink)"/>
+        <line x1="25" y1="49" x2="25" y2="62" stroke="var(--art-ink)" stroke-width="3"/>
+        <line x1="75" y1="49" x2="75" y2="62" stroke="var(--art-ink)" stroke-width="3"/>
+        
+        <ellipse cx="48" cy="38" rx="18" ry="7" fill="var(--art-muscle)"/>
+        <circle cx="70" cy="36" r="5" fill="var(--art-ink)"/>
+        <circle cx="62" cy="39" r="4.5" fill="var(--art-secondary)"/>
+        
+        <path d="M30 42 L22 48 L20 62" stroke="var(--art-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="16" y="60" width="8" height="3" rx="1" fill="var(--art-ink)"/>
+        
+        <!-- Lowered Barbell touching sternum -->
+        <line x1="10" y1="34" x2="86" y2="34" stroke="var(--art-ink)" stroke-width="3.5" stroke-linecap="round"/>
+        <rect x="12" y="26" width="4" height="16" rx="1" fill="var(--art-ink)"/>
+        <rect x="80" y="26" width="4" height="16" rx="1" fill="var(--art-ink)"/>
+        
+        <!-- Bent Elbows tucked at 45 degrees -->
+        <path d="M62 39 L54 44 L48 34" stroke="var(--art-secondary)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M42 39 L38 44 L44 34" stroke="var(--art-secondary)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      `;
+    } else {
+      tabs[0].classList.add('active');
+      svg.innerHTML = `
+        <rect x="15" y="44" width="70" height="5" rx="2" fill="var(--art-ink)"/>
+        <line x1="25" y1="49" x2="25" y2="62" stroke="var(--art-ink)" stroke-width="3"/>
+        <line x1="75" y1="49" x2="75" y2="62" stroke="var(--art-ink)" stroke-width="3"/>
+        
+        <ellipse cx="48" cy="38" rx="18" ry="7" fill="var(--art-muscle)"/>
+        <circle cx="70" cy="36" r="5" fill="var(--art-ink)"/>
+        <circle cx="62" cy="39" r="4.5" fill="var(--art-secondary)"/>
+        
+        <path d="M30 42 L22 48 L20 62" stroke="var(--art-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="16" y="60" width="8" height="3" rx="1" fill="var(--art-ink)"/>
+        
+        <line x1="10" y1="22" x2="86" y2="22" stroke="var(--art-ink)" stroke-width="3.5" stroke-linecap="round"/>
+        <rect x="12" y="14" width="4" height="16" rx="1" fill="var(--art-ink)"/>
+        <rect x="80" y="14" width="4" height="16" rx="1" fill="var(--art-ink)"/>
+        
+        <path d="M62 39 L50 22" stroke="var(--art-secondary)" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M42 39 L46 22" stroke="var(--art-secondary)" stroke-width="3.5" stroke-linecap="round"/>
+      `;
+    }
+  }
+
+  // Squat Depth Phase Switcher
+  function switchSquatDepth(phase) {
+    const svg = document.getElementById('squat-svg');
+    const tabs = document.querySelectorAll('.frame-col:last-child .phase-tab');
+    tabs.forEach(t => t.classList.remove('active'));
+
+    if (phase === 'top') {
+      tabs[0].classList.add('active');
+      svg.innerHTML = `
+        <line x1="10" y1="72" x2="90" y2="72" stroke="var(--art-ink)" stroke-width="2"/>
+        <!-- Upright Standing Stance -->
+        <path d="M50 20 L50 46" stroke="var(--art-ink)" stroke-width="7" stroke-linecap="round"/>
+        <ellipse cx="50" cy="35" rx="6" ry="12" fill="var(--art-muscle)"/>
+        <circle cx="50" cy="14" r="5" fill="var(--art-ink)"/>
+        <circle cx="50" cy="20" r="3.5" fill="var(--art-ink)"/>
+        <line x1="48" y1="6" x2="48" y2="34" stroke="var(--art-ink)" stroke-width="3"/>
+        <path d="M50 46 L50 72" stroke="var(--art-secondary)" stroke-width="5" stroke-linecap="round"/>
+        <rect x="46" y="70" width="12" height="3" rx="1" fill="var(--art-ink)"/>
+      `;
+    } else {
+      tabs[1].classList.add('active');
+      svg.innerHTML = `
+        <line x1="10" y1="72" x2="90" y2="72" stroke="var(--art-ink)" stroke-width="2"/>
+        <path d="M42 28 L35 48" stroke="var(--art-ink)" stroke-width="7" stroke-linecap="round"/>
+        <ellipse cx="37" cy="42" rx="7" ry="12" transform="rotate(-20 37 42)" fill="var(--art-muscle)"/>
+        <circle cx="48" cy="22" r="5" fill="var(--art-ink)"/>
+        <circle cx="41" cy="28" r="3.5" fill="var(--art-ink)"/>
+        <line x1="39" y1="12" x2="39" y2="44" stroke="var(--art-ink)" stroke-width="3"/>
+        <path d="M35 48 L56 52" stroke="var(--art-muscle)" stroke-width="5" stroke-linecap="round"/>
+        <path d="M56 52 L52 72" stroke="var(--art-secondary)" stroke-width="4.5" stroke-linecap="round"/>
+        <rect x="48" y="70" width="12" height="3" rx="1" fill="var(--art-ink)"/>
+        <line x1="28" y1="52" x2="68" y2="52" stroke="var(--ok)" stroke-width="1.5" stroke-dasharray="3 2"/>
+        <text x="70" y="54" fill="var(--ok)" font-size="6" font-weight="700">PARALLEL</text>
+      `;
+    }
+  }
+</script>
+</body>
+</html>

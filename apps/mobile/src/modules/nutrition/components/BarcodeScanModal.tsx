@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
-import { normalizeBarcode } from "../services/barcode";
+import { isBarcodeInFrame, normalizeBarcode, SUPPORTED_BARCODE_TYPES, type Rect } from "../services/barcode";
 
 type Props = {
   visible: boolean;
@@ -29,10 +29,25 @@ export function BarcodeScanModal({ visible, onClose, onScanned }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const [torch, setTorch] = useState(false);
   const busy = useRef(false);
+  const frameRectRef = useRef<Rect | null>(null);
+  const targetAreaPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const framePos = useRef<Rect | null>(null);
 
-  const handleBarcodeScanned = ({ data }: BarcodeScanningResult) => {
+  const updateFrameLayout = () => {
+    if (framePos.current) {
+      frameRectRef.current = {
+        x: targetAreaPos.current.x + framePos.current.x,
+        y: targetAreaPos.current.y + framePos.current.y,
+        width: framePos.current.width,
+        height: framePos.current.height,
+      };
+    }
+  };
+
+  const handleBarcodeScanned = (result: BarcodeScanningResult) => {
     if (busy.current) return;
-    const barcode = normalizeBarcode(data);
+    if (!isBarcodeInFrame(result, frameRectRef.current)) return;
+    const barcode = normalizeBarcode(result.data);
     if (!barcode) return;
     busy.current = true;
     Vibration.vibrate(50);
@@ -80,7 +95,7 @@ export function BarcodeScanModal({ visible, onClose, onScanned }: Props) {
           style={StyleSheet.absoluteFill}
           facing="back"
           enableTorch={torch}
-          barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"] }}
+          barcodeScannerSettings={{ barcodeTypes: SUPPORTED_BARCODE_TYPES }}
           onBarcodeScanned={handleBarcodeScanned}
         />
         <View style={[styles.overlay, { paddingTop: insets.top + theme.space[3], paddingBottom: insets.bottom + theme.space[5] }]} pointerEvents="box-none">
@@ -93,9 +108,22 @@ export function BarcodeScanModal({ visible, onClose, onScanned }: Props) {
             </Pressable>
           </View>
 
-          <View style={styles.targetArea} pointerEvents="none">
+          <View
+            style={styles.targetArea}
+            pointerEvents="none"
+            onLayout={(e) => {
+              targetAreaPos.current = { x: e.nativeEvent.layout.x, y: e.nativeEvent.layout.y };
+              updateFrameLayout();
+            }}
+          >
             <Text style={styles.hint}>Point at a barcode</Text>
-            <View style={styles.frame} />
+            <View
+              style={styles.frame}
+              onLayout={(e) => {
+                framePos.current = e.nativeEvent.layout;
+                updateFrameLayout();
+              }}
+            />
           </View>
 
           <Pressable onPress={onClose} accessibilityRole="button" style={styles.cancelBottomBtn}>

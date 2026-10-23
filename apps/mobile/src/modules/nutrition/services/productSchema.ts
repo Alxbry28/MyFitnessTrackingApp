@@ -51,7 +51,7 @@ const optionalPositive = z
 const fields = z.object({
   name: z.string().trim().min(1, "Name is required"),
   brand: optionalText,
-  barcode: optionalText.pipe(z.string().regex(/^\d+$/, "Digits only").nullable()),
+  barcode: optionalText,
   servingSize: optionalText,
   servingGrams: optionalPositive,
   netWeightG: optionalPositive,

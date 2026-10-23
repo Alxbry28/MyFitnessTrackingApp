@@ -13,6 +13,10 @@ import * as m010 from "./010_supplement_units";
 import * as m011 from "./011_recipes_and_batches";
 import * as m012 from "./012_workouts";
 import * as m013 from "./013_measurements";
+import * as m014 from "./014_workout_routines";
+import * as m015 from "./015_workout_timer_controls";
+import * as m016 from "./016_routine_exercise_targets";
+import * as m017 from "./017_routine_per_set_targets";
 
 export type Migration = {
   version: number;
@@ -36,4 +40,8 @@ export const migrations: Migration[] = [
   { version: 11, name: "011_recipes_and_batches", up: m011.up },
   { version: 12, name: "012_workouts", up: m012.up },
   { version: 13, name: "013_measurements", up: m013.up },
+  { version: 14, name: "014_workout_routines", up: m014.up },
+  { version: 15, name: "015_workout_timer_controls", up: m015.up },
+  { version: 16, name: "016_routine_exercise_targets", up: m016.up },
+  { version: 17, name: "017_routine_per_set_targets", up: m017.up },
 ];

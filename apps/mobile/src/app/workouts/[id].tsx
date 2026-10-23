@@ -1,8 +1,9 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,17 +14,32 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
+import { ExerciseArtThumb } from "@/modules/workouts/components/ExerciseArtThumb";
+import { ExerciseGuideModal } from "@/modules/workouts/components/ExerciseGuideModal";
 import { useActiveWorkout } from "@/modules/workouts/hooks/useActiveWorkout";
 import {
   formatDuration,
   type SetPerformance,
 } from "@/modules/workouts/services/workoutCalc";
-import type { SessionExercise, WorkoutSet } from "@/modules/workouts/types/workouts";
+import type { Exercise, SessionExercise, WorkoutSet } from "@/modules/workouts/types/workouts";
 
 function formatSeconds(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
-  return `${m}:${s < 10 ? "0" : ""}${s}`;
+  return `${m < 10 ? "0" : ""}${m}:${s < 10 ? "0" : ""}${s}`;
+}
+
+function formatStartTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  } catch {
+    return "";
+  }
 }
 
 export default function ActiveWorkoutScreen() {
@@ -38,17 +54,46 @@ export default function ActiveWorkoutScreen() {
     addSet,
     updateSet,
     deleteSet,
+    moveExercise,
+    deleteExercise,
+    pauseWorkout,
+    resumeWorkout,
+    restartWorkout,
+    discardWorkout,
     finishWorkout,
     updateName,
     updateNotes,
   } = useActiveWorkout(id);
 
-  // Local elapsed seconds timer
-  const [elapsed, setElapsed] = useState(0);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleText, setTitleText] = useState("");
   const [notesText, setNotesText] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
+
+  // Form Guide Modal State
+  const [selectedGuideExercise, setSelectedGuideExercise] = useState<Exercise | null>(null);
+
+  // Floating Rest Timer State
+  const DEFAULT_REST_SEC = 120; // 02:00
+  const [restRemaining, setRestRemaining] = useState<number | null>(null);
+  const [restDuration, setRestDuration] = useState(DEFAULT_REST_SEC);
+
+  // If id is "index" or invalid route, redirect to workouts hub
+  useEffect(() => {
+    if (id === "index") {
+      router.replace("/workouts" as any);
+    }
+  }, [id]);
+
+  // If already completed, redirect to summary
+  useEffect(() => {
+    if (session && session.endedAt) {
+      router.replace({
+        pathname: "/workouts/summary/[id]" as any,
+        params: { id: session.id },
+      });
+    }
+  }, [session]);
 
   // Auto-add exercise if returning from exercise picker with addExerciseId
   useEffect(() => {
@@ -60,19 +105,75 @@ export default function ActiveWorkoutScreen() {
     }
   }, [addExerciseId, session, addSet]);
 
+  // Elapsed session time
+  const isPaused = Boolean(session?.isPaused);
   const startedAt = session?.startedAt;
-  const endedAt = session?.endedAt;
+  const lastResumedAt = session?.lastResumedAt;
+  const elapsedSec = session?.elapsedSec ?? 0;
+  const [elapsed, setElapsed] = useState(elapsedSec);
+  const isNotStarted = isPaused && elapsed === 0;
 
   useEffect(() => {
-    if (!startedAt || endedAt) return;
-    const start = new Date(startedAt).getTime();
-    const interval = setInterval(() => {
-      setElapsed(Math.max(0, Math.floor((Date.now() - start) / 1000)));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [startedAt, endedAt]);
+    if (!startedAt || session?.endedAt || isPaused) {
+      const timer = setTimeout(() => {
+        setElapsed(elapsedSec);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
 
-  if (loading || !session) {
+    const baseMs = lastResumedAt
+      ? new Date(lastResumedAt).getTime()
+      : new Date(startedAt).getTime();
+
+    const tick = () => {
+      const additional = Math.max(0, Math.floor((Date.now() - baseMs) / 1000));
+      setElapsed(elapsedSec + additional);
+    };
+
+    const initialTimer = setTimeout(tick, 0);
+    const interval = setInterval(tick, 1000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, [startedAt, lastResumedAt, elapsedSec, isPaused, session?.endedAt]);
+
+  // Rest timer countdown
+  const isRestActive = restRemaining !== null;
+  useEffect(() => {
+    if (!isRestActive) return;
+
+    const interval = setInterval(() => {
+      setRestRemaining((prev) => {
+        if (prev === null || prev <= 1) {
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isRestActive]);
+
+  const handleStartRest = (sec = DEFAULT_REST_SEC) => {
+    setRestDuration(sec);
+    setRestRemaining(sec);
+  };
+
+  const handleAdjustRest = (deltaSec: number) => {
+    setRestRemaining((prev) => {
+      const current = prev ?? restDuration;
+      const next = Math.max(0, current + deltaSec);
+      return next === 0 ? null : next;
+    });
+  };
+
+  const handleSkipRest = () => {
+    setRestRemaining(null);
+  };
+
+  if (loading) {
     return (
       <View style={[styles.screen, styles.center, { paddingTop: insets.top }]}>
         <ActivityIndicator color={theme.colors.accent} size="large" />
@@ -80,14 +181,30 @@ export default function ActiveWorkoutScreen() {
     );
   }
 
-  const isCompletedSession = Boolean(session.endedAt);
+  if (!session) {
+    return (
+      <View style={[styles.screen, styles.center, { paddingTop: insets.top, padding: theme.space[4] }]}>
+        <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: "600", marginBottom: theme.space[3] }}>
+          Workout not found
+        </Text>
+        <Pressable
+          onPress={() => router.replace("/workouts" as any)}
+          style={{
+            backgroundColor: theme.colors.accent,
+            paddingHorizontal: theme.space[4],
+            paddingVertical: theme.space[2],
+            borderRadius: theme.radius.sm,
+          }}
+        >
+          <Text style={{ color: theme.colors.accentInk, fontWeight: "700", fontSize: theme.fontSize.sm }}>
+            Back to Workouts
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   const handleFinish = async () => {
-    if (isCompletedSession) {
-      router.back();
-      return;
-    }
-
     Alert.alert(
       "Finish workout?",
       `Complete ${session.name} (${formatDuration(Math.max(1, Math.round(elapsed / 60)))})?`,
@@ -100,14 +217,81 @@ export default function ActiveWorkoutScreen() {
             try {
               setFinishing(true);
               const finalNotes = notesText !== null ? notesText.trim() : (session.notes ?? undefined);
-              await finishWorkout(finalNotes || undefined);
-              router.dismissTo("/workouts" as any);
+              await finishWorkout(finalNotes || undefined, elapsed);
+              router.replace({
+                pathname: "/workouts/summary/[id]" as any,
+                params: { id: session.id },
+              });
             } catch {
               Alert.alert("Error", "Could not finish workout.");
             } finally {
               setFinishing(false);
             }
           },
+        },
+      ],
+    );
+  };
+
+  const handlePause = async () => {
+    try {
+      await pauseWorkout(elapsed);
+    } catch {
+      Alert.alert("Error", "Could not pause workout.");
+    }
+  };
+
+  const handleResume = async () => {
+    try {
+      await resumeWorkout();
+    } catch {
+      Alert.alert("Error", "Could not resume workout.");
+    }
+  };
+
+  const handleRestart = () => {
+    Alert.alert(
+      "Restart workout timer?",
+      "Reset workout elapsed time back to 00:00?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Restart",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await restartWorkout();
+            } catch {
+              Alert.alert("Error", "Could not restart workout timer.");
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleStop = () => {
+    Alert.alert(
+      "Stop workout",
+      "What would you like to do with this workout session?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Discard & Exit",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await discardWorkout();
+              router.replace("/workouts" as any);
+            } catch {
+              Alert.alert("Error", "Could not discard workout.");
+            }
+          },
+        },
+        {
+          text: "Finish & Save",
+          style: "default",
+          onPress: handleFinish,
         },
       ],
     );
@@ -121,34 +305,186 @@ export default function ActiveWorkoutScreen() {
   };
 
   const exercises = session.exercises ?? [];
+  const exerciseCount = exercises.length;
+  const startTimeStr = formatStartTime(session.startedAt);
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      {/* App Bar */}
-      <View style={styles.appbar}>
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          hitSlop={8}
-          style={styles.backBtn}
-        >
-          <Text style={styles.backText}>‹ Workouts</Text>
-        </Pressable>
-
-        <View style={styles.timerBox}>
-          <Text style={styles.timerText}>{formatSeconds(elapsed)}</Text>
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
+        {/* Top App Bar & Logger Bar (Frame 2) */}
+      <View style={styles.loggerTop}>
+        <View style={styles.backRow}>
+          <Pressable
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            hitSlop={8}
+            style={styles.backBtn}
+          >
+            <Text style={styles.backText}>‹ Workouts</Text>
+          </Pressable>
         </View>
 
-        {!isCompletedSession && (
+        <View style={styles.loggerBar}>
           <Pressable
-            onPress={handleFinish}
-            accessibilityRole="button"
-            disabled={finishing}
-            style={styles.finishBtn}
+            onPress={() => {
+              setTitleText(session.name);
+              setEditingTitle(true);
+            }}
+            style={styles.loggerTitleCol}
           >
-            <Text style={styles.finishBtnText}>Finish</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.sessionTitle} numberOfLines={1}>
+                {session.name}
+              </Text>
+              <Text style={styles.editIcon}>✎</Text>
+            </View>
+            <Text style={styles.sessionMeta}>
+              {isNotStarted
+                ? `Ready to start · ${exerciseCount} ${exerciseCount === 1 ? "exercise" : "exercises"}`
+                : `Started ${startTimeStr} · ${exerciseCount} ${exerciseCount === 1 ? "exercise" : "exercises"}`}
+            </Text>
           </Pressable>
-        )}
+
+          {/* Timer pill */}
+          <Pressable
+            onPress={isPaused ? handleResume : handlePause}
+            hitSlop={4}
+            accessibilityRole="button"
+            accessibilityLabel={isNotStarted ? "Start workout timer" : isPaused ? "Resume workout" : "Pause workout"}
+            style={[
+              styles.timerPill,
+              isNotStarted
+                ? styles.timerPillNotStarted
+                : isPaused
+                  ? styles.timerPillPaused
+                  : undefined,
+            ]}
+          >
+            <View
+              style={[
+                styles.pulseDot,
+                isNotStarted
+                  ? styles.pulseDotNotStarted
+                  : isPaused
+                    ? styles.pulseDotPaused
+                    : undefined,
+              ]}
+            />
+            <Text
+              style={[
+                styles.timerPillText,
+                isNotStarted
+                  ? styles.timerPillTextNotStarted
+                  : isPaused
+                    ? styles.timerPillTextPaused
+                    : undefined,
+              ]}
+            >
+              {isNotStarted
+                ? "START · 00:00"
+                : isPaused
+                  ? `PAUSED · ${formatSeconds(elapsed)}`
+                  : formatSeconds(elapsed)}
+            </Text>
+          </Pressable>
+
+          {/* Top Action Buttons: Start/Pause/Resume + Finish */}
+          <View style={styles.topActionsCluster}>
+            <Pressable
+              onPress={isPaused ? handleResume : handlePause}
+              hitSlop={4}
+              accessibilityRole="button"
+              accessibilityLabel={isNotStarted ? "Start workout" : isPaused ? "Resume workout" : "Pause workout"}
+              style={[
+                styles.topPauseBtn,
+                isNotStarted
+                  ? styles.topStartBtn
+                  : isPaused
+                    ? styles.topResumeBtn
+                    : undefined,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.topPauseBtnText,
+                  isNotStarted
+                    ? styles.topStartBtnText
+                    : isPaused
+                      ? styles.topResumeBtnText
+                      : undefined,
+                ]}
+              >
+                {isNotStarted ? "▶ Start" : isPaused ? "▶ Resume" : "⏸ Pause"}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={handleFinish}
+              accessibilityRole="button"
+              disabled={finishing}
+              style={[styles.finishBtn, isPaused && styles.finishBtnHighlighted]}
+            >
+              <Text style={styles.finishBtnText}>Finish</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Workout Controls Bar: Restart & Stop */}
+        <View style={styles.controlsBar}>
+          <Pressable
+            onPress={handleRestart}
+            style={styles.controlBtn}
+            accessibilityRole="button"
+          >
+            <Text style={styles.controlBtnText}>↺ Restart Timer</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={handleStop}
+            style={[styles.controlBtn, styles.controlBtnStop]}
+            accessibilityRole="button"
+          >
+            <Text style={styles.controlBtnTextStop}>⏹ Stop / Discard</Text>
+          </Pressable>
+        </View>
+
+        {/* Floating/Docked Rest Timer Strip */}
+        <View style={styles.restStrip}>
+          <View style={styles.restLeft}>
+            <Text style={styles.restLabel}>Rest timer · </Text>
+            <Text style={styles.restTime}>
+              {restRemaining !== null ? formatSeconds(restRemaining) : "00:00"}
+            </Text>
+            <Text style={styles.restTotal}> / {formatSeconds(restDuration)}</Text>
+          </View>
+
+          <View style={styles.restActions}>
+            <Pressable
+              onPress={() => handleAdjustRest(-15)}
+              style={styles.restActionBtn}
+              hitSlop={4}
+            >
+              <Text style={styles.restActionText}>-15s</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => handleAdjustRest(15)}
+              style={styles.restActionBtn}
+              hitSlop={4}
+            >
+              <Text style={styles.restActionText}>+15s</Text>
+            </Pressable>
+            <Pressable
+              onPress={restRemaining !== null ? handleSkipRest : () => handleStartRest()}
+              style={styles.restSkipBtn}
+              hitSlop={4}
+            >
+              <Text style={styles.restSkipText}>
+                {restRemaining !== null ? "Skip" : "Start"}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
       </View>
 
       <ScrollView
@@ -157,169 +493,311 @@ export default function ActiveWorkoutScreen() {
           { paddingBottom: theme.space[6] + insets.bottom + 40 },
         ]}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Session Name header */}
-        <View style={styles.titleSection}>
-          {editingTitle ? (
-            <TextInput
-              value={titleText}
-              onChangeText={setTitleText}
-              onBlur={handleTitleSubmit}
-              onSubmitEditing={handleTitleSubmit}
-              autoFocus
-              style={styles.titleInput}
-            />
-          ) : (
-            <Pressable
-              onPress={() => !isCompletedSession && setEditingTitle(true)}
-              style={styles.titlePress}
-            >
-              <Text style={styles.titleText}>{session.name}</Text>
-              {!isCompletedSession && <Text style={styles.editHint}>✎</Text>}
-            </Pressable>
-          )}
-          {isCompletedSession && (
-            <View style={styles.completedBadge}>
-              <Text style={styles.completedBadgeText}>Completed</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Exercises */}
-        {exercises.map((group) => (
-          <ExerciseCard
+        {/* Exercise Cards */}
+        {exercises.map((group, index) => (
+          <ActiveExerciseCard
             key={group.exercise.id}
             group={group}
-            readOnly={isCompletedSession}
-            onAddSet={() => void addSet(group.exercise.id)}
+            canMoveUp={index > 0}
+            canMoveDown={index < exercises.length - 1}
+            onMoveUp={() => void moveExercise(group.exercise.id, "up")}
+            onMoveDown={() => void moveExercise(group.exercise.id, "down")}
+            onDeleteExercise={() => void deleteExercise(group.exercise.id)}
+            onOpenGuide={(ex) => setSelectedGuideExercise(ex)}
+            onAddSet={(weight, reps, isWarmup) =>
+              void addSet(group.exercise.id, weight, reps, isWarmup)
+            }
             onUpdateSet={(setId, updates) => void updateSet(setId, updates)}
             onDeleteSet={(setId) => void deleteSet(setId)}
+            onSetCompleted={() => {
+              if (isNotStarted) {
+                void handleResume();
+              }
+              handleStartRest();
+            }}
             styles={styles}
             theme={theme}
           />
         ))}
 
         {/* Add Exercise Action */}
-        {!isCompletedSession && (
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: "/workouts/exercises" as any,
-                params: { pick: "1", sessionId: session.id },
-              })
-            }
-            accessibilityRole="button"
-            style={styles.addExerciseBtn}
-          >
-            <Text style={styles.addExerciseText}>+ Add exercise</Text>
-          </Pressable>
-        )}
+        <Pressable
+          onPress={() =>
+            router.push({
+              pathname: "/workouts/exercises" as any,
+              params: { pick: "1", sessionId: session.id },
+            })
+          }
+          accessibilityRole="button"
+          style={styles.addExerciseBtn}
+        >
+          <Text style={styles.addExerciseText}>+ Add Exercise</Text>
+        </Pressable>
 
         {/* Workout Notes */}
         <View style={styles.notesCard}>
-          <Text style={styles.notesLabel}>Notes</Text>
+          <Text style={styles.notesLabel}>Workout Notes</Text>
           <TextInput
             value={notesText ?? session.notes ?? ""}
             onChangeText={setNotesText}
             onBlur={() => {
-              if (!isCompletedSession && notesText !== null) {
+              if (notesText !== null) {
                 void updateNotes(notesText.trim() || null);
               }
             }}
             placeholder="How did this workout feel? (optional)"
             placeholderTextColor={theme.colors.faint}
-            editable={!isCompletedSession}
             multiline
             style={styles.notesInput}
           />
         </View>
 
-        {!isCompletedSession && exercises.length > 0 && (
-          <Pressable
-            onPress={handleFinish}
-            accessibilityRole="button"
-            style={styles.bigFinishBtn}
-          >
-            <Text style={styles.bigFinishText}>Finish workout</Text>
-          </Pressable>
-        )}
+        {/* Bottom Finish Button */}
+        <Pressable
+          onPress={handleFinish}
+          disabled={finishing}
+          accessibilityRole="button"
+          style={styles.bottomFinishBtn}
+        >
+          <Text style={styles.bottomFinishBtnText}>✓ Finish Workout</Text>
+        </Pressable>
       </ScrollView>
+
+      {/* Edit Title Modal */}
+      <Modal
+        visible={editingTitle}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditingTitle(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Rename Workout</Text>
+            <TextInput
+              value={titleText}
+              onChangeText={setTitleText}
+              autoFocus
+              selectTextOnFocus
+              style={styles.modalInput}
+            />
+            <View style={styles.modalButtons}>
+              <Pressable
+                onPress={() => setEditingTitle(false)}
+                style={[styles.modalBtn, styles.modalBtnCancel]}
+              >
+                <Text style={styles.modalBtnCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleTitleSubmit}
+                style={[styles.modalBtn, styles.modalBtnSave]}
+              >
+                <Text style={styles.modalBtnSaveText}>Save</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Exercise Form Guide Modal */}
+      <ExerciseGuideModal
+        visible={selectedGuideExercise !== null}
+        exercise={selectedGuideExercise}
+        onClose={() => setSelectedGuideExercise(null)}
+      />
     </View>
+    </>
   );
 }
 
-function ExerciseCard({
+function ActiveExerciseCard({
   group,
-  readOnly,
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
+  onDeleteExercise,
+  onOpenGuide,
   onAddSet,
   onUpdateSet,
   onDeleteSet,
+  onSetCompleted,
   styles,
   theme,
 }: {
   group: SessionExercise;
-  readOnly: boolean;
-  onAddSet: () => void;
-  onUpdateSet: (setId: string, updates: Partial<SetPerformance & { isCompleted?: boolean }>) => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  onDeleteExercise?: () => void;
+  onOpenGuide?: (exercise: Exercise) => void;
+  onAddSet: (weight?: number, reps?: number, isWarmup?: boolean) => void;
+  onUpdateSet: (setId: string, updates: Partial<SetPerformance & { isCompleted?: boolean; isWarmup?: boolean }>) => void;
   onDeleteSet: (setId: string) => void;
+  onSetCompleted: () => void;
   styles: Styles;
   theme: Theme;
 }) {
-  const { exercise, previousText, sets } = group;
+  const { exercise, previousText, sets, hasPR } = group;
+
+  // Calculate prefill values for "+ Add Set" button
+  const completedSets = sets.filter((s) => s.isCompleted);
+  const lastSet = completedSets[completedSets.length - 1] ?? sets[sets.length - 1];
+  const prefillWeight = lastSet?.weightKg ?? (exercise.isBodyweight ? 0 : 20);
+  const prefillReps = lastSet?.reps ?? 10;
+  const prefillLabel = exercise.isBodyweight
+    ? prefillWeight > 0
+      ? `+${prefillWeight} kg × ${prefillReps}`
+      : `BW × ${prefillReps}`
+    : `${prefillWeight} kg × ${prefillReps}`;
 
   return (
-    <View style={styles.exerciseCard}>
-      <View style={styles.exerciseHeader}>
-        <View style={styles.exerciseTitleWrap}>
-          <Text style={styles.exerciseName}>{exercise.name}</Text>
-          {previousText && <Text style={styles.prevText}>{previousText}</Text>}
+    <View style={styles.exCard}>
+      {/* Header */}
+      <View style={styles.exHeader}>
+        <Pressable
+          onPress={() => onOpenGuide?.(exercise)}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel={`View guide for ${exercise.name}`}
+        >
+          <ExerciseArtThumb
+            muscleGroup={exercise.muscleGroup}
+            equipment={exercise.equipment}
+            guideId={exercise.guideId}
+            name={exercise.name}
+            size="sm"
+            isCustom={!exercise.guideId && !exercise.id.startsWith("ex_")}
+          />
+        </Pressable>
+
+        <Pressable
+          onPress={() => onOpenGuide?.(exercise)}
+          hitSlop={6}
+          style={styles.exInfo}
+          accessibilityRole="button"
+          accessibilityLabel={`View guide for ${exercise.name}`}
+        >
+          <Text style={styles.exName}>
+            {exercise.name} <Text style={{ fontSize: 11, color: theme.colors.faint }}>ℹ️</Text>
+          </Text>
+          <Text style={styles.exPrevHint}>
+            {previousText ?? "First time logging this exercise"}
+          </Text>
+        </Pressable>
+
+        {hasPR ? (
+          <View style={styles.badgePr}>
+            <Text style={styles.badgePrText}>🏆 PR</Text>
+          </View>
+        ) : exercise.isBodyweight ? (
+          <View style={styles.badgeAcc}>
+            <Text style={styles.badgeAccText}>BW + kg</Text>
+          </View>
+        ) : null}
+
+        <View style={styles.exHeaderActions}>
+          <Pressable
+            disabled={!canMoveUp}
+            onPress={onMoveUp}
+            hitSlop={6}
+            style={[styles.orderBtn, !canMoveUp && styles.orderBtnDisabled]}
+            accessibilityLabel="Move exercise up"
+          >
+            <Text style={[styles.orderBtnText, !canMoveUp && styles.orderBtnTextDisabled]}>▲</Text>
+          </Pressable>
+          <Pressable
+            disabled={!canMoveDown}
+            onPress={onMoveDown}
+            hitSlop={6}
+            style={[styles.orderBtn, !canMoveDown && styles.orderBtnDisabled]}
+            accessibilityLabel="Move exercise down"
+          >
+            <Text style={[styles.orderBtnText, !canMoveDown && styles.orderBtnTextDisabled]}>▼</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              Alert.alert(
+                "Remove Exercise",
+                `Remove ${exercise.name} and all its sets from this workout?`,
+                [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Remove", style: "destructive", onPress: onDeleteExercise },
+                ],
+              );
+            }}
+            hitSlop={6}
+            style={styles.removeExBtn}
+            accessibilityLabel="Remove exercise"
+          >
+            <Text style={styles.removeExBtnText}>✕</Text>
+          </Pressable>
         </View>
       </View>
 
-      {/* Sets table header */}
-      <View style={styles.setsHeader}>
-        <Text style={[styles.setTh, styles.colSet]}>SET</Text>
-        <Text style={[styles.setTh, styles.colWeight]}>
-          {exercise.isBodyweight ? "+KG" : "KG"}
-        </Text>
-        <Text style={[styles.setTh, styles.colReps]}>REPS</Text>
-        <Text style={[styles.setTh, styles.colCheck]}>✓</Text>
+      {/* Set Table */}
+      <View style={styles.setTable}>
+        {/* Table Header */}
+        <View style={styles.setRowHead}>
+          <Text style={[styles.setTh, styles.colNum]}>SET</Text>
+          <Text style={[styles.setTh, styles.colPrev]}>PREVIOUS</Text>
+          <Text style={[styles.setTh, styles.colInput]}>
+            {exercise.isBodyweight ? "+KG" : "KG"}
+          </Text>
+          <Text style={[styles.setTh, styles.colInput]}>REPS</Text>
+          <Text style={[styles.setTh, styles.colCheck]}>✓</Text>
+        </View>
+
+        {/* Set Rows */}
+        {sets.map((set, index) => {
+          // Previous set text
+          const prevHint = previousText?.replace(/^Last:\s*/, "").split(", ")[index] ?? "-";
+
+          return (
+            <ActiveSetRow
+              key={`${set.id}-${set.weightKg}-${set.reps}`}
+              set={set}
+              prevHint={prevHint}
+              onUpdate={(updates) => onUpdateSet(set.id, updates)}
+              onDelete={() => onDeleteSet(set.id)}
+              onCompleted={onSetCompleted}
+              styles={styles}
+              theme={theme}
+            />
+          );
+        })}
       </View>
 
-      {/* Sets rows */}
-      {sets.map((set) => (
-        <SetRow
-          key={set.id}
-          set={set}
-          readOnly={readOnly}
-          onUpdate={(updates) => onUpdateSet(set.id, updates)}
-          onDelete={() => onDeleteSet(set.id)}
-          styles={styles}
-          theme={theme}
-        />
-      ))}
-
       {/* Add Set Button */}
-      {!readOnly && (
-        <Pressable onPress={onAddSet} accessibilityRole="button" style={styles.addSetBtn}>
-          <Text style={styles.addSetText}>+ Add set</Text>
-        </Pressable>
-      )}
+      <Pressable
+        onPress={() => onAddSet(prefillWeight, prefillReps, false)}
+        accessibilityRole="button"
+        style={styles.addSetBtn}
+      >
+        <Text style={styles.addSetBtnText}>
+          + Add Set (prefills {prefillLabel})
+        </Text>
+      </Pressable>
     </View>
   );
 }
 
-function SetRow({
+function ActiveSetRow({
   set,
-  readOnly,
+  prevHint,
   onUpdate,
   onDelete,
+  onCompleted,
   styles,
+  theme,
 }: {
   set: WorkoutSet;
-  readOnly: boolean;
-  onUpdate: (updates: { weightKg?: number; reps?: number; isCompleted?: boolean }) => void;
+  prevHint: string;
+  onUpdate: (updates: { weightKg?: number; reps?: number; isCompleted?: boolean; isWarmup?: boolean }) => void;
   onDelete: () => void;
+  onCompleted: () => void;
   styles: Styles;
   theme: Theme;
 }) {
@@ -344,50 +822,87 @@ function SetRow({
     }
   };
 
-  const toggleCompleted = () => {
-    if (readOnly) return;
-    onUpdate({ isCompleted: !set.isCompleted });
+  const handleCheck = () => {
+    const nextCompleted = !set.isCompleted;
+    onUpdate({ isCompleted: nextCompleted });
+    if (nextCompleted) {
+      onCompleted();
+    }
+  };
+
+  const toggleWarmup = () => {
+    onUpdate({ isWarmup: !set.isWarmup });
   };
 
   return (
-    <View style={[styles.setRow, set.isCompleted && styles.setRowCompleted]}>
-      <Text style={[styles.setTd, styles.colSet]}>{set.setNumber}</Text>
+    <View style={[styles.setRow, set.isCompleted && styles.setRowDone]}>
+      {/* Set Number / Warmup Indicator */}
+      <Pressable
+        onPress={toggleWarmup}
+        accessibilityRole="button"
+        hitSlop={4}
+        style={[styles.setNumBox, set.isWarmup && styles.setNumWarmup, set.isCompleted && styles.setNumDone]}
+      >
+        <Text
+          style={[
+            styles.setNumText,
+            set.isWarmup && styles.setNumWarmupText,
+            set.isCompleted && styles.setNumDoneText,
+          ]}
+        >
+          {set.isWarmup ? "W" : set.setNumber}
+        </Text>
+      </Pressable>
 
-      <View style={styles.colWeight}>
+      {/* Previous Hint */}
+      <Text style={styles.colPrevText} numberOfLines={1}>
+        {prevHint}
+      </Text>
+
+      {/* Weight input */}
+      <View style={styles.colInput}>
         <TextInput
           value={weight}
           onChangeText={setWeight}
           onBlur={handleWeightBlur}
           keyboardType="decimal-pad"
-          editable={!readOnly}
-          style={[styles.setInput, set.isCompleted && styles.setInputCompleted]}
+          selectTextOnFocus
+          style={[styles.setInput, set.isCompleted && styles.setInputDone]}
           placeholder="0"
-          placeholderTextColor={styles.placeholder.color}
+          placeholderTextColor={theme.colors.faint}
         />
       </View>
 
-      <View style={styles.colReps}>
+      {/* Reps input */}
+      <View style={styles.colInput}>
         <TextInput
           value={reps}
           onChangeText={setReps}
           onBlur={handleRepsBlur}
           keyboardType="number-pad"
-          editable={!readOnly}
-          style={[styles.setInput, set.isCompleted && styles.setInputCompleted]}
+          selectTextOnFocus
+          style={[styles.setInput, set.isCompleted && styles.setInputDone]}
           placeholder="0"
-          placeholderTextColor={styles.placeholder.color}
+          placeholderTextColor={theme.colors.faint}
         />
       </View>
 
-      <View style={styles.colCheck}>
-        <Pressable
-          onPress={toggleCompleted}
-          disabled={readOnly}
-          style={[styles.checkBtn, set.isCompleted && styles.checkBtnOn]}
-        >
-          <Text style={[styles.checkIcon, set.isCompleted && styles.checkIconOn]}>✓</Text>
-        </Pressable>
-      </View>
+      {/* Checkbox button */}
+      <Pressable
+        onPress={handleCheck}
+        onLongPress={() => {
+          Alert.alert("Delete Set", `Delete set ${set.setNumber}?`, [
+            { text: "Cancel", style: "cancel" },
+            { text: "Delete", style: "destructive", onPress: onDelete },
+          ]);
+        }}
+        accessibilityRole="button"
+        style={[styles.setCheck, set.isCompleted && styles.setCheckDone]}
+      >
+        <Text style={[styles.setCheckText, set.isCompleted && styles.setCheckDoneText]}>
+          ✓
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -395,174 +910,592 @@ function SetRow({
 type Styles = ReturnType<typeof makeStyles>;
 
 function makeStyles(theme: Theme) {
-  const { colors, space, fontSize, radius, tap } = theme;
   return StyleSheet.create({
-    screen: { flex: 1, backgroundColor: colors.bg },
-    center: { justifyContent: "center", alignItems: "center" },
-    appbar: {
-      flexDirection: "row",
+    screen: {
+      flex: 1,
+      backgroundColor: theme.colors.bg,
+    },
+    center: {
       alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: space[4],
-      paddingVertical: space[2],
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    backBtn: { minHeight: tap, justifyContent: "center" },
-    backText: { color: colors.accentText, fontSize: fontSize.md },
-    timerBox: {
-      backgroundColor: colors.surface2,
-      paddingHorizontal: space[3],
-      paddingVertical: space[1],
-      borderRadius: radius.pill,
-    },
-    timerText: {
-      fontSize: fontSize.sm,
-      fontWeight: "700",
-      color: colors.text,
-      fontVariant: ["tabular-nums"],
-    },
-    finishBtn: {
-      backgroundColor: colors.accent,
-      paddingHorizontal: space[3],
-      paddingVertical: space[1],
-      borderRadius: radius.md,
-      minHeight: 36,
       justifyContent: "center",
     },
-    finishBtnText: { color: colors.accentInk, fontSize: fontSize.sm, fontWeight: "700" },
-    content: { padding: space[4], gap: space[3] },
-    titleSection: {
+
+    // Logger Top Bar
+    loggerTop: {
+      backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      paddingHorizontal: theme.space[4],
+      paddingVertical: theme.space[2],
+      gap: theme.space[2],
+    },
+    backRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    backBtn: {
+      paddingVertical: 2,
+    },
+    backText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.accentText,
+      fontWeight: "500",
+    },
+    loggerBar: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      paddingBottom: space[1],
+      gap: theme.space[2],
     },
-    titlePress: { flexDirection: "row", alignItems: "baseline", gap: space[2] },
-    titleText: { fontSize: fontSize.xl, fontWeight: "700", color: colors.text, letterSpacing: -0.5 },
-    editHint: { fontSize: fontSize.sm, color: colors.muted },
-    titleInput: {
-      fontSize: fontSize.xl,
+    loggerTitleCol: {
+      flex: 1,
+      minWidth: 0,
+    },
+    titleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    sessionTitle: {
+      fontSize: theme.fontSize.md,
       fontWeight: "700",
-      color: colors.text,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.accent,
-      paddingVertical: 2,
-      minWidth: 150,
+      color: theme.colors.text,
     },
-    completedBadge: {
-      backgroundColor: colors.surface2,
-      paddingHorizontal: space[2],
-      paddingVertical: 2,
-      borderRadius: radius.pill,
+    editIcon: {
+      fontSize: 12,
+      color: theme.colors.muted,
     },
-    completedBadgeText: { fontSize: fontSize.xs, color: colors.ok, fontWeight: "600" },
-    exerciseCard: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      padding: space[3],
-      gap: space[2],
+    sessionMeta: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.muted,
+      marginTop: 1,
     },
-    exerciseHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "flex-start",
-    },
-    exerciseTitleWrap: { flex: 1 },
-    exerciseName: { fontSize: fontSize.md, fontWeight: "700", color: colors.text },
-    prevText: { fontSize: fontSize.xs, color: colors.muted, marginTop: 2 },
-    setsHeader: {
+    timerPill: {
       flexDirection: "row",
       alignItems: "center",
-      paddingVertical: space[1],
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: theme.radius.pill,
+      backgroundColor: theme.colors.timerSoft,
     },
-    setTh: { fontSize: fontSize.xs, color: colors.muted, fontWeight: "600", textAlign: "center" },
-    colSet: { width: 36, textAlign: "center" },
-    colWeight: { flex: 1, paddingHorizontal: space[1], alignItems: "center" },
-    colReps: { flex: 1, paddingHorizontal: space[1], alignItems: "center" },
-    colCheck: { width: 44, alignItems: "center" },
+    timerPillPaused: {
+      backgroundColor: theme.colors.estimateSoft,
+    },
+    pulseDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 4,
+      backgroundColor: theme.colors.timer,
+    },
+    pulseDotPaused: {
+      backgroundColor: theme.colors.estimate,
+    },
+    timerPillText: {
+      fontSize: theme.fontSize.xs,
+      fontWeight: "700",
+      color: theme.colors.timer,
+    },
+    timerPillTextPaused: {
+      color: theme.colors.estimate,
+    },
+    topActionsCluster: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    topPauseBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: theme.radius.sm,
+      backgroundColor: theme.colors.surface2,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    topStartBtn: {
+      backgroundColor: theme.colors.accent,
+      borderColor: theme.colors.accent,
+    },
+    topResumeBtn: {
+      backgroundColor: theme.colors.okSoft,
+      borderColor: theme.colors.ok,
+    },
+    topPauseBtnText: {
+      fontSize: theme.fontSize.xs,
+      fontWeight: "700",
+      color: theme.colors.text,
+    },
+    topStartBtnText: {
+      color: theme.colors.accentInk,
+      fontWeight: "700",
+    },
+    topResumeBtnText: {
+      color: theme.colors.ok,
+    },
+    timerPillNotStarted: {
+      backgroundColor: theme.colors.surface2,
+    },
+    timerPillTextNotStarted: {
+      color: theme.colors.muted,
+    },
+    pulseDotNotStarted: {
+      backgroundColor: theme.colors.muted,
+    },
+    finishBtnHighlighted: {
+      borderWidth: 1,
+      borderColor: theme.colors.ok,
+    },
+    controlsBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.space[2],
+      paddingTop: 4,
+    },
+    controlBtn: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 7,
+      paddingHorizontal: 10,
+      borderRadius: theme.radius.sm,
+      backgroundColor: theme.colors.surface2,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    controlBtnStop: {
+      borderColor: theme.colors.border,
+    },
+    controlBtnText: {
+      fontSize: theme.fontSize.xs,
+      fontWeight: "700",
+      color: theme.colors.text,
+    },
+    controlBtnTextStop: {
+      fontSize: theme.fontSize.xs,
+      fontWeight: "700",
+      color: theme.colors.over,
+    },
+    bottomFinishBtn: {
+      backgroundColor: theme.colors.ok,
+      borderRadius: theme.radius.md,
+      paddingVertical: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: theme.space[2],
+    },
+    bottomFinishBtnText: {
+      color: theme.colors.accentInk,
+      fontWeight: "700",
+      fontSize: theme.fontSize.md,
+    },
+    finishBtn: {
+      backgroundColor: theme.colors.ok,
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: theme.radius.sm,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    finishBtnText: {
+      color: theme.colors.accentInk,
+      fontWeight: "700",
+      fontSize: theme.fontSize.sm,
+    },
+
+    // Rest Strip
+    restStrip: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: theme.colors.surface2,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.sm,
+      paddingHorizontal: theme.space[3],
+      paddingVertical: 6,
+    },
+    restLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    restLabel: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.muted,
+    },
+    restTime: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: "700",
+      color: theme.colors.timer,
+    },
+    restTotal: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.muted,
+    },
+    restActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    restActionBtn: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    restActionText: {
+      fontSize: theme.fontSize.xs,
+      fontWeight: "600",
+      color: theme.colors.muted,
+    },
+    restSkipBtn: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    restSkipText: {
+      fontSize: theme.fontSize.xs,
+      fontWeight: "600",
+      color: theme.colors.accentText,
+    },
+
+    // Content Scroll
+    content: {
+      paddingHorizontal: theme.space[4],
+      paddingTop: theme.space[3],
+      gap: theme.space[3],
+    },
+
+    // Exercise Card
+    exCard: {
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.md,
+      padding: theme.space[3],
+      gap: theme.space[2],
+    },
+    exHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.space[3],
+    },
+    exInfo: {
+      flex: 1,
+      minWidth: 0,
+    },
+    exName: {
+      fontSize: theme.fontSize.md,
+      fontWeight: "600",
+      color: theme.colors.accentText,
+    },
+    exPrevHint: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.muted,
+      marginTop: 2,
+    },
+    badgePr: {
+      backgroundColor: theme.colors.prSoft,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: theme.radius.pill,
+    },
+    badgePrText: {
+      fontSize: theme.fontSize.xs,
+      fontWeight: "700",
+      color: theme.colors.pr,
+    },
+    badgeAcc: {
+      backgroundColor: theme.colors.accentSoft,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: theme.radius.pill,
+    },
+    badgeAccText: {
+      fontSize: theme.fontSize.xs,
+      fontWeight: "600",
+      color: theme.colors.accentText,
+    },
+    exHeaderActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    orderBtn: {
+      width: 26,
+      height: 26,
+      borderRadius: 6,
+      backgroundColor: theme.colors.surface2,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    orderBtnDisabled: {
+      opacity: 0.3,
+    },
+    orderBtnText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: theme.colors.text,
+    },
+    orderBtnTextDisabled: {
+      color: theme.colors.muted,
+    },
+    removeExBtn: {
+      width: 26,
+      height: 26,
+      borderRadius: 6,
+      backgroundColor: theme.colors.surface2,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      marginLeft: 2,
+    },
+    removeExBtnText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: theme.colors.over,
+    },
+
+    // Set Table
+    setTable: {
+      gap: 4,
+      marginTop: 4,
+    },
+    setRowHead: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 6,
+      paddingBottom: 2,
+    },
+    setTh: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: theme.colors.faint,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    colNum: {
+      width: 26,
+      textAlign: "center",
+    },
+    colPrev: {
+      flex: 1,
+    },
+    colInput: {
+      width: 58,
+      alignItems: "center",
+    },
+    colCheck: {
+      width: 32,
+      textAlign: "right",
+    },
+
+    // Set Row
     setRow: {
       flexDirection: "row",
       alignItems: "center",
-      paddingVertical: space[1],
-      borderRadius: radius.sm,
+      gap: 6,
+      paddingHorizontal: 6,
+      paddingVertical: 4,
+      borderRadius: theme.radius.sm,
+      backgroundColor: "transparent",
     },
-    setRowCompleted: { backgroundColor: colors.surface2 },
-    setTd: { fontSize: fontSize.sm, color: colors.muted, fontWeight: "600" },
+    setRowDone: {
+      backgroundColor: theme.colors.okSoft,
+    },
+    setNumBox: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      backgroundColor: theme.colors.surface2,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    setNumWarmup: {
+      backgroundColor: theme.colors.warmupSoft,
+    },
+    setNumDone: {
+      backgroundColor: theme.colors.ok,
+    },
+    setNumText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: theme.colors.muted,
+    },
+    setNumWarmupText: {
+      color: theme.colors.warmup,
+    },
+    setNumDoneText: {
+      color: theme.colors.accentInk,
+    },
+    colPrevText: {
+      flex: 1,
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.muted,
+    },
     setInput: {
-      backgroundColor: colors.surface2,
-      borderRadius: radius.sm,
-      borderWidth: 1,
-      borderColor: colors.border,
       width: "100%",
-      height: 36,
-      textAlign: "center",
-      fontSize: fontSize.md,
+      height: 30,
+      borderRadius: 6,
+      backgroundColor: theme.colors.bg,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      color: theme.colors.text,
+      fontSize: theme.fontSize.sm,
       fontWeight: "600",
-      color: colors.text,
-      fontVariant: ["tabular-nums"],
+      textAlign: "center",
+      padding: 0,
     },
-    setInputCompleted: {
+    setInputDone: {
       backgroundColor: "transparent",
       borderColor: "transparent",
     },
-    placeholder: { color: colors.faint },
-    checkBtn: {
-      width: 34,
-      height: 34,
-      borderRadius: 8,
+    setCheck: {
+      width: 28,
+      height: 28,
+      borderRadius: 7,
+      backgroundColor: theme.colors.surface2,
       borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
-      justifyContent: "center",
+      borderColor: theme.colors.border,
       alignItems: "center",
+      justifyContent: "center",
     },
-    checkBtnOn: {
-      backgroundColor: colors.ok,
-      borderColor: colors.ok,
+    setCheckDone: {
+      backgroundColor: theme.colors.ok,
+      borderColor: theme.colors.ok,
     },
-    checkIcon: { fontSize: fontSize.sm, color: colors.muted, fontWeight: "700" },
-    checkIconOn: { color: "#FFFFFF" },
+    setCheckText: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: theme.colors.faint,
+    },
+    setCheckDoneText: {
+      color: theme.colors.accentInk,
+    },
+
+    // Add Set
     addSetBtn: {
-      backgroundColor: colors.surface2,
-      borderRadius: radius.sm,
-      paddingVertical: space[2],
+      height: 34,
+      borderRadius: theme.radius.sm,
+      backgroundColor: theme.colors.surface2,
       alignItems: "center",
-      marginTop: space[1],
+      justifyContent: "center",
+      marginTop: 4,
     },
-    addSetText: { fontSize: fontSize.sm, fontWeight: "600", color: colors.text },
+    addSetBtnText: {
+      fontSize: theme.fontSize.xs,
+      fontWeight: "600",
+      color: theme.colors.text,
+    },
+
+    // Add Exercise
     addExerciseBtn: {
+      height: 44,
+      borderRadius: theme.radius.md,
       borderWidth: 1,
-      borderColor: colors.accent,
-      borderStyle: "dashed",
-      borderRadius: radius.md,
-      paddingVertical: space[3],
+      borderColor: theme.colors.accent,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: colors.accentSoft,
+      backgroundColor: "transparent",
     },
-    addExerciseText: { fontSize: fontSize.md, fontWeight: "700", color: colors.accentText },
+    addExerciseText: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: "600",
+      color: theme.colors.accentText,
+    },
+
+    // Notes
     notesCard: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.md,
+      backgroundColor: theme.colors.surface,
       borderWidth: 1,
-      borderColor: colors.border,
-      padding: space[3],
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.md,
+      padding: theme.space[3],
+      gap: theme.space[2],
     },
-    notesLabel: { fontSize: fontSize.xs, color: colors.muted, fontWeight: "600", textTransform: "uppercase" },
-    notesInput: { fontSize: fontSize.sm, color: colors.text, marginTop: space[1], minHeight: 48 },
-    bigFinishBtn: {
-      backgroundColor: colors.accent,
-      borderRadius: radius.md,
-      minHeight: tap,
-      justifyContent: "center",
+    notesLabel: {
+      fontSize: theme.fontSize.xs,
+      fontWeight: "600",
+      color: theme.colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    notesInput: {
+      minHeight: 48,
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.text,
+      lineHeight: 20,
+    },
+
+    // Modal
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: theme.colors.scrim,
       alignItems: "center",
-      marginTop: space[2],
+      justifyContent: "center",
+      padding: theme.space[4],
     },
-    bigFinishText: { color: colors.accentInk, fontSize: fontSize.md, fontWeight: "700" },
+    modalCard: {
+      width: "100%",
+      maxWidth: 340,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      padding: theme.space[4],
+      gap: theme.space[3],
+    },
+    modalTitle: {
+      fontSize: theme.fontSize.md,
+      fontWeight: "700",
+      color: theme.colors.text,
+    },
+    modalInput: {
+      height: 42,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.sm,
+      backgroundColor: theme.colors.surface2,
+      color: theme.colors.text,
+      paddingHorizontal: theme.space[3],
+      fontSize: theme.fontSize.sm,
+    },
+    modalButtons: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: theme.space[2],
+    },
+    modalBtn: {
+      paddingHorizontal: theme.space[3],
+      paddingVertical: theme.space[2],
+      borderRadius: theme.radius.sm,
+    },
+    modalBtnCancel: {
+      backgroundColor: "transparent",
+    },
+    modalBtnCancelText: {
+      color: theme.colors.muted,
+      fontWeight: "600",
+      fontSize: theme.fontSize.sm,
+    },
+    modalBtnSave: {
+      backgroundColor: theme.colors.accent,
+    },
+    modalBtnSaveText: {
+      color: theme.colors.accentInk,
+      fontWeight: "600",
+      fontSize: theme.fontSize.sm,
+    },
   });
 }

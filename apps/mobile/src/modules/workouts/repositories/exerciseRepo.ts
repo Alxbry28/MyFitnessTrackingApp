@@ -136,4 +136,32 @@ export const exerciseRepo = {
     const text = formatPreviousPerformance(sets);
     return { sets, text: `Last: ${text}` };
   },
+
+  async getHistoryMax(
+    db: SQLiteDatabase,
+    exerciseId: string,
+    beforeDateIso?: string,
+  ): Promise<{ maxWeight: number; maxVolume: number }> {
+    let sql = `
+      SELECT MAX(ws.weight_kg) AS max_weight,
+             MAX(COALESCE(ws.weight_kg, 0) * COALESCE(ws.reps, 0)) AS max_volume
+      FROM workout_sets ws
+      JOIN workout_sessions s ON s.id = ws.session_id
+      WHERE ws.exercise_id = ?
+        AND ws.is_completed = 1
+        AND ws.is_warmup = 0
+        AND ws.deleted_at IS NULL
+        AND s.deleted_at IS NULL
+    `;
+    const params: string[] = [exerciseId];
+    if (beforeDateIso) {
+      sql += " AND s.started_at < ?";
+      params.push(beforeDateIso);
+    }
+    const row = await db.getFirstAsync<{ max_weight: number | null; max_volume: number | null }>(sql, params);
+    return {
+      maxWeight: row?.max_weight ?? 0,
+      maxVolume: row?.max_volume ?? 0,
+    };
+  },
 };
