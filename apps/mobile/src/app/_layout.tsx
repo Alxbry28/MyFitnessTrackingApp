@@ -56,6 +56,10 @@ export default function RootLayout() {
               <Stack.Screen name="recipes/index" options={{ headerShown: false }} />
               <Stack.Screen name="recipes/[id]" options={{ headerShown: false }} />
               <Stack.Screen name="recipes/cook/[recipeId]" options={{ headerShown: false }} />
+              <Stack.Screen name="cooking/index" options={{ headerShown: false }} />
+              <Stack.Screen name="cooking/new" options={{ headerShown: false }} />
+              <Stack.Screen name="meal-prep/index" options={{ headerShown: false }} />
+              <Stack.Screen name="meal-prep/new" options={{ headerShown: false }} />
               <Stack.Screen name="calorie-stats" options={{ headerShown: false }} />
             </Stack>
           </SQLiteProvider>

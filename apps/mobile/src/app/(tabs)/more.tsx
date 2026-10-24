@@ -4,9 +4,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
 
 const ITEMS = [
-  { name: "Calorie Stats", meta: "TDEE, weekly averages and adherence", href: "/calorie-stats" },
+  { name: "Cooking", meta: "Cooking workflow, active timer & fridge batches", href: "/cooking" },
+  { name: "Meal Prep", meta: "Tupperware boxes & batch portioning", href: "/meal-prep" },
   { name: "Workouts", meta: "Track sessions, exercises and sets", href: "/workouts" },
-  { name: "Recipes", meta: "Saved recipes and cooked batches", href: "/recipes" },
+  { name: "Calorie Stats", meta: "TDEE, weekly averages and adherence", href: "/calorie-stats" },
   { name: "Products", meta: "Your food library", href: "/products" },
   { name: "Settings", meta: "Goal, backup and restore", href: "/settings" },
 ] as const;
@@ -20,7 +21,7 @@ export default function MoreScreen() {
         {ITEMS.map((item, index) => (
           <Pressable
             key={item.href}
-            onPress={() => router.navigate(item.href)}
+            onPress={() => router.navigate(item.href as any)}
             accessibilityRole="button"
             accessibilityLabel={`${item.name}. ${item.meta}`}
             style={({ pressed }) => [styles.item, index > 0 && styles.divided, pressed && styles.pressed]}

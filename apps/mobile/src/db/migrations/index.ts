@@ -17,6 +17,7 @@ import * as m014 from "./014_workout_routines";
 import * as m015 from "./015_workout_timer_controls";
 import * as m016 from "./016_routine_exercise_targets";
 import * as m017 from "./017_routine_per_set_targets";
+import * as m018 from "./018_cooking_and_meal_prep";
 
 export type Migration = {
   version: number;
@@ -44,4 +45,5 @@ export const migrations: Migration[] = [
   { version: 15, name: "015_workout_timer_controls", up: m015.up },
   { version: 16, name: "016_routine_exercise_targets", up: m016.up },
   { version: 17, name: "017_routine_per_set_targets", up: m017.up },
+  { version: 18, name: "018_cooking_and_meal_prep", up: m018.up },
 ];

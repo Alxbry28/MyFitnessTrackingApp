@@ -42,6 +42,7 @@ export type Batch = {
   proteinPer100g: number;
   carbsPer100g: number;
   fatPer100g: number;
+  cookTimeSeconds?: number | null;
   createdAt: string;
   updatedAt: string;
   pantryItemId?: string;
@@ -82,6 +83,7 @@ export type BatchInput = {
   cookedWeightG: number;
   weightMethod: WeightMethod;
   isSettled: boolean;
+  cookTimeSeconds?: number | null;
   ingredients: {
     productId: string;
     rawGrams: number;

@@ -13,7 +13,7 @@ import { MEAL_LABELS } from "./mealTime";
 // Kept free of React and SQLite so it can get unit tests once a runner exists.
 
 const BULLET = /^[-*•]\s+/;
-const FOOD = /^(\d+(?:[.,]\d+)?)\s*(g|ml|oz|caps?|tabs?|tablets?|capsules?|scoops?)\s+(.+)$/i;
+const FOOD = /^(\d+(?:[.,]\d+)?)\s*(g|ml|oz|caps?|tabs?|tablets?|capsules?|scoops?|tupperwares?|boxes?|box)\s+(.+)$/i;
 const OZ_GRAMS = 28.35;
 
 const HEADING_MEALS: Record<string, MealType> = {

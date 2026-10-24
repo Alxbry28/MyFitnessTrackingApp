@@ -24,6 +24,7 @@ type BatchRow = {
   protein_per_100g: number;
   carbs_per_100g: number;
   fat_per_100g: number;
+  cook_time_seconds?: number | null;
   created_at: string;
   updated_at: string;
   pantry_item_id: string | null;
@@ -69,8 +70,8 @@ export const batchRepo = {
       await tx.runAsync(`
         INSERT INTO batches (
           id, recipe_id, name, cooked_at, cooked_weight_g, weight_method, is_settled,
-          kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, cook_time_seconds, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         batchId,
         input.recipeId ?? null,
@@ -83,6 +84,7 @@ export const batchRepo = {
         cookedNutrition.proteinPer100g,
         cookedNutrition.carbsPer100g,
         cookedNutrition.fatPer100g,
+        input.cookTimeSeconds ?? null,
         now,
         now,
       ]);
@@ -155,7 +157,7 @@ export const batchRepo = {
     const row = await db.getFirstAsync<BatchRow>(`
       SELECT b.id, b.recipe_id, b.name, b.cooked_at, b.cooked_weight_g, b.weight_method,
         b.is_settled, b.kcal_per_100g, b.protein_per_100g, b.carbs_per_100g, b.fat_per_100g,
-        b.created_at, b.updated_at, pi.id AS pantry_item_id,
+        b.cook_time_seconds, b.created_at, b.updated_at, pi.id AS pantry_item_id,
         (SELECT SUM(m.delta_grams) FROM stock_movements m WHERE m.pantry_item_id = pi.id AND m.deleted_at IS NULL) AS grams_left
       FROM batches b
       LEFT JOIN pantry_items pi ON pi.batch_id = b.id AND pi.deleted_at IS NULL
@@ -197,6 +199,7 @@ export const batchRepo = {
       proteinPer100g: row.protein_per_100g,
       carbsPer100g: row.carbs_per_100g,
       fatPer100g: row.fat_per_100g,
+      cookTimeSeconds: row.cook_time_seconds ?? null,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       pantryItemId: row.pantry_item_id ?? undefined,
@@ -209,7 +212,7 @@ export const batchRepo = {
     const rows = await db.getAllAsync<BatchRow>(`
       SELECT b.id, b.recipe_id, b.name, b.cooked_at, b.cooked_weight_g, b.weight_method,
         b.is_settled, b.kcal_per_100g, b.protein_per_100g, b.carbs_per_100g, b.fat_per_100g,
-        b.created_at, b.updated_at, pi.id AS pantry_item_id,
+        b.cook_time_seconds, b.created_at, b.updated_at, pi.id AS pantry_item_id,
         (SELECT SUM(m.delta_grams) FROM stock_movements m WHERE m.pantry_item_id = pi.id AND m.deleted_at IS NULL) AS grams_left
       FROM batches b
       JOIN pantry_items pi ON pi.batch_id = b.id AND pi.deleted_at IS NULL
@@ -230,6 +233,7 @@ export const batchRepo = {
       proteinPer100g: r.protein_per_100g,
       carbsPer100g: r.carbs_per_100g,
       fatPer100g: r.fat_per_100g,
+      cookTimeSeconds: r.cook_time_seconds ?? null,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
       pantryItemId: r.pantry_item_id ?? undefined,

@@ -14,7 +14,11 @@ export type PastedUnit =
   | "capsule"
   | "capsules"
   | "scoop"
-  | "scoops";
+  | "scoops"
+  | "tupperware"
+  | "tupperwares"
+  | "box"
+  | "boxes";
 
 // grams is the amount converted for the log: ml counts as grams, oz as 28.35 g.
 export type PastedFood = {
