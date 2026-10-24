@@ -217,28 +217,29 @@ export const batchRepo = {
       FROM batches b
       JOIN pantry_items pi ON pi.batch_id = b.id AND pi.deleted_at IS NULL
       WHERE b.deleted_at IS NULL
-      HAVING grams_left > 0.5
       ORDER BY b.cooked_at ASC
     `);
 
-    return rows.map((r) => ({
-      id: r.id,
-      recipeId: r.recipe_id,
-      name: r.name,
-      cookedAt: r.cooked_at,
-      cookedWeightG: r.cooked_weight_g,
-      weightMethod: r.weight_method,
-      isSettled: r.is_settled === 1,
-      kcalPer100g: r.kcal_per_100g,
-      proteinPer100g: r.protein_per_100g,
-      carbsPer100g: r.carbs_per_100g,
-      fatPer100g: r.fat_per_100g,
-      cookTimeSeconds: r.cook_time_seconds ?? null,
-      createdAt: r.created_at,
-      updatedAt: r.updated_at,
-      pantryItemId: r.pantry_item_id ?? undefined,
-      gramsLeft: r.grams_left ?? 0,
-    }));
+    return rows
+      .filter((r) => (r.grams_left ?? 0) > 0.5)
+      .map((r) => ({
+        id: r.id,
+        recipeId: r.recipe_id,
+        name: r.name,
+        cookedAt: r.cooked_at,
+        cookedWeightG: r.cooked_weight_g,
+        weightMethod: r.weight_method,
+        isSettled: r.is_settled === 1,
+        kcalPer100g: r.kcal_per_100g,
+        proteinPer100g: r.protein_per_100g,
+        carbsPer100g: r.carbs_per_100g,
+        fatPer100g: r.fat_per_100g,
+        cookTimeSeconds: r.cook_time_seconds ?? null,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+        pantryItemId: r.pantry_item_id ?? undefined,
+        gramsLeft: r.grams_left ?? 0,
+      }));
   },
 
   async logPortion(

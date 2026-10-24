@@ -274,14 +274,15 @@ export const mealPrepRepo = {
       FROM batches b
       JOIN pantry_items pi ON pi.batch_id = b.id AND pi.deleted_at IS NULL
       WHERE b.deleted_at IS NULL
-      HAVING grams_left > 0.5
       ORDER BY b.cooked_at DESC
     `);
 
-    const result: AvailableCookedFood[] = batchRows.map((r) => ({
-      id: `batch-${r.id}`,
-      name: r.name,
-      gramsAvailable: Math.round(r.grams_left),
+    const result: AvailableCookedFood[] = batchRows
+      .filter((r) => (r.grams_left ?? 0) > 0.5)
+      .map((r) => ({
+        id: `batch-${r.id}`,
+        name: r.name,
+        gramsAvailable: Math.round(r.grams_left),
       kcalPer100g: r.kcal_per_100g,
       proteinPer100g: r.protein_per_100g,
       carbsPer100g: r.carbs_per_100g,
