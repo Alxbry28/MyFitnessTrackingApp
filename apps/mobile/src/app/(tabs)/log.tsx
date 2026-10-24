@@ -1,5 +1,6 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState, type ReactNode } from "react";
+
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -22,8 +23,21 @@ export default function LogScreen() {
   const styles = makeStyles(theme);
   const insets = useSafeAreaInsets();
   const today = dayKey(new Date());
-  const [day, setDay] = useState(today);
+  const params = useLocalSearchParams<{ date?: string }>();
+  const [userDay, setUserDay] = useState<string | null>(null);
+  const [prevParamDate, setPrevParamDate] = useState(params.date);
+
+  if (params.date !== prevParamDate) {
+    setPrevParamDate(params.date);
+    setUserDay(null);
+  }
+
+  const day = userDay ?? params.date ?? today;
+  const setDay = (d: string) => setUserDay(d);
+
   const { status, retry, groups, totals, isEmpty, remove, undo, pendingUndo, actionError } = useDayLog(day);
+
+
   const goal = useCalorieGoal();
   const addTo = (meal: MealType) => router.push({ pathname: "/add", params: { meal, day } });
 

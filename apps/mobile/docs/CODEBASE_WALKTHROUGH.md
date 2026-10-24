@@ -27,8 +27,8 @@ The app is built with modern React Native and the Expo ecosystem:
 
 | Technology | Purpose | Where to find it |
 | :--- | :--- | :--- |
-| **React 19 & React Native 0.86** | Core UI library & mobile primitives (`View`, `Text`, `Pressable`, `ScrollView`). | [`package.json`](file:///c:/Users/Bryan/Desktop/mine/1_personal/draft/fitness_app/apps/mobile/package.json) |
-| **Expo SDK 57** | Framework providing native mobile capabilities (Camera, SQLite, Filesystem, Sensors). | [`app.json`](file:///c:/Users/Bryan/Desktop/mine/1_personal/draft/fitness_app/apps/mobile/app.json) |
+| **React 19 & React Native 0.88** | Core UI library & mobile primitives (`View`, `Text`, `Pressable`, `ScrollView`). | [`package.json`](file:///c:/Users/Bryan/Desktop/mine/1_personal/draft/fitness_app/apps/mobile/package.json) |
+| **Expo SDK 58** | Framework providing native mobile capabilities (Camera, SQLite, Filesystem, Sensors). | [`app.json`](file:///c:/Users/Bryan/Desktop/mine/1_personal/draft/fitness_app/apps/mobile/app.json) |
 | **Expo Router** | File-based routing system (similar to Next.js on the web). Folders and files define screens! | [`src/app/`](file:///c:/Users/Bryan/Desktop/mine/1_personal/draft/fitness_app/apps/mobile/src/app) |
 | **Expo SQLite** | Embedded relational SQL database running entirely on the phone. | [`src/db/client.ts`](file:///c:/Users/Bryan/Desktop/mine/1_personal/draft/fitness_app/apps/mobile/src/db/client.ts) |
 | **Expo Camera** | Native hardware barcode scanner. | [`src/app/scan.tsx`](file:///c:/Users/Bryan/Desktop/mine/1_personal/draft/fitness_app/apps/mobile/src/app/scan.tsx) |
@@ -241,7 +241,7 @@ If you are modifying or extending this codebase, keep these core rules in mind:
 
 1. **Keep Services Pure**: Don't import `react`, `expo-sqlite`, or UI components inside `src/modules/*/services/`. Services should be simple TypeScript functions that take input and return output.
 2. **All SQL Stays in Repositories**: Don't run SQL queries directly inside React components or hooks. Put them in `src/modules/*/repositories/` so they are reusable and easy to audit.
-3. **Always Run Expo Commands with `npx expo install`**: Never use bare `npm install <package>` for native Expo libraries. `npx expo install` ensures that the installed library version matches Expo SDK 57.
+3. **Always Run Expo Commands with `npx expo install`**: Never use bare `npm install <package>` for native Expo libraries. `npx expo install` ensures that the installed library version matches Expo SDK 58.
 4. **Use `useFocusEffect` for Screens**: In tabbed navigation, screens don't always unmount when you navigate away. Use `useFocusEffect` to refresh data whenever the user switches back to a tab.
 
 ---

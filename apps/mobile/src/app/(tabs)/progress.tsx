@@ -1,4 +1,6 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import { useState } from "react";
+
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useTheme, type Theme } from "@/lib/theme/useTheme";
@@ -8,6 +10,7 @@ import { WeightCard } from "@/modules/body/components/WeightCard";
 import { useMeasurements } from "@/modules/body/hooks/useMeasurements";
 import { useProgress } from "@/modules/body/hooks/useProgress";
 import { formatCm, formatDelta } from "@/modules/body/services/measurementCalc";
+import { CalendarView } from "@/modules/calendar/components/CalendarView";
 import { useCalorieStats } from "@/modules/nutrition/hooks/useCalorieStats";
 
 export default function ProgressScreen() {
@@ -16,6 +19,19 @@ export default function ProgressScreen() {
   const { state, retry } = useProgress();
   const measurements = useMeasurements();
   const calorieStats = useCalorieStats();
+
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const [tabOverride, setTabOverride] = useState<"overview" | "calendar" | null>(null);
+  const [prevTabParam, setPrevTabParam] = useState(params.tab);
+
+  if (params.tab !== prevTabParam) {
+    setPrevTabParam(params.tab);
+    setTabOverride(null);
+  }
+
+  const activeTab = tabOverride ?? (params.tab === "calendar" ? "calendar" : "overview");
+  const setActiveTab = (t: "overview" | "calendar") => setTabOverride(t);
+
 
   if (state.status === "loading") {
     return (
@@ -38,13 +54,42 @@ export default function ProgressScreen() {
   const logWeight = () => router.push("/weight");
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <WeightCard
-        trend={state.trend}
-        chart={state.chart}
-        latest={state.latest}
-        today={state.today}
-        onLog={logWeight}
-      />
+      {/* Segmented Control: [ Overview | Calendar ] */}
+      <View style={styles.segmentedControlWrap}>
+        <Pressable
+          onPress={() => setActiveTab("overview")}
+          accessibilityRole="button"
+          accessibilityState={{ selected: activeTab === "overview" }}
+          style={[styles.segmentBtn, activeTab === "overview" && styles.segmentBtnActive]}
+        >
+          <Text style={[styles.segmentBtnText, activeTab === "overview" && styles.segmentBtnTextActive]}>
+            Overview
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setActiveTab("calendar")}
+          accessibilityRole="button"
+          accessibilityState={{ selected: activeTab === "calendar" }}
+          style={[styles.segmentBtn, activeTab === "calendar" && styles.segmentBtnActive]}
+        >
+          <Text style={[styles.segmentBtnText, activeTab === "calendar" && styles.segmentBtnTextActive]}>
+            Calendar
+          </Text>
+        </Pressable>
+      </View>
+
+      {activeTab === "calendar" ? (
+        <CalendarView />
+      ) : (
+        <>
+          <WeightCard
+            trend={state.trend}
+            chart={state.chart}
+            latest={state.latest}
+            today={state.today}
+            onLog={logWeight}
+          />
+
       <BmiCard
         profile={state.profile}
         latest={state.latest}
@@ -196,6 +241,8 @@ export default function ProgressScreen() {
           </View>
         </>
       )}
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -205,7 +252,33 @@ function makeStyles(theme: Theme) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.bg },
     content: { padding: space[4], gap: space[4] },
+    segmentedControlWrap: {
+      flexDirection: "row",
+      backgroundColor: colors.surface2,
+      borderRadius: radius.md,
+      padding: 3,
+    },
+    segmentBtn: {
+      flex: 1,
+      height: 34,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 9,
+    },
+    segmentBtnActive: {
+      backgroundColor: colors.surface,
+    },
+    segmentBtnText: {
+      fontSize: fontSize.sm,
+      color: colors.muted,
+      fontWeight: "400",
+    },
+    segmentBtnTextActive: {
+      color: colors.text,
+      fontWeight: "600",
+    },
     center: { flex: 1, alignItems: "center", justifyContent: "center", gap: space[4], backgroundColor: colors.bg },
+
     message: { color: colors.muted, fontSize: fontSize.md, textAlign: "center" },
     section: {
       color: colors.muted,

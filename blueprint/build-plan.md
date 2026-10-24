@@ -40,7 +40,7 @@ After 13 (not a feature): build the Android APK with `eas build -p android --pro
 - [x] 19. **Workouts** - exercise library, start/active/complete session, sets with previous hints, history; exercise illustrations from `@bryllim/workout-guide` (ADR-20: art is CC BY-SA 4.0, credit Bryl Lim and Everkinetic, don't edit the art)
 - [x] 20. **Body measurements** - measurement sites, sessions, change since start, waist-to-height
 - [x] 21. **Calorie stats** - weekly averages, 30-day chart, learned TDEE from logged food and weight trend (formula TDEE ships in 13), suggested target
-- [ ] 31. **Progress and history calendar** - built to `prototypes/current/calendar.html` and `progress.html`: segmented toggle `[ Overview | Calendar ]` on Progress screen; monthly calendar grid with daily calories, target adherence indicator (on-target, over, low), and weigh-in markers; monthly statistics header (daily average kcal, days on target, weigh-in count); filter chips (All, Food, Body, Pantry, Workouts); day sheet bottom modal showing events of the selected day with quick navigation to that date's log; link from Log date navigator
+- [x] 31. **Progress and history calendar** - built to `prototypes/current/calendar.html` and `progress.html`: segmented toggle `[ Overview | Calendar ]` on Progress screen; monthly calendar grid with daily calories, target adherence indicator (on-target, over, low), and weigh-in markers; monthly statistics header (daily average kcal, days on target, weigh-in count); filter chips (All, Food, Body, Pantry, Workouts); day sheet bottom modal showing events of the selected day with quick navigation to that date's log; link from Log date navigator
 
 
 ## v1.2 - .NET API and friends beta (November)

@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { SymbolView } from "expo-symbols";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -16,13 +17,17 @@ function relative(day: string, today: string): string {
   return WEEKDAYS[dayFromKey(day).getDay()];
 }
 
-// The date nav from prototypes/log.html; the calendar screen isn't built, so the date opens the picker.
+// Built to prototypes/log.html; tapping the date nav opens the Progress Calendar.
 export function DayNavigator({ day, today, onChange }: Props) {
   const theme = useTheme();
   const styles = makeStyles(theme);
   const isToday = day === today;
   const label = formatDayShort(day);
   const sub = `${relative(day, today)} · tap for calendar`;
+
+  const openCalendar = () => {
+    router.push({ pathname: "/(tabs)/progress", params: { tab: "calendar" } });
+  };
 
   const openPicker = () =>
     DateTimePickerAndroid.open({
@@ -46,9 +51,10 @@ export function DayNavigator({ day, today, onChange }: Props) {
           <SymbolView name={{ android: "chevron_left", web: "chevron_left" }} tintColor={theme.colors.muted} size={22} />
         </Pressable>
         <Pressable
-          onPress={openPicker}
+          onPress={openCalendar}
+          onLongPress={openPicker}
           accessibilityRole="button"
-          accessibilityLabel={`${label}, ${relative(day, today)}. Pick a date`}
+          accessibilityLabel={`${label}, ${relative(day, today)}. View calendar`}
           style={styles.label}
         >
           <Text style={styles.date}>{label} ▾</Text>
@@ -58,6 +64,7 @@ export function DayNavigator({ day, today, onChange }: Props) {
           onPress={() => onChange(addDays(day, 1))}
           disabled={isToday}
           accessibilityRole="button"
+
           accessibilityLabel="Next day"
           accessibilityState={{ disabled: isToday }}
           style={({ pressed }) => [styles.arrow, pressed && styles.pressed]}

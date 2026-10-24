@@ -1,8 +1,8 @@
-import type { ImageSourcePropType } from "react-native";
+import type { ImageSource } from "expo-image";
 
 export type ExerciseImageSet = {
-  start: ImageSourcePropType;
-  finish: ImageSourcePropType;
+  start: ImageSource;
+  finish: ImageSource;
 };
 
 export const EXERCISE_LOCAL_IMAGES: Record<string, ExerciseImageSet> = {
