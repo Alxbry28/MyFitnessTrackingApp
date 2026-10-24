@@ -6,6 +6,9 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   BackHandler,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -63,6 +66,27 @@ export default function PasteLogScreen() {
 
   const lunchCopy = useMemo(() => copyLunchToDinner(log.text), [log.text]);
   const dayLabel = formatDayLabel(log.day, dayKey(new Date()));
+
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      },
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => {
+        setKeyboardHeight(0);
+      },
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Android back on the Preview / AI Preview returns to the text instead of closing the screen.
   useEffect(() => {
@@ -274,9 +298,23 @@ export default function PasteLogScreen() {
   if (mode === "write") {
     const foods = log.summary.foods;
     return (
-      <View style={styles.screen}>
+      <KeyboardAvoidingView
+        style={styles.screen}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         {appBar}
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingBottom:
+                keyboardHeight > 0
+                  ? keyboardHeight + insets.bottom + theme.space[6]
+                  : insets.bottom + theme.space[6],
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.chips}>
             {log.isEditingExisting && (
               <Chip
@@ -338,6 +376,7 @@ export default function PasteLogScreen() {
               value={log.text}
               onChangeText={log.setText}
               multiline
+              scrollEnabled={false}
               placeholder={"Breakfast:\n100g food\n\nLunch:\n100g food\n\nDinner:\n100g food\n\nSnacks:\n100g food\n\nSupplements:\n1 cap Hydroxicut\n5g Creatine"}
               placeholderTextColor={theme.colors.faint}
               accessibilityLabel="Paste your log"
@@ -400,7 +439,7 @@ export default function PasteLogScreen() {
             </Pressable>
           </View>
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 
